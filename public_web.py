@@ -10,6 +10,12 @@ app.secret_key = os.environ.get("SECRET_KEY", "subarashii_academy_secret_key_cha
 ORGANIZER_API_KEY = os.environ.get("ORGANIZER_API_KEY", "subarashii_secret_organizer_key_2026")
 ORGANIZER_ADMIN_PASSWORD = os.environ.get("ORGANIZER_ADMIN_PASSWORD", "subarashii2026")
 
+try:
+    from database import init_db
+    init_db()
+except Exception as _e:
+    print(f"[PublicWeb] DB init notice: {_e}")
+
 def organizer_auth_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -362,26 +368,34 @@ def view_tournament_room(room_code):
 
 @app.route('/api/room/<room_code>/join', methods=['POST'])
 def api_room_join(room_code):
-    from tournament_room_manager import TournamentRoomManager
-    trm = TournamentRoomManager()
-    data = request.get_json() or {}
-    
-    player_name = data.get('player_name', '').strip()
-    konami_id = data.get('konami_id', '').strip()
-    deck = data.get('deck', '').strip()
-    session_token = data.get('session_token', '').strip()
-    
-    ok, res = trm.register_player(
-        room_code=room_code,
-        player_name=player_name,
-        konami_id=konami_id,
-        deck_archetype=deck,
-        session_token=session_token
-    )
-    if ok:
-        return jsonify({"success": True, "data": res})
-    else:
-        return jsonify({"success": False, "message": str(res)}), 400
+    try:
+        from tournament_room_manager import TournamentRoomManager
+        trm = TournamentRoomManager()
+        data = request.get_json() or {}
+        
+        player_name = data.get('player_name', '').strip()
+        konami_id = data.get('konami_id', '').strip()
+        deck = data.get('deck', '').strip()
+        session_token = data.get('session_token', '').strip()
+        
+        if not player_name:
+            return jsonify({"success": False, "message": "Debes ingresar tu nombre o apodo."}), 400
+
+        ok, res = trm.register_player(
+            room_code=room_code,
+            player_name=player_name,
+            konami_id=konami_id,
+            deck_archetype=deck,
+            session_token=session_token
+        )
+        if ok:
+            return jsonify({"success": True, "data": res})
+        else:
+            return jsonify({"success": False, "message": str(res)}), 400
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": f"Error del servidor al registrar: {str(e)}"}), 500
 
 @app.route('/api/room/<room_code>/status')
 def api_room_status(room_code):
@@ -632,6 +646,7 @@ def api_organizer_sync():
             trm = TournamentRoomManager()
             room_code = data.get("room_code")
             title = data.get("title", "Torneo Sincronizado")
+            format_name = data.get("format_name", "EDISON")
             current_round = data.get("current_round", 1)
             pairings = data.get("pairings", [])
             standings = data.get("standings", [])
@@ -640,11 +655,12 @@ def api_organizer_sync():
             # Buscar o crear sala
             existing = trm.get_room_by_code(room_code)
             if not existing:
-                trm.create_or_get_room(title=title, room_code=room_code)
+                trm.create_or_get_room(title=title, format_name=format_name, room_code=room_code)
                 
             room_status = data.get("status", "RUNNING" if (pairings and len(pairings) > 0) else "LOBBY")
             live_data = {
                 "title": title,
+                "format_name": format_name,
                 "current_round": current_round,
                 "matches": pairings,
                 "standings": standings,
@@ -656,7 +672,9 @@ def api_organizer_sync():
                 room_code=room_code,
                 status=room_status,
                 current_round=current_round,
-                live_data_json=live_data
+                live_data_json=live_data,
+                format_name=format_name,
+                title=title
             )
             return jsonify({"success": True, "message": f"Sala {room_code} actualizada en el servidor remoto."})
 

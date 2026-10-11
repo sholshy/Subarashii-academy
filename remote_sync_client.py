@@ -82,7 +82,7 @@ class RemoteSyncClient:
         except Exception as e:
             return False, f"Error de conexión: {str(e)}"
 
-    def sync_room_state(self, room_code: str, title: str, current_round: int, pairings: list, standings: list, timer_info: dict, status: str = "LOBBY") -> Tuple[bool, str]:
+    def sync_room_state(self, room_code: str, title: str, current_round: int, pairings: list, standings: list, timer_info: dict, status: str = "LOBBY", format_name: str = "") -> Tuple[bool, str]:
         """Envía el estado actual del torneo y sus rondas al servidor cloud."""
         if not self.enabled:
             return False, "Sincronización remota desactivada."
@@ -92,6 +92,7 @@ class RemoteSyncClient:
                 "type": "room_sync",
                 "room_code": room_code,
                 "title": title,
+                "format_name": format_name,
                 "current_round": current_round,
                 "status": status,
                 "pairings": pairings,

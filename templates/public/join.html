@@ -396,7 +396,15 @@ function submitJoin(e) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     })
-    .then(r => r.json())
+    .then(async r => {
+        let res;
+        try {
+            res = await r.json();
+        } catch(e) {
+            res = { success: false, message: `Error del servidor (${r.status}). Intenta nuevamente.` };
+        }
+        return res;
+    })
     .then(res => {
         if (res.success) {
             localStorage.setItem(`duel_room_${roomCode}`, JSON.stringify({
@@ -412,7 +420,7 @@ function submitJoin(e) {
         }
     })
     .catch(err => {
-        alert("Error de conexión al registrarse.");
+        alert("Error de conexión al registrarse. Por favor verifica tu red e inténtalo de nuevo.");
         btn.disabled = false;
         btn.innerText = "⚔️ UNIRME AL TORNEO";
     });

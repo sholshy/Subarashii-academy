@@ -17,6 +17,51 @@ def migrate_rooms_schema(cursor):
     except Exception:
         pass
 
+    # Tablas base necesarias para integridad referencial (Foreign Keys) en Render o BDs limpias
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS players (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            konami_id TEXT UNIQUE,
+            name TEXT NOT NULL,
+            phone TEXT,
+            email TEXT,
+            slug TEXT
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS academy_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            store_id INTEGER,
+            format_name TEXT NOT NULL,
+            current_rating INTEGER DEFAULT 1000,
+            highest_rating INTEGER DEFAULT 1000,
+            dorm TEXT DEFAULT 'Slifer Red',
+            xp INTEGER DEFAULT 0,
+            level INTEGER DEFAULT 1,
+            matches_played INTEGER DEFAULT 0,
+            wins INTEGER DEFAULT 0,
+            losses INTEGER DEFAULT 0,
+            title TEXT,
+            FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS scheduled_tournaments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            format_name TEXT NOT NULL,
+            event_date TEXT NOT NULL,
+            start_time TEXT,
+            description TEXT,
+            max_players INTEGER,
+            status TEXT DEFAULT 'UPCOMING',
+            created_at TEXT
+        )
+    ''')
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS tournament_rooms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,6 +190,15 @@ class TournamentRoomManager:
         if code:
             existing = self.get_room_by_code(code)
             if existing:
+                if (format_name and existing.get('format_name') != format_name.strip()) or (title and existing.get('title') != title.strip()):
+                    cursor.execute("""
+                        UPDATE tournament_rooms 
+                        SET format_name = ?, title = ?, updated_at = ? 
+                        WHERE UPPER(room_code) = ?
+                    """, (format_name.strip(), title.strip(), now_str, code))
+                    if hasattr(cursor, 'connection') and cursor.connection:
+                        cursor.connection.commit()
+                    existing = self.get_room_by_code(code)
                 return existing
 
         if not code:
@@ -190,7 +244,7 @@ class TournamentRoomManager:
         row = cursor.fetchone()
         return dict(row) if row else None
 
-    def update_room_status(self, room_code, status, current_round=None, live_data_json=None):
+    def update_room_status(self, room_code, status, current_round=None, live_data_json=None, format_name=None, title=None):
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
         now_str = datetime.now().isoformat()
@@ -201,6 +255,14 @@ class TournamentRoomManager:
         if current_round is not None:
             fields.append("current_round = ?")
             params.append(int(current_round))
+
+        if format_name:
+            fields.append("format_name = ?")
+            params.append(format_name.strip())
+
+        if title:
+            fields.append("title = ?")
+            params.append(title.strip())
 
         if live_data_json is not None:
             fields.append("live_data_json = ?")
@@ -279,16 +341,25 @@ class TournamentRoomManager:
                     dorm = p_row['dorm']
                 if not kid and p_row['konami_id']:
                     kid = p_row['konami_id']
-        except sqlite3.OperationalError:
+        except Exception:
             pass
 
         now_str = datetime.now().isoformat()
-        cursor.execute("""
-            INSERT INTO room_checkins (
-                room_id, session_token, player_id, player_name, konami_id,
-                dorm, deck_archetype, payment_status, status, checked_in_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
-        """, (room['id'], token, player_id, clean_name, kid, dorm, deck_archetype.strip(), now_str))
+        try:
+            cursor.execute("""
+                INSERT INTO room_checkins (
+                    room_id, session_token, player_id, player_name, konami_id,
+                    dorm, deck_archetype, payment_status, status, checked_in_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
+            """, (room['id'], token, player_id, clean_name, kid, dorm, deck_archetype.strip(), now_str))
+        except Exception as insert_err:
+            # Si falla la restricción de integridad referencial o similar, intentar con player_id=None
+            cursor.execute("""
+                INSERT INTO room_checkins (
+                    room_id, session_token, player_id, player_name, konami_id,
+                    dorm, deck_archetype, payment_status, status, checked_in_at
+                ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
+            """, (room['id'], token, clean_name, kid, dorm, deck_archetype.strip(), now_str))
 
         if hasattr(cursor, 'connection') and cursor.connection:
             cursor.connection.commit()

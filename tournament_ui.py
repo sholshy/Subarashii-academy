@@ -236,7 +236,8 @@ class TournamentUI(ctk.CTkFrame):
                             current_round=self.manager.current_round,
                             pairings=matches_data,
                             standings=standings_data,
-                            timer_info=timer_info
+                            timer_info=timer_info,
+                            format_name=getattr(self.manager, 'format_name', 'EDISON')
                         )
                     except Exception as err:
                         print("[TournamentUI] Error syncing to cloud hosting:", err)
@@ -438,7 +439,8 @@ class TournamentUI(ctk.CTkFrame):
                         pairings=[],
                         standings=[],
                         timer_info={},
-                        status="LOBBY"
+                        status="LOBBY",
+                        format_name=fmt
                     )
                 except Exception as err:
                     print("[TournamentUI] Error syncing lobby to cloud:", err)
