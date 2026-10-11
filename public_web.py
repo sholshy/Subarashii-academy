@@ -288,6 +288,21 @@ def profile(slug):
     }
     dorm_meta = dorms_meta.get(player.get("dorm"), dorms_meta["Estudiante de Intercambio"])
 
+    # Generar QR dinámico en base64 para la credencial digital
+    import qrcode, io, base64
+    qr_profile_url = f"https://subarashii-academy.onrender.com/torneo/{player['slug']}"
+    qr_data_uri = ""
+    try:
+        qr = qrcode.QRCode(box_size=4, border=1)
+        qr.add_data(qr_profile_url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        qr_data_uri = f"data:image/png;base64,{base64.b64encode(buf.getvalue()).decode()}"
+    except Exception as e_qr:
+        print("[public_web] Error generating profile QR:", e_qr)
+
     return render_template('profile.html', 
                            player=player, 
                            achievements=achievements,
@@ -296,7 +311,9 @@ def profile(slug):
                            formats=formats,
                            tournaments=tournaments,
                            explanation=explanation,
-                           dorm_meta=dorm_meta)
+                           dorm_meta=dorm_meta,
+                           qr_data_uri=qr_data_uri,
+                           qr_profile_url=qr_profile_url)
 
 @app.route('/temporadas')
 def seasons():

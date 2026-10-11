@@ -78,8 +78,18 @@
                 </div>
             </div>
             <div class="cred-footer">
-                <div class="qr-placeholder">QR</div>
-                <div class="cred-url">duelorapido.cl/torneo/{{ player.slug }}</div>
+                <div class="qr-box">
+                    {% if qr_data_uri %}
+                    <img src="{{ qr_data_uri }}" alt="QR Perfil" class="cred-qr-img">
+                    {% else %}
+                    <div class="qr-placeholder">QR</div>
+                    {% endif %}
+                </div>
+                <div class="cred-url">
+                    <a href="{{ qr_profile_url }}" target="_blank" style="color: inherit; text-decoration: none;">
+                        subarashii-academy.onrender.com/torneo/{{ player.slug }}
+                    </a>
+                </div>
             </div>
         </div>
         <div style="text-align:center; margin-top:1rem;">

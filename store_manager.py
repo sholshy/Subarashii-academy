@@ -91,12 +91,9 @@ class StoreManager:
                     data = json.load(f)
                 
                 ui_data = data.get("ui", {})
-                file_store = ui_data.get("store_name")
-                
-                if not file_store:
-                    file_store = ui_data.get("store") or self.get_active_store()
-                    
-                if file_store != store_name: continue
+                file_store = ui_data.get("store_name") or ui_data.get("store") or self.get_active_store()
+                if file_store and store_name and str(file_store).strip().lower() != str(store_name).strip().lower():
+                    continue
                 
                 stats['total_tournaments'] += 1
                 fmt = ui_data.get("format") or data.get("manager", {}).get("format_name") or "GOAT"
@@ -176,7 +173,8 @@ class StoreManager:
                 
                 ui_data = data.get("ui", {})
                 file_store = ui_data.get("store_name") or ui_data.get("store") or self.get_active_store()
-                if file_store != store_name: continue
+                if file_store and store_name and str(file_store).strip().lower() != str(store_name).strip().lower():
+                    continue
                 
                 date_str = ui_data.get("date", "Desconocido")
                 fmt = ui_data.get("format") or data.get("manager", {}).get("format_name") or "GOAT"
@@ -224,7 +222,8 @@ class StoreManager:
                 
                 ui_data = data.get("ui", {})
                 file_store = ui_data.get("store_name") or ui_data.get("store") or self.get_active_store()
-                if file_store != store_name: continue
+                if file_store and store_name and str(file_store).strip().lower() != str(store_name).strip().lower():
+                    continue
                 
                 date_str = ui_data.get("date", "Desconocido")
                 fmt = ui_data.get("format") or data.get("manager", {}).get("format_name") or "GOAT"

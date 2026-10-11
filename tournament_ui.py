@@ -505,14 +505,16 @@ class TournamentUI(ctk.CTkFrame):
 
         def _do_push():
             try:
-                snapshots_dir = os.path.join("data", "snapshots")
+                from academy.sync_manager import SyncManager
+                sm = SyncManager()
+                snapshots_dir = sm.snapshots_dir
                 snap_path = None
                 if version:
                     candidate = os.path.join(snapshots_dir, f"snapshot_v{version}.json")
                     if os.path.exists(candidate):
                         snap_path = candidate
                 if not snap_path:
-                    manifest_path = os.path.join(snapshots_dir, "manifest.json")
+                    manifest_path = getattr(sm, 'manifest_path', os.path.join(sm.base_dir, "manifest.json"))
                     if os.path.exists(manifest_path):
                         with open(manifest_path, "r", encoding="utf-8") as mf:
                             mdata = json.load(mf)
@@ -529,6 +531,73 @@ class TournamentUI(ctk.CTkFrame):
                 print(f"[TournamentUI] Error pushing snapshot to cloud: {ex}")
 
         threading.Thread(target=_do_push, daemon=True).start()
+
+    def sync_all_history_to_cloud(self, notify=True):
+        """
+        Sincroniza todos los torneos jugados offline:
+        1. Migra cualquier archivo de torneo pendiente en data/history/ a SQLite.
+        2. Procesa torneos pendientes en AcademyEngine.
+        3. Genera un nuevo snapshot completo oficial con SyncManager.
+        4. Sube el snapshot a Render mediante RemoteSyncClient.
+        """
+        if not getattr(self, 'remote_sync', None) or not self.remote_sync.enabled:
+            if notify:
+                messagebox.showwarning("Aviso", "La sincronización con la nube está desactivada.")
+            return
+
+        def _worker():
+            try:
+                from migrate_history import migrate_history
+                from database import get_connection
+                from academy.academy_engine import AcademyEngine
+                from academy.sync_manager import SyncManager
+                import sqlite3
+
+                # Migrar archivos en data/history
+                migrate_history()
+
+                conn = get_connection()
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Asegurar que todos los torneos estén procesados en AcademyEngine
+                cursor.execute("SELECT id FROM tournaments ORDER BY id ASC")
+                all_tournaments = cursor.fetchall()
+                ae = AcademyEngine()
+                for t in all_tournaments:
+                    try:
+                        ae.process_tournament(cursor, t['id'])
+                    except Exception:
+                        pass
+                conn.commit()
+
+                # Generar Snapshot
+                sm = SyncManager()
+                new_ver = sm.generate_snapshot_and_manifest(cursor)
+                conn.close()
+                sm.publish()
+
+                # Subir snapshot a Render
+                snap_path = os.path.join(sm.snapshots_dir, f"snapshot_v{new_ver}.json")
+                if os.path.exists(snap_path):
+                    with open(snap_path, "r", encoding="utf-8") as sf:
+                        snap_data = json.load(sf)
+                    ok, msg = self.remote_sync.sync_full_snapshot(snap_data, filename=os.path.basename(snap_path))
+                    if ok:
+                        if notify:
+                            self.after(0, lambda: messagebox.showinfo(
+                                "Sincronización Exitosa",
+                                f"¡Todos los torneos locales y el ranking oficial han sido sincronizados y publicados en la web con éxito!\nVersión: v{new_ver}"
+                            ))
+                    else:
+                        if notify:
+                            self.after(0, lambda: messagebox.showwarning("Aviso", f"Error al subir snapshot a Render:\n{msg}"))
+            except Exception as ex:
+                print(f"[TournamentUI] Error syncing offline history: {ex}")
+                if notify:
+                    self.after(0, lambda: messagebox.showerror("Error", f"Ocurrió un error al sincronizar con la web:\n{ex}"))
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def check_room_match_reports(self):
         """
@@ -691,12 +760,27 @@ class TournamentUI(ctk.CTkFrame):
             messagebox.showinfo("Configuración Guardada", "La conexión con el hosting ha sido guardada correctamente.", parent=win)
             win.destroy()
 
+        # Sección de Sincronización de Torneos Offline
+        offline_box = ctk.CTkFrame(win, fg_color="#1e293b", corner_radius=10)
+        offline_box.pack(fill="x", padx=24, pady=(2, 10))
+
+        ctk.CTkLabel(offline_box, text="🔄 Torneos jugados offline:", font=UI_FONT_SMALL, text_color="#cbd5e1").pack(side="left", padx=12, pady=8)
+        ctk.CTkButton(
+            offline_box,
+            text="☁️ Sincronizar Historial y Ranking",
+            command=lambda: self.sync_all_history_to_cloud(notify=True),
+            font=UI_FONT_SMALL,
+            width=210,
+            fg_color="#8b5cf6",
+            hover_color="#7c3aed"
+        ).pack(side="right", padx=12, pady=6)
+
         btn_box = ctk.CTkFrame(win, fg_color="transparent")
         btn_box.pack(pady=10)
 
         ctk.CTkButton(btn_box, text="⚡ Probar Conexión", command=do_test, font=UI_FONT_SMALL, width=140, fg_color="#3b82f6", hover_color="#2563eb").pack(side="left", padx=8)
         ctk.CTkButton(btn_box, text="💾 Guardar Cambios", command=do_save, font=UI_FONT_SMALL, width=140, fg_color="#10b981", hover_color="#059669", text_color="#0f172a").pack(side="left", padx=8)
-        ctk.CTkButton(btn_box, text="Cancelar", command=win.destroy, font=UI_FONT_SMALL, width=90, fg_color="#334155", hover_color="#475569").pack(side="left", padx=8)
+        ctk.CTkButton(btn_box, text="Cerrar", command=win.destroy, font=UI_FONT_SMALL, width=90, fg_color="#334155", hover_color="#475569").pack(side="left", padx=8)
 
 
     def open_qr_checkin_window(self):
@@ -791,16 +875,14 @@ class TournamentUI(ctk.CTkFrame):
         tree_f = ctk.CTkFrame(right_f, fg_color="transparent")
         tree_f.pack(fill="both", expand=True, padx=15, pady=(0, 10))
 
-        cols = ("name", "dorm", "deck", "time")
+        cols = ("name", "dorm", "time")
         tree = ttk.Treeview(tree_f, columns=cols, show="headings", height=8, selectmode="extended")
         tree.heading("name", text="Nombre")
         tree.heading("dorm", text="Casa / Dorm")
-        tree.heading("deck", text="Mazo")
         tree.heading("time", text="Hora Check-in")
-        tree.column("name", width=140, anchor="w")
-        tree.column("dorm", width=110, anchor="center")
-        tree.column("deck", width=110, anchor="w")
-        tree.column("time", width=80, anchor="center")
+        tree.column("name", width=180, anchor="w")
+        tree.column("dorm", width=140, anchor="center")
+        tree.column("time", width=100, anchor="center")
         tree.pack(side="left", fill="both", expand=True)
 
         sc = ttk.Scrollbar(tree_f, orient="vertical", command=tree.yview)
@@ -849,7 +931,6 @@ class TournamentUI(ctk.CTkFrame):
                     tree.insert("", "end", values=(
                         p['player_name'],
                         p.get('dorm', 'Intercambio'),
-                        p.get('deck_archetype') or '-',
                         t_str or '-'
                     ))
             except Exception:

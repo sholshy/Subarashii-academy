@@ -28,7 +28,7 @@ class StoreUI(ctk.CTkFrame):
         title = ctk.CTkLabel(header_frame, text="Gestor de Tiendas", font=UI_FONT_BIG, text_color="#60a5fa")
         title.place(relx=0.5, rely=0.5, anchor="center")
         
-        self.tabview = ctk.CTkTabview(self)
+        self.tabview = ctk.CTkTabview(self, command=self.on_tab_changed)
         self.tabview.pack(fill="both", expand=True, padx=20, pady=20)
         
         self.tab_manage = self.tabview.add("Gestión de Tiendas")
@@ -39,6 +39,14 @@ class StoreUI(ctk.CTkFrame):
         self.setup_stats_tab()
         self.setup_history_tab()
         self.refresh_list()
+
+    def on_tab_changed(self):
+        curr = self.tabview.get()
+        if curr == "Analíticas":
+            self.update_stats()
+        elif curr == "Historial de Torneos":
+            if hasattr(self, 'reload_history_list'):
+                self.reload_history_list()
 
     def setup_manage_tab(self):
         content_frame = self.tab_manage
@@ -488,7 +496,9 @@ class StoreUI(ctk.CTkFrame):
         header_frame = ctk.CTkFrame(list_frame, fg_color="transparent")
         header_frame.pack(fill="x", pady=10)
         ctk.CTkLabel(header_frame, text="Torneos Guardados", font=UI_FONT_BIG, text_color="#60a5fa").pack(side="left", padx=10)
-        ctk.CTkButton(header_frame, text="📊 Estadísticas", command=lambda: self.show_history_metrics(history_dir), font=UI_FONT_SMALL, width=100, fg_color="#3b82f6").pack(side="right", padx=10)
+        ctk.CTkButton(header_frame, text="📊 Estadísticas", command=lambda: self.show_history_metrics(history_dir), font=UI_FONT_SMALL, width=100, fg_color="#3b82f6").pack(side="right", padx=(4, 10))
+        ctk.CTkButton(header_frame, text="🔄 Recargar", command=lambda: self.reload_history_list(), font=UI_FONT_SMALL, width=75, fg_color="#334155", hover_color="#475569").pack(side="right", padx=4)
+        ctk.CTkButton(header_frame, text="☁️ Sincronizar Web", command=self.sync_history_to_cloud, font=UI_FONT_SMALL, width=130, fg_color="#8b5cf6", hover_color="#7c3aed").pack(side="right", padx=4)
 
         history_listbox = tk.Listbox(list_frame, font=UI_FONT_SMALL, bg="#1e293b", fg="white", selectbackground="#3b82f6", relief="flat", borderwidth=0, highlightthickness=0)
         history_listbox.pack(fill="both", expand=True, padx=10, pady=10)
@@ -511,8 +521,10 @@ class StoreUI(ctk.CTkFrame):
                         history_listbox.insert(tk.END, f"{saved_at} - {format_name}")
                 except:
                     pass
+            self.tournaments_data = loaded_tournaments
             return loaded_tournaments
             
+        self.reload_history_list = load_list
         self.tournaments_data = load_list()
         
         def on_select(event):
@@ -737,3 +749,66 @@ class StoreUI(ctk.CTkFrame):
             
         filter_var.trace_add("write", update_metrics)
         update_metrics()
+
+    def sync_history_to_cloud(self):
+        """Sincroniza todos los torneos del historial local con la base de datos y la nube de Render."""
+        from remote_sync_client import RemoteSyncClient
+        rsc = RemoteSyncClient()
+        if not rsc.enabled:
+            import custom_alerts as messagebox
+            messagebox.showwarning("Aviso", "La sincronización con la nube está desactivada.")
+            return
+
+        def _worker():
+            try:
+                import os, json, sqlite3
+                import custom_alerts as messagebox
+                from migrate_history import migrate_history
+                from database import get_connection
+                from academy.academy_engine import AcademyEngine
+                from academy.sync_manager import SyncManager
+
+                # Migrar archivos en data/history a SQLite
+                migrate_history()
+
+                conn = get_connection()
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                cursor.execute("SELECT id FROM tournaments ORDER BY id ASC")
+                all_tournaments = cursor.fetchall()
+                ae = AcademyEngine()
+                for t in all_tournaments:
+                    try:
+                        ae.process_tournament(cursor, t['id'])
+                    except Exception:
+                        pass
+                conn.commit()
+
+                sm = SyncManager()
+                new_ver = sm.generate_snapshot_and_manifest(cursor)
+                conn.close()
+                sm.publish()
+
+                snap_path = os.path.join(sm.snapshots_dir, f"snapshot_v{new_ver}.json")
+                if os.path.exists(snap_path):
+                    with open(snap_path, "r", encoding="utf-8") as sf:
+                        snap_data = json.load(sf)
+                    ok, msg = rsc.sync_full_snapshot(snap_data, filename=os.path.basename(snap_path))
+                    if ok:
+                        self.after(0, lambda: messagebox.showinfo(
+                            "Sincronización Exitosa",
+                            f"¡Todos los torneos locales y el ranking oficial han sido sincronizados y publicados en la web con éxito!\nVersión: v{new_ver}"
+                        ))
+                    else:
+                        self.after(0, lambda: messagebox.showwarning("Aviso", f"Error al subir a Render:\n{msg}"))
+                else:
+                    self.after(0, lambda: messagebox.showwarning("Aviso", f"No se encontró el snapshot generado en:\n{snap_path}"))
+                if hasattr(self, 'reload_history_list'):
+                    self.after(0, self.reload_history_list)
+                self.after(0, self.update_stats)
+            except Exception as ex:
+                self.after(0, lambda: messagebox.showerror("Error", f"Ocurrió un error al sincronizar:\n{ex}"))
+
+        import threading
+        threading.Thread(target=_worker, daemon=True).start()
