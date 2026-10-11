@@ -655,6 +655,94 @@ footer { text-align: center; padding: 2rem; border-top: 1px solid #334155; color
         box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
     }
     
+    /* Profile details full width en móviles */
+    .profile-details {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    /* Duelos Table y Tablas en Móviles */
+    .table-container {
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border: 1px solid #334155;
+    }
+    .duels-table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .duels-table {
+        min-width: 320px;
+        width: 100%;
+    }
+    .duels-table th, 
+    .duels-table td {
+        padding: 0.55rem 0.4rem;
+        font-size: 0.78rem;
+    }
+    .col-desktop {
+        display: none !important;
+    }
+    .th-date, .td-date {
+        white-space: nowrap;
+        font-size: 0.72rem;
+        color: #94a3b8;
+        width: 48px;
+    }
+    .td-opp {
+        max-width: 110px;
+        word-break: break-word;
+        line-height: 1.2;
+    }
+    .td-opp strong {
+        font-size: 0.82rem;
+        color: #fff;
+        display: block;
+    }
+    .td-opp .opp-elo {
+        font-size: 0.68rem;
+        color: #94a3b8;
+    }
+    .res-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .res-badge.win {
+        background: rgba(34, 197, 94, 0.2);
+        color: #4ade80;
+        border: 1px solid #22c55e;
+    }
+    .res-badge.loss {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid #ef4444;
+    }
+    .res-badge.draw {
+        background: rgba(245, 158, 11, 0.2);
+        color: #fbbf24;
+        border: 1px solid #f59e0b;
+    }
+    .td-delta, .td-elo {
+        text-align: right;
+        white-space: nowrap;
+        font-size: 0.8rem;
+    }
+
+    /* Rivalidades y listas explicativas */
+    .explain-section ul {
+        padding-left: 1.1rem;
+        font-size: 0.85rem;
+    }
+    .explain-section li {
+        margin-bottom: 0.4rem;
+        word-break: break-word;
+    }
+    
     /* Ranking tables */
     .ranking-table th, 
     .ranking-table td {

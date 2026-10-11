@@ -160,21 +160,40 @@
             {% endif %}
 
             <h3>Duelos ({{ explanation.duels_total }})</h3>
-            <div class="table-container">
-                <table class="ranking-table" style="font-size:0.85rem;">
+            <div class="table-container duels-table-wrap">
+                <table class="ranking-table duels-table" style="font-size:0.85rem;">
                     <thead>
-                        <tr><th>Fecha</th><th>Rival</th><th>Resultado</th><th>Prob. de ganar</th><th>K</th><th>Cambio</th><th>Rating</th></tr>
+                        <tr>
+                            <th class="th-date">Fecha</th>
+                            <th class="th-opp">Rival</th>
+                            <th class="th-res">Resultado</th>
+                            <th class="th-prob col-desktop">Prob.</th>
+                            <th class="th-k col-desktop">K</th>
+                            <th class="th-delta">Cambio</th>
+                            <th class="th-elo">Rating</th>
+                        </tr>
                     </thead>
                     <tbody>
                         {% for d in explanation.duels|reverse %}
                         <tr>
-                            <td>{{ d.date[:10] }}</td>
-                            <td>{{ d.opponent or '—' }}{% if d.opponent_rating %} ({{ d.opponent_rating }}){% endif %}</td>
-                            <td>{{ d.result }}</td>
-                            <td>{% if d.expected_win_pct is not none %}{{ d.expected_win_pct }}%{% else %}—{% endif %}</td>
-                            <td>{{ d.k_factor if d.k_factor is not none else '—' }}</td>
-                            <td style="color: {{ '#22c55e' if d.rating_change > 0 else '#ef4444' if d.rating_change < 0 else 'inherit' }};">{{ '%+d'|format(d.rating_change) }}</td>
-                            <td>{{ d.rating_after }}</td>
+                            <td class="td-date">{{ d.date[8:10] }}/{{ d.date[5:7] }}</td>
+                            <td class="td-opp">
+                                <strong>{{ d.opponent or '—' }}</strong>
+                                {% if d.opponent_rating %}<small class="opp-elo">({{ d.opponent_rating }})</small>{% endif %}
+                            </td>
+                            <td class="td-res">
+                                <span class="res-badge {{ 'win' if d.result == 'Victoria' else 'loss' if d.result == 'Derrota' else 'draw' }}">
+                                    {{ 'Victoria' if d.result == 'Victoria' else 'Derrota' if d.result == 'Derrota' else d.result }}
+                                </span>
+                            </td>
+                            <td class="col-desktop">{% if d.expected_win_pct is not none %}{{ d.expected_win_pct }}%{% else %}—{% endif %}</td>
+                            <td class="col-desktop">{{ d.k_factor if d.k_factor is not none else '—' }}</td>
+                            <td class="td-delta" style="font-weight: 800; font-family: 'Orbitron', monospace; color: {{ '#22c55e' if d.rating_change > 0 else '#ef4444' if d.rating_change < 0 else '#94a3b8' }};">
+                                {{ '%+d'|format(d.rating_change) }}
+                            </td>
+                            <td class="td-elo" style="font-weight: 800; font-family: 'Orbitron', monospace; color: #fff;">
+                                {{ d.rating_after }}
+                            </td>
                         </tr>
                         {% else %}
                         <tr><td colspan="7" style="text-align:center;">Sin duelos registrados.</td></tr>
