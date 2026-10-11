@@ -41,12 +41,15 @@ htmlcov/
 # Outputs and Generated Graphics
 output/
 whatsapp_print_automation/session/
-*.png
-*.jpg
-*.jpeg
-*.gif
-# Except static assets
+/*.png
+/*.jpg
+/*.jpeg
+/*.gif
+
+# Whitelist static directory and all assets
 !static/
+!static/**
+!static/**/*
 !body.png
 !background.png
 !face_*.png
