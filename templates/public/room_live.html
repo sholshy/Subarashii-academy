@@ -611,6 +611,134 @@
     width: 200px;
     height: 200px;
 }
+
+/* SUBARASHII RESULTADOS DEL TORNEO (WHATSAPP POSTER STYLE) */
+.tournament-results-poster {
+    background: #090d16;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 1.5rem 1.8rem;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7);
+    margin-bottom: 2rem;
+    font-family: 'Inter', sans-serif;
+}
+.poster-header {
+    margin-bottom: 1.25rem;
+    border-bottom: 2.5px solid #38bdf8;
+    padding-bottom: 0.75rem;
+}
+.poster-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.65rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: 2.5px;
+    margin: 0 0 6px 0;
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+}
+.poster-subtitle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.88rem;
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+.poster-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 9px;
+}
+.poster-table th {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 6px 14px;
+    border: none;
+    text-align: left;
+}
+.poster-table th.center { text-align: center; }
+.poster-row {
+    border-radius: 6px;
+    transition: transform 0.15s;
+}
+.poster-row td {
+    padding: 14px 14px;
+    border: none;
+    vertical-align: middle;
+}
+.poster-row.rank-1 {
+    background: linear-gradient(90deg, rgba(161, 98, 7, 0.55) 0%, rgba(113, 63, 18, 0.4) 100%);
+    border-left: 9px solid #eab308;
+    box-shadow: 0 4px 18px rgba(234, 179, 8, 0.22);
+}
+.poster-row.rank-2 {
+    background: linear-gradient(90deg, rgba(30, 58, 138, 0.5) 0%, rgba(15, 23, 42, 0.6) 100%);
+    border-left: 9px solid #38bdf8;
+    box-shadow: 0 4px 18px rgba(56, 189, 248, 0.18);
+}
+.poster-row.rank-3 {
+    background: linear-gradient(90deg, rgba(154, 52, 18, 0.5) 0%, rgba(67, 20, 7, 0.4) 100%);
+    border-left: 9px solid #ea580c;
+    box-shadow: 0 4px 18px rgba(234, 88, 12, 0.18);
+}
+.poster-row.rank-other {
+    background: rgba(15, 23, 42, 0.7);
+    border-left: 9px solid #475569;
+}
+.poster-rk {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+.poster-row.rank-1 .poster-rk { color: #facc15; }
+.poster-row.rank-2 .poster-rk { color: #38bdf8; }
+.poster-row.rank-3 .poster-rk { color: #fb923c; }
+.poster-row.rank-other .poster-rk { color: #94a3b8; }
+.poster-name {
+    font-family: 'Orbitron', 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+.poster-pts {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.3rem;
+    font-weight: 900;
+    text-align: center;
+}
+.poster-row.rank-1 .poster-pts { color: #facc15; }
+.poster-row.rank-2 .poster-pts { color: #38bdf8; }
+.poster-row.rank-3 .poster-pts { color: #fb923c; }
+.poster-row.rank-other .poster-pts { color: #cbd5e1; }
+.poster-metric {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    text-align: center;
+}
+.poster-note {
+    font-size: 0.75rem;
+    color: #f59e0b;
+    font-style: italic;
+    white-space: nowrap;
+}
+.poster-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 1.25rem;
+    padding-top: 0.75rem;
+    text-align: center;
+    font-size: 0.78rem;
+    color: #64748b;
+    font-family: 'Inter', sans-serif;
+}
 </style>
 {% endblock %}
 
@@ -713,27 +841,12 @@
         </div>
     </div>
 
-    <!-- CONTENIDO 3: STANDINGS EN VIVO -->
+    <!-- CONTENIDO 3: STANDINGS EN VIVO & RESULTADOS -->
     <div id="contentStandings" style="display: none;">
-        <div class="table-container">
-            <table class="ranking-table" style="font-size: 0.95rem;">
-                <thead>
-                    <tr>
-                        <th style="width: 50px;">Pos</th>
-                        <th>Duelista</th>
-                        <th style="text-align: center;">Pts</th>
-                        <th style="text-align: center;">OMW%</th>
-                        <th style="text-align: center;">Duelos</th>
-                    </tr>
-                </thead>
-                <tbody id="standingsTableBody">
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">
-                            Los standings estarán disponibles al iniciar la Ronda 1.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div id="standingsContainer">
+            <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 10px; border: 1px solid #334155;">
+                <p style="color: #94a3b8; font-size: 1.05rem; margin: 0;">Los standings oficiales estarán disponibles al iniciar la primera ronda.</p>
+            </div>
         </div>
     </div>
 
@@ -744,7 +857,7 @@
             <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <strong style="color: #fff; display: block; font-size: 0.95rem;">{{ p.player_name }}</strong>
-                    <small style="color: #94a3b8; font-size: 0.75rem;">{{ p.deck_archetype or 'Duelista Oficial' }}</small>
+                    <small style="color: #94a3b8; font-size: 0.75rem;">{{ ('K-ID: ' + p.konami_id) if p.konami_id else 'Duelista Oficial' }}</small>
                 </div>
                 <span class="badge dorm-{{ p.dorm.lower().replace(' ', '-') }}" style="font-size: 0.7rem; font-weight: 800;">
                     {{ p.dorm }}
@@ -1063,6 +1176,12 @@ function renderRoomData(data) {
     // Sincronizar Reloj de Ronda
     syncTimerData(live.time_left, live.timer_running, data.status);
 
+    // Auto-activar pestaña de Standings al finalizar el torneo
+    if (data.status === 'FINISHED' && !window._switchedToStandings) {
+        window._switchedToStandings = true;
+        switchRoomTab('standings');
+    }
+
     // Renderizar sección "Mi Match" & Fase 2
     renderMyMatch(data);
 
@@ -1070,7 +1189,7 @@ function renderRoomData(data) {
     renderPairings(live.matches || []);
 
     // Renderizar Standings
-    renderStandings(live.standings || []);
+    renderStandings(live.standings || [], data.format_name, data.status);
 
     // Renderizar Lista de Jugadores
     renderPlayersList(data.players || []);
@@ -1164,6 +1283,48 @@ function renderMyMatch(data) {
         return;
     }
 
+    // SI EL TORNEO FINALIZÓ: HERO BANNER DE PODIO Y FELICITACIÓN
+    if (data.status === 'FINISHED') {
+        const standings = live.standings || [];
+        const myStanding = standings.find(s => {
+            const sn = (s.name || '').trim().toLowerCase();
+            return sn === myName || (myName && sn.includes(myName)) || (sn && myName.includes(sn));
+        });
+        let rankBadge = '🏆';
+        let rankMsg = '<strong style="color: #cbd5e1; font-size: 1.15rem;">Torneo Oficial Finalizado</strong>';
+        if (myStanding) {
+            if (myStanding.rank === 1) {
+                rankBadge = '🥇';
+                rankMsg = '<strong style="color: #facc15; font-size: 1.3rem;">¡FELICITACIONES, ERES EL CAMPEÓN DEL TORNEO!</strong>';
+            } else if (myStanding.rank === 2) {
+                rankBadge = '🥈';
+                rankMsg = '<strong style="color: #38bdf8; font-size: 1.3rem;">¡FELICITACIONES, SEGUNDO LUGAR (SUB-CAMPEÓN)!</strong>';
+            } else if (myStanding.rank === 3) {
+                rankBadge = '🥉';
+                rankMsg = '<strong style="color: #fb923c; font-size: 1.3rem;">¡GRAN DESEMPEÑO, TERCER LUGAR DEL TORNEO!</strong>';
+            } else {
+                rankBadge = '🎖️';
+                rankMsg = `<strong style="color: #cbd5e1; font-size: 1.15rem;">¡Gracias por participar! Puesto Final: #${myStanding.rank} (${myStanding.points} Pts)</strong>`;
+            }
+        }
+
+        mySection.innerHTML = `
+            <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98)); border: 2px solid #fbbf24; border-radius: 14px; padding: 1.5rem; text-align: center; margin-bottom: 2rem; box-shadow: 0 0 30px rgba(251, 191, 36, 0.25);">
+                <div style="font-size: 2.8rem; margin-bottom: 6px;">${rankBadge}</div>
+                <div>${rankMsg}</div>
+                <p style="color: #94a3b8; font-size: 0.88rem; margin: 8px 0 16px;">
+                    El torneo ha concluido oficialmente. Revisa el podio y la tabla de clasificación oficial a continuación:
+                </p>
+                <button onclick="switchRoomTab('standings')" class="btn btn-primary" style="font-weight: 800; font-size: 0.88rem; padding: 10px 24px;">
+                    🏆 Ver Resultados y Podio Final ➜
+                </button>
+            </div>
+        `;
+        mySection.style.display = 'block';
+        currentMyMatch = null;
+        return;
+    }
+
     if (data.status === 'LOBBY') {
         mySection.innerHTML = `
             <div class="lobby-waiting-banner">
@@ -1188,14 +1349,16 @@ function renderMyMatch(data) {
     let isP1 = true;
 
     for (let m of matches) {
-        if (m.p1 && m.p1.toLowerCase() === myName) {
+        const p1Clean = (m.p1 || '').trim().toLowerCase();
+        const p2Clean = (m.p2 || '').trim().toLowerCase();
+        if (p1Clean === myName || (myName && p1Clean.includes(myName)) || (p1Clean && myName.includes(p1Clean))) {
             myMatch = m;
             opponentName = m.p2 || "BYE";
             opponentSlug = m.p2_slug || null;
             opponentDorm = m.p2_dorm || "Academia";
             isP1 = true;
             break;
-        } else if (m.p2 && m.p2.toLowerCase() === myName) {
+        } else if (p2Clean === myName || (myName && p2Clean.includes(myName)) || (p2Clean && myName.includes(p2Clean))) {
             myMatch = m;
             opponentName = m.p1 || "BYE";
             opponentSlug = m.p1_slug || null;
@@ -1206,7 +1369,20 @@ function renderMyMatch(data) {
     }
 
     if (!myMatch) {
-        mySection.style.display = 'none';
+        mySection.innerHTML = `
+            <div style="background: rgba(15, 23, 42, 0.85); border: 1.5px solid #38bdf8; border-radius: 12px; padding: 1.25rem; text-align: center; margin-bottom: 1.5rem;">
+                <div style="font-size: 1.05rem; font-weight: 800; color: #38bdf8; margin-bottom: 4px;">
+                    Estás dentro de la sala (${savedUserData.name})
+                </div>
+                <p style="color: #cbd5e1; font-size: 0.85rem; margin: 0 0 12px;">
+                    Ronda #${data.current_round} en curso. Si no figuras en las mesas asignadas arriba, consulta al organizador o puedes retirarte:
+                </p>
+                <button type="button" onclick="openDropModal()" style="background: transparent; border: 1px solid #ef4444; color: #f87171; font-size: 0.75rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer;" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='transparent'">
+                    🚪 Retirarme del Torneo (Drop)
+                </button>
+            </div>
+        `;
+        mySection.style.display = 'block';
         currentMyMatch = null;
         return;
     }
@@ -1468,7 +1644,8 @@ function goToDropStep2() {
 }
 
 function confirmDropPlayer() {
-    if (!savedUserData || !savedUserData.name || !savedUserData.session_token) {
+    const token = (savedUserData && (savedUserData.session_token || savedUserData.token)) || localStorage.getItem('duel_player_token');
+    if (!savedUserData || !savedUserData.name || !token) {
         alert("No se encontraron tus datos de sesión en este dispositivo.");
         return;
     }
@@ -1482,7 +1659,7 @@ function confirmDropPlayer() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             player_name: savedUserData.name,
-            session_token: savedUserData.session_token,
+            session_token: token,
             round_num: currentRoundNum
         })
     })
@@ -1820,26 +1997,87 @@ function renderPairings(matches) {
     container.innerHTML = html;
 }
 
-function renderStandings(standings) {
-    const tbody = document.getElementById('standingsTableBody');
+function renderStandings(standings, formatName, roomStatus) {
+    const container = document.getElementById('standingsContainer');
+    if (!container) return;
     if (!standings || standings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:2rem;">Los standings se calcularán al finalizar las partidas.</td></tr>`;
+        container.innerHTML = `
+            <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 10px; border: 1px solid #334155;">
+                <p style="color: #94a3b8; font-size: 1.05rem; margin: 0;">Los standings oficiales estarán disponibles al iniciar la primera ronda.</p>
+            </div>
+        `;
         return;
     }
 
-    let html = '';
+    const fmt = (formatName || 'EDISON').toUpperCase();
+    const isFin = (roomStatus === 'FINISHED');
+    const today = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-');
+
+    let rowsHtml = '';
     standings.forEach(s => {
-        html += `
-            <tr>
-                <td><strong style="color: #38bdf8; font-family: 'Orbitron';">#${s.rank}</strong></td>
-                <td><strong style="color: #fff;">${s.name}</strong></td>
-                <td style="text-align: center; font-family: 'Orbitron'; font-weight: 800; color: #fbbf24;">${s.points}</td>
-                <td style="text-align: center; color: #94a3b8;">${s.omw}</td>
-                <td style="text-align: center; color: #94a3b8;">${s.matches_played}</td>
+        let rankClass = 'rank-other';
+        if (s.rank === 1) rankClass = 'rank-1';
+        else if (s.rank === 2) rankClass = 'rank-2';
+        else if (s.rank === 3) rankClass = 'rank-3';
+
+        let omwVal = s.omw || '0.333';
+        let oomwVal = s.oomw || '0.333';
+        if (typeof omwVal === 'string' && omwVal.includes('%')) {
+            omwVal = (parseFloat(omwVal) / 100).toFixed(3);
+        } else if (!isNaN(parseFloat(omwVal))) {
+            omwVal = parseFloat(omwVal).toFixed(3);
+        }
+        if (typeof oomwVal === 'string' && oomwVal.includes('%')) {
+            oomwVal = (parseFloat(oomwVal) / 100).toFixed(3);
+        } else if (!isNaN(parseFloat(oomwVal))) {
+            oomwVal = parseFloat(oomwVal).toFixed(3);
+        }
+
+        rowsHtml += `
+            <tr class="poster-row ${rankClass}">
+                <td style="width: 55px;"><div class="poster-rk">#${s.rank}</div></td>
+                <td><div class="poster-name">${(s.name || '').toUpperCase()}</div></td>
+                <td class="poster-pts">${s.points}</td>
+                <td class="poster-metric">${omwVal}</td>
+                <td class="poster-metric">${oomwVal}</td>
+                <td class="poster-note">${s.note || ''}</td>
             </tr>
         `;
     });
-    tbody.innerHTML = html;
+
+    container.innerHTML = `
+        <div class="tournament-results-poster">
+            <div class="poster-header">
+                <h2 class="poster-title">RESULTADOS DEL TORNEO</h2>
+                <div class="poster-subtitle-row">
+                    <span>SUBARASHII - ${fmt} - ${isFin ? 'STANDING FINAL' : 'EN VIVO'}</span>
+                    <span>${today}</span>
+                </div>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="poster-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 55px;">RK</th>
+                            <th>JUGADOR</th>
+                            <th class="center" style="width: 75px;">PTS</th>
+                            <th class="center" style="width: 95px;">RIVALES</th>
+                            <th class="center" style="width: 100px;">2DO NIVEL</th>
+                            <th style="width: 150px;">NOTA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="poster-footer">
+                Rivales = rendimiento de oponentes | 2do nivel = rendimiento de oponentes de tus oponentes
+            </div>
+        </div>
+    `;
 }
 
 function renderPlayersList(players) {
@@ -1856,7 +2094,7 @@ function renderPlayersList(players) {
             <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <strong style="color: #fff; display: block; font-size: 0.95rem;">${p.player_name}</strong>
-                    <small style="color: #94a3b8; font-size: 0.75rem;">${p.deck_archetype || 'Duelista Oficial'}</small>
+                    <small style="color: #94a3b8; font-size: 0.75rem;">${p.konami_id ? 'K-ID: ' + p.konami_id : 'Duelista Oficial'}</small>
                 </div>
                 <span class="badge dorm-${dormClass}" style="font-size: 0.7rem; font-weight: 800;">
                     ${p.dorm}

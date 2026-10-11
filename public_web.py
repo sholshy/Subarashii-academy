@@ -525,9 +525,21 @@ def api_room_status(room_code):
     live_data = {}
     if room.get('live_data_json'):
         try:
-            live_data = json.loads(room['live_data_json'])
+            live_data = json.loads(room['live_data_json']) if isinstance(room['live_data_json'], str) else room['live_data_json']
         except Exception:
             live_data = {}
+
+    curr_round = room.get('current_round', 1)
+    try:
+        reports = trm.get_room_match_reports(room_code, round_num=curr_round)
+        rep_map = {r['table_num']: r for r in reports}
+        if 'matches' in live_data and isinstance(live_data['matches'], list):
+            for m in live_data['matches']:
+                t_num = m.get('table')
+                if t_num in rep_map:
+                    m['report'] = rep_map[t_num]
+    except Exception:
+        pass
             
     return jsonify({
         "success": True,

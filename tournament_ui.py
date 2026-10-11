@@ -216,14 +216,32 @@ class TournamentUI(ctk.CTkFrame):
                                 "is_bye": (m.p1 is None or m.p2 is None)
                             })
                         standings_data = []
-                        for rank, p in self.manager.get_ranked_standings():
-                            standings_data.append({
-                                "rank": rank,
-                                "name": p.name,
-                                "points": p.points,
-                                "omw": f"{getattr(p, '_omw', 0.33) * 100:.1f}%",
-                                "matches_played": p.matches_played
-                            })
+                        try:
+                            _std = self.manager.get_standings()
+                            _rkd = self.manager.get_ranked_standings()
+                            _nts = self.manager.get_tiebreaker_notes(_std)
+                            for rank, p in _rkd:
+                                note_txt = self.friendly_tiebreaker_note(_nts.get(p, "")) if hasattr(self, 'friendly_tiebreaker_note') else ""
+                                standings_data.append({
+                                    "rank": rank,
+                                    "name": p.name,
+                                    "points": p.points,
+                                    "omw": f"{getattr(p, '_omw', 0.3333):.3f}",
+                                    "oomw": f"{getattr(p, '_oomw', 0.3333):.3f}",
+                                    "note": note_txt,
+                                    "matches_played": p.matches_played
+                                })
+                        except Exception:
+                            for rank, p in self.manager.get_ranked_standings():
+                                standings_data.append({
+                                    "rank": rank,
+                                    "name": p.name,
+                                    "points": p.points,
+                                    "omw": f"{getattr(p, '_omw', 0.3333):.3f}",
+                                    "oomw": f"{getattr(p, '_oomw', 0.3333):.3f}",
+                                    "note": "",
+                                    "matches_played": p.matches_played
+                                })
                         timer_info = {
                             "time_left": getattr(self, 'time_left', 0),
                             "duration_secs": getattr(self, 'round_minutes', 50) * 60,
@@ -1645,6 +1663,7 @@ class TournamentUI(ctk.CTkFrame):
         self.show_round_view()
 
     def show_standings_view(self):
+        self.sync_active_room()
         if getattr(self, "current_view_frame", None):
             old = self.current_view_frame
             self.after(20, lambda o=old: o.destroy() if o.winfo_exists() else None)
@@ -2041,22 +2060,18 @@ class TournamentUI(ctk.CTkFrame):
                 ctk.CTkLabel(disp_f, text=f"🚨 ¡MESA EN DISPUTA! Llamaron al Juez ({table_rep['score_p1']}-{table_rep['score_p2']})",
                              font=UI_FONT_SMALL, text_color="#fca5a5").pack(side="left", padx=8)
 
-            # 2. Controles de reporte directo del Organizador (para celular descargado o sin batería)
+            # 2. Controles de reporte directo del Organizador (Opción B: 4 botones limpios y claros)
             btn_box = ctk.CTkFrame(res_frame, fg_color="transparent")
             btn_box.pack(fill="x")
 
-            ctk.CTkButton(btn_box, text=f"2-0 ({p1_name[:8]})", command=lambda m=match: self.organizer_report_match(m, "2-0"),
-                          font=UI_FONT_SMALL, width=85, height=30, fg_color="#166534", hover_color="#22c55e").pack(side="left", padx=2)
-            ctk.CTkButton(btn_box, text=f"2-1 ({p1_name[:8]})", command=lambda m=match: self.organizer_report_match(m, "2-1"),
-                          font=UI_FONT_SMALL, width=85, height=30, fg_color="#15803d", hover_color="#22c55e").pack(side="left", padx=2)
-            ctk.CTkButton(btn_box, text=f"1-2 ({p2_name[:8]})", command=lambda m=match: self.organizer_report_match(m, "1-2"),
-                          font=UI_FONT_SMALL, width=85, height=30, fg_color="#991b1b", hover_color="#ef4444").pack(side="left", padx=2)
-            ctk.CTkButton(btn_box, text=f"0-2 ({p2_name[:8]})", command=lambda m=match: self.organizer_report_match(m, "0-2"),
-                          font=UI_FONT_SMALL, width=85, height=30, fg_color="#7f1d1d", hover_color="#ef4444").pack(side="left", padx=2)
-            ctk.CTkButton(btn_box, text="1-1 Empate", command=lambda m=match: self.organizer_report_match(m, "1-1"),
-                          font=UI_FONT_SMALL, width=80, height=30, fg_color="#854d0e", hover_color="#eab308").pack(side="left", padx=2)
+            ctk.CTkButton(btn_box, text=f"Gana {p1_name}", command=lambda m=match: self.organizer_report_match(m, "2-0"),
+                          font=UI_FONT_SMALL, width=125, height=32, fg_color="#166534", hover_color="#22c55e").pack(side="left", padx=3)
+            ctk.CTkButton(btn_box, text=f"Gana {p2_name}", command=lambda m=match: self.organizer_report_match(m, "0-2"),
+                          font=UI_FONT_SMALL, width=125, height=32, fg_color="#991b1b", hover_color="#ef4444").pack(side="left", padx=3)
+            ctk.CTkButton(btn_box, text="Empate", command=lambda m=match: self.organizer_report_match(m, "1-1"),
+                          font=UI_FONT_SMALL, width=80, height=32, fg_color="#854d0e", hover_color="#eab308").pack(side="left", padx=3)
             ctk.CTkButton(btn_box, text="D-Loss", command=lambda m=match: self.organizer_report_match(m, "DOUBLE_LOSS"),
-                          font=UI_FONT_SMALL, width=60, height=30, fg_color="#334155", hover_color="#475569").pack(side="left", padx=2)
+                          font=UI_FONT_SMALL, width=70, height=32, fg_color="#334155", hover_color="#475569").pack(side="left", padx=3)
             return
 
         result_text = "Ronda perdida por atraso" if match.result_text == "LATE_LOSS" else match.result_text
