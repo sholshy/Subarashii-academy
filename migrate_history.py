@@ -51,13 +51,13 @@ def migrate_history(db_path=None, specific_file=None):
         format_name = ui_data.get('format') or manager_data.get('format_name', 'GOAT')
         date_str = ui_data.get('date', '')
         
-        # Check if this tournament already exists based on date and format to avoid duplicates.
-        # This is basic, might need a better unique identifier in the future.
-        cursor.execute("SELECT id FROM tournaments WHERE date = ? AND format_name = ?", (date_str, format_name))
-        existing_tournament = cursor.fetchone()
-        if existing_tournament:
-            print(f"Tournament {filename} ({date_str} - {format_name}) might already be imported. Skipping.")
-            continue
+        # Check if this tournament already exists based on date and format to avoid duplicates (only in bulk migration).
+        if not specific_file:
+            cursor.execute("SELECT id FROM tournaments WHERE date = ? AND format_name = ?", (date_str, format_name))
+            existing_tournament = cursor.fetchone()
+            if existing_tournament:
+                print(f"Tournament {filename} ({date_str} - {format_name}) might already be imported. Skipping.")
+                continue
             
         print(f"Importing {filename}...")
         

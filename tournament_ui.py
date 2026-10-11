@@ -45,6 +45,11 @@ class TournamentUI(ctk.CTkFrame):
         self.players_db = {}
         self.current_scheduled_id = None
         self.active_room_code = None
+        self._setup_poll_active = False
+        self._setup_poll_job = None
+        self._tournament_already_published = False
+        self._last_saved_history_filename = None
+        self._current_saved_tournament_id = None
         self.date_var = tk.StringVar(value=datetime.now().strftime("%d-%m-%y"))
         self.load_db()
         
@@ -189,7 +194,7 @@ class TournamentUI(ctk.CTkFrame):
         except OSError as e:
             print("Error clearing tournament autosave:", e)
 
-    def sync_active_room(self):
+    def sync_active_room(self, status: str = None):
         if getattr(self, 'active_room_code', None):
             try:
                 from tournament_room_manager import TournamentRoomManager
@@ -251,6 +256,8 @@ class TournamentUI(ctk.CTkFrame):
                         status_val = "RUNNING" if getattr(self.manager, 'current_round', 0) > 0 else "LOBBY"
                         if getattr(self.manager, 'status', '') == "finished":
                             status_val = "FINISHED"
+                        if status:
+                            status_val = status
 
                         self.remote_sync.sync_room_state(
                             room_code=self.active_room_code,
@@ -265,6 +272,263 @@ class TournamentUI(ctk.CTkFrame):
                     except Exception as err:
                         print("[TournamentUI] Error syncing to cloud hosting:", err)
                 threading.Thread(target=_do_remote_sync, daemon=True).start()
+
+    def ensure_active_room(self):
+        """Asegura que exista una sala interactiva activa para este torneo."""
+        try:
+            from tournament_room_manager import TournamentRoomManager
+            trm = TournamentRoomManager()
+            fmt = self.format_var.get() if hasattr(self, 'format_var') else "GOAT"
+            date_str = self.date_var.get() if hasattr(self, 'date_var') else datetime.now().strftime("%d-%m-%y")
+            sched_id = getattr(self, 'current_scheduled_id', None)
+            title = f"Torneo {fmt} ({date_str})"
+            room = trm.create_or_get_room(title=title, format_name=fmt, scheduled_id=sched_id, room_code=getattr(self, 'active_room_code', None))
+            self.active_room_code = room['room_code']
+            return self.active_room_code
+        except Exception as e:
+            print("[TournamentUI] Error ensuring active room:", e)
+            return getattr(self, 'active_room_code', None)
+
+    def sync_room_players(self, notify_if_none=False):
+        """
+        Sincroniza los jugadores registrados en la sala (desde teléfonos o web)
+        hacia la base de datos local SQLite y la lista de inscritos del torneo.
+        """
+        try:
+            room_code = self.ensure_active_room()
+            if not room_code:
+                return 0
+
+            from tournament_room_manager import TournamentRoomManager
+            trm = TournamentRoomManager()
+
+            # 1. Si la sincronización en la nube está activa, consultar check-ins de Render
+            if getattr(self, 'remote_sync', None) and self.remote_sync.enabled:
+                try:
+                    ok, cloud_events = self.remote_sync.fetch_room_events(room_code)
+                    if ok and cloud_events and "players" in cloud_events:
+                        for cp in cloud_events["players"]:
+                            trm.register_player(
+                                room_code=room_code,
+                                player_name=cp.get("player_name", ""),
+                                konami_id=cp.get("konami_id", "") or "",
+                                deck_archetype=cp.get("deck_archetype", "") or "",
+                                session_token=cp.get("session_token", "") or ""
+                            )
+                except Exception as ex_cloud:
+                    print(f"[TournamentUI] Error fetching room events from cloud: {ex_cloud}")
+
+            # 2. Obtener lista completa de jugadores registrados en la sala local
+            room_players = trm.get_room_players(room_code)
+            if not room_players:
+                if notify_if_none:
+                    self.after(0, lambda: messagebox.showinfo("Información", "Aún no hay jugadores registrados en la sala interactiva."))
+                return 0
+
+            from utils import normalize_player_name
+            from tournament_manager import Player
+
+            existing_names = {p.name.strip().lower() for p in self.manager.players}
+            added_to_tournament = 0
+            db_updated = False
+
+            for p in room_players:
+                p_name = p.get('player_name', '').strip()
+                if not p_name:
+                    continue
+                p_kid = (p.get('konami_id') or '').strip()
+
+                # Guardar o asegurar que exista en la base de datos local SQLite players
+                slug = normalize_player_name(p_name)
+                try:
+                    if p_kid:
+                        self.cursor.execute("SELECT id, name FROM players WHERE konami_id=?", (p_kid,))
+                    else:
+                        self.cursor.execute("SELECT id, name FROM players WHERE slug=?", (slug,))
+                    row = self.cursor.fetchone()
+                    if not row:
+                        self.cursor.execute(
+                            "INSERT INTO players (konami_id, name, slug) VALUES (?, ?, ?)",
+                            (p_kid or None, p_name, slug)
+                        )
+                        self.conn.commit()
+                        db_updated = True
+                except Exception as ex_sql:
+                    print(f"[TournamentUI] Error persisting room player to DB: {ex_sql}")
+
+                # Añadir al torneo en curso si aún no está en la lista de inscritos
+                if p_name.lower() not in existing_names:
+                    new_p = Player(name=p_name, konami_id=p_kid, phone='', email='', paid=True)
+                    self.manager.players.append(new_p)
+                    existing_names.add(p_name.lower())
+                    added_to_tournament += 1
+
+            if db_updated:
+                self.after(0, self.load_db)
+                self.after(0, self.refresh_db_listbox)
+
+            if added_to_tournament > 0:
+                self.after(0, self.update_player_list)
+                self.autosave_tournament()
+                self.sync_active_room()
+                if notify_if_none:
+                    self.after(0, lambda n=added_to_tournament: messagebox.showinfo(
+                        "Sincronización Exitosa", f"¡Se añadieron {n} nuevo(s) jugador(es) desde la sala al torneo!"
+                    ))
+            elif notify_if_none:
+                self.after(0, lambda: messagebox.showinfo(
+                    "Sin Cambios", "Todos los jugadores de la sala interactiva ya están inscritos en el torneo."
+                ))
+
+            return added_to_tournament
+
+        except Exception as e:
+            print(f"[TournamentUI] Error in sync_room_players: {e}")
+            return 0
+
+    def manual_sync_room_players(self):
+        threading.Thread(target=lambda: self.sync_room_players(notify_if_none=True), daemon=True).start()
+
+    def start_setup_room_poll(self):
+        self._setup_poll_active = True
+        self._poll_setup_room()
+
+    def stop_setup_room_poll(self):
+        self._setup_poll_active = False
+        if getattr(self, '_setup_poll_job', None):
+            try:
+                self.after_cancel(self._setup_poll_job)
+            except Exception:
+                pass
+            self._setup_poll_job = None
+
+    def _poll_setup_room(self):
+        if not getattr(self, '_setup_poll_active', False):
+            return
+        if not hasattr(self, 'player_listbox') or not self.player_listbox.winfo_exists():
+            self._setup_poll_active = False
+            return
+
+        threading.Thread(target=lambda: self.sync_room_players(notify_if_none=False), daemon=True).start()
+        self._setup_poll_job = self.after(3500, self._poll_setup_room)
+
+    def save_and_publish_tournament(self, notify=False):
+        """
+        Guarda el torneo actual en data/history/, migra a SQLite matches history,
+        calcula Academy ELO/Misiones, genera el snapshot y lo sube automáticamente a Render.
+        """
+        if not self.manager.players:
+            if notify:
+                messagebox.showwarning("Atención", "No hay jugadores en el torneo para guardar.")
+            return False
+
+        try:
+            history_dir = os.path.join("data", "history")
+            os.makedirs(history_dir, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = getattr(self, '_last_saved_history_filename', None)
+            if not filename:
+                filename = f"tournament_{timestamp}.json"
+                self._last_saved_history_filename = filename
+            filepath = os.path.join(history_dir, filename)
+
+            from store_manager import StoreManager
+            payload = {
+                "version": 1,
+                "saved_at": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
+                "manager": self.manager.to_dict(),
+                "ui": {
+                    "round_minutes": getattr(self, "round_minutes", 50),
+                    "date": self.date_var.get() if hasattr(self, "date_var") else datetime.now().strftime("%d-%m-%y"),
+                    "format": getattr(self.manager, "format_name", "GOAT"),
+                    "store_name": StoreManager().get_active_store()
+                }
+            }
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+
+            t_id = getattr(self, '_current_saved_tournament_id', None)
+            if not t_id:
+                from migrate_history import migrate_history
+                t_id = migrate_history(specific_file=filename)
+                self._current_saved_tournament_id = t_id
+
+            if t_id:
+                import sqlite3
+                from academy.academy_engine import AcademyEngine
+                from academy.sync_manager import SyncManager
+                from database import get_connection
+
+                conn = get_connection()
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                try:
+                    AcademyEngine().process_tournament(cursor, t_id)
+                    conn.commit()
+                except Exception as e_ae:
+                    print(f"[TournamentUI] Error in AcademyEngine: {e_ae}")
+
+                try:
+                    sync_mgr = SyncManager()
+                    new_version = sync_mgr.generate_snapshot_and_manifest(cursor)
+                    conn.close()
+                    sync_mgr.publish()
+                    self._push_snapshot_to_cloud(new_version)
+                except Exception as e_sm:
+                    print(f"[TournamentUI] Error in SyncManager: {e_sm}")
+                    if conn:
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
+
+            self.sync_active_room(status="FINISHED")
+            self._tournament_already_published = True
+
+            if notify:
+                messagebox.showinfo(
+                    "Torneo Publicado",
+                    "¡El torneo ha sido guardado y publicado con éxito!\nLos resultados, ranking ELO y perfiles han sido actualizados en la web."
+                )
+            return True
+
+        except Exception as e:
+            print(f"[TournamentUI] Error in save_and_publish_tournament: {e}")
+            if notify:
+                messagebox.showerror("Error", f"Ocurrió un error al guardar o publicar el torneo:\n{e}")
+            return False
+
+    def _push_snapshot_to_cloud(self, version=None):
+        """Lee el último snapshot generado y lo envía a Render via RemoteSyncClient."""
+        if not getattr(self, 'remote_sync', None) or not self.remote_sync.enabled:
+            return
+
+        def _do_push():
+            try:
+                snapshots_dir = os.path.join("data", "snapshots")
+                snap_path = None
+                if version:
+                    candidate = os.path.join(snapshots_dir, f"snapshot_v{version}.json")
+                    if os.path.exists(candidate):
+                        snap_path = candidate
+                if not snap_path:
+                    manifest_path = os.path.join(snapshots_dir, "manifest.json")
+                    if os.path.exists(manifest_path):
+                        with open(manifest_path, "r", encoding="utf-8") as mf:
+                            mdata = json.load(mf)
+                            latest = mdata.get("latest_snapshot")
+                            if latest:
+                                snap_path = os.path.join(snapshots_dir, latest)
+
+                if snap_path and os.path.exists(snap_path):
+                    with open(snap_path, "r", encoding="utf-8") as f:
+                        snap_json = json.load(f)
+                    ok, resp_msg = self.remote_sync.sync_full_snapshot(snap_json, filename=os.path.basename(snap_path))
+                    print(f"[TournamentUI] Cloud snapshot push result: ok={ok}, msg={resp_msg}")
+            except Exception as ex:
+                print(f"[TournamentUI] Error pushing snapshot to cloud: {ex}")
+
+        threading.Thread(target=_do_push, daemon=True).start()
 
     def check_room_match_reports(self):
         """
@@ -547,31 +811,7 @@ class TournamentUI(ctk.CTkFrame):
         act_f.pack(fill="x", padx=15, pady=(0, 15))
 
         def import_players_to_tournament():
-            players = trm.get_room_players(room['room_code'])
-            if not players:
-                messagebox.showinfo("Información", "Aún no hay jugadores registrados en esta sala.")
-                return
-
-            existing_names = {p.name.strip().lower() for p in self.manager.players}
-            added_count = 0
-
-            for p in players:
-                p_name = p['player_name'].strip()
-                if p_name.lower() not in existing_names:
-                    from tournament_manager import Player
-                    new_p = Player(name=p_name, konami_id=p.get('konami_id') or '', phone='', email='', paid=True)
-                    self.manager.players.append(new_p)
-                    existing_names.add(p_name.lower())
-                    added_count += 1
-
-            if added_count > 0:
-                self.autosave_tournament()
-                if hasattr(self, 'update_player_list'):
-                    self.update_player_list()
-                self.sync_active_room()
-                messagebox.showinfo("Importación Exitosa", f"¡Se agregaron {added_count} jugador(es) al torneo!")
-            else:
-                messagebox.showinfo("Sin Cambios", "Todos los jugadores de la sala ya están en la lista del torneo.")
+            threading.Thread(target=lambda: self.sync_room_players(notify_if_none=True), daemon=True).start()
 
         ctk.CTkButton(act_f, text="📥 AÑADIR JUGADORES AL TORNEO", font=("Roboto", 12, "bold"),
                       fg_color="#22c55e", hover_color="#16a34a", text_color="#0f172a", height=38,
@@ -776,6 +1016,7 @@ class TournamentUI(ctk.CTkFrame):
                           command=do_launch).pack(side="right", padx=15)
 
     def show_setup_view(self):
+        self.stop_setup_room_poll()
         if getattr(self, "current_view_frame", None):
             old = self.current_view_frame
             self.after(20, lambda o=old: o.destroy() if o.winfo_exists() else None)
@@ -855,7 +1096,12 @@ class TournamentUI(ctk.CTkFrame):
 
         ctk.CTkButton(lbl_frame, text="📱 Check-in QR (Sala)", command=self.open_qr_checkin_window,
                       font=UI_FONT_SMALL, fg_color="#38bdf8", hover_color="#0284c7",
-                      text_color="#0f172a", width=145, height=28).pack(side="right", padx=(0, 10))
+                      text_color="#0f172a", width=145, height=28).pack(side="right", padx=(0, 6))
+
+        self.sync_room_btn = ctk.CTkButton(lbl_frame, text="📥 Sincronizar Sala", command=self.manual_sync_room_players,
+                      font=UI_FONT_SMALL, fg_color="#6366f1", hover_color="#4f46e5",
+                      text_color="#ffffff", width=130, height=28)
+        self.sync_room_btn.pack(side="right", padx=(0, 10))
         
         self.player_listbox = tk.Listbox(list_frame, font=UI_FONT, bg="#1e293b", fg="white", selectbackground="#3b82f6", relief="flat", borderwidth=0, highlightthickness=0)
         self.player_listbox.pack(fill="both", expand=True, pady=(10, 20))
@@ -918,6 +1164,8 @@ class TournamentUI(ctk.CTkFrame):
         self.update_player_list()
         
         buf.pack(fill="both", expand=True)
+        self.ensure_active_room()
+        self.start_setup_room_poll()
         
     def toggle_enrolled_paid_key(self, event):
         self.toggle_enrolled_paid()
@@ -1236,6 +1484,13 @@ class TournamentUI(ctk.CTkFrame):
 
     def start_tournament(self):
         try:
+            self.stop_setup_room_poll()
+            # Sincronización rápida final de check-ins de sala antes de generar pareos
+            try:
+                self.sync_room_players(notify_if_none=False)
+            except Exception:
+                pass
+
             unpaid = [p for p in self.manager.players if not getattr(p, "paid", False) and not getattr(p, "invited", False)]
             if unpaid:
                 from custom_alerts import _create_custom_dialog
@@ -1301,6 +1556,7 @@ class TournamentUI(ctk.CTkFrame):
             messagebox.showerror("Error", str(e))
             
     def show_round_view(self):
+        self.stop_setup_room_poll()
         if self.manager.status == "finished":
             self.show_standings_view()
             return
@@ -1663,7 +1919,16 @@ class TournamentUI(ctk.CTkFrame):
         self.show_round_view()
 
     def show_standings_view(self):
-        self.sync_active_room()
+        self.stop_setup_room_poll()
+        self.sync_active_room(status="FINISHED")
+
+        # Auto-guardar y publicar el torneo completado a SQLite y a la nube
+        if not getattr(self, '_tournament_already_published', False):
+            try:
+                self.save_and_publish_tournament(notify=False)
+            except Exception as e_pub:
+                print("[TournamentUI] Auto-publish on standings error:", e_pub)
+
         if getattr(self, "current_view_frame", None):
             old = self.current_view_frame
             self.after(20, lambda o=old: o.destroy() if o.winfo_exists() else None)
@@ -1678,6 +1943,7 @@ class TournamentUI(ctk.CTkFrame):
         final_actions_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
         final_actions_frame.pack(anchor="center")
         
+        ctk.CTkButton(final_actions_frame, text="☁️ PUBLICAR EN LA WEB Y RANKING", command=lambda: self.save_and_publish_tournament(notify=True), font=UI_FONT_SMALL, width=220, fg_color="#8b5cf6", hover_color="#7c3aed").pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="CREAR POST DEL CAMPEÓN", command=self.open_champion_deck_post, font=UI_FONT_SMALL, width=150).pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="EXPORTAR STANDING PNG", command=self.export_standings_image, font=UI_FONT_SMALL, width=150).pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="EXPORTAR A INSTAGRAM", command=self.export_to_instagram, font=UI_FONT_SMALL, width=170, fg_color="#d946ef", hover_color="#c026d3").pack(side="left", padx=5, pady=5)
@@ -1904,90 +2170,21 @@ class TournamentUI(ctk.CTkFrame):
 
     def reset_tournament(self):
         if messagebox.askyesno("Finalizar", "¿Estás seguro de finalizar este torneo e iniciar uno nuevo?"):
-            try:
-                history_dir = os.path.join("data", "history")
-                os.makedirs(history_dir, exist_ok=True)
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"tournament_{timestamp}.json"
-                filepath = os.path.join(history_dir, filename)
-                
-                from store_manager import StoreManager
-                payload = {
-                    "version": 1,
-                    "saved_at": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
-                    "manager": self.manager.to_dict(),
-                    "ui": {
-                        "round_minutes": getattr(self, "round_minutes", 50),
-                        "date": self.date_var.get() if hasattr(self, "date_var") else datetime.now().strftime("%d-%m-%y"),
-                        "format": getattr(self.manager, "format_name", "GOAT"),
-                        "store_name": StoreManager().get_active_store()
-                    }
-                }
-                with open(filepath, "w", encoding="utf-8") as f:
-                    json.dump(payload, f, ensure_ascii=False, indent=2)
-                    
-                # Auto-migrate the newly created tournament into SQLite matches history
+            if not getattr(self, '_tournament_already_published', False):
                 try:
-                    from migrate_history import migrate_history
-                    new_tournament_id = migrate_history(specific_file=filename)
-                    if new_tournament_id:
-                        try:
-                            import sqlite3
-                            from academy.academy_engine import AcademyEngine
-                            from database import get_connection
-                            conn = get_connection()
-                            conn.row_factory = sqlite3.Row
-                            cursor = conn.cursor()
-                            AcademyEngine().process_tournament(cursor, new_tournament_id)
-                            conn.commit()
-                            
-                            # GENERATE CLOUD SYNC SNAPSHOT
-                            from academy.sync_manager import SyncManager
-                            sync_mgr = SyncManager()
-                            sync_mgr.generate_snapshot_and_manifest(cursor)
-                            
-                            conn.close()
-                            
-                            # ATTEMPT TO PUBLISH
-                            # Since this is production UI, we don't pass fail flags here by default.
-                            sync_mgr.publish()
-                            
-                            print(f"Tournament {new_tournament_id} successfully processed by AcademyEngine & SyncManager.")
-                            
-                            try:
-                                import webbrowser
-                                import sys
-                                import os
-                                import threading
-                                try:
-                                    if getattr(sys, 'frozen', False):
-                                        from public_web import app
-                                        threading.Thread(target=lambda: app.run(port=8000, debug=False, use_reloader=False), daemon=True).start()
-                                        self.after(2000, lambda: webbrowser.open("http://localhost:8000"))
-                                    else:
-                                        # Use os.path to correctly find the bat file from project root
-                                        bat_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Start_Academy_Web.bat")
-                                        if os.path.exists(bat_path):
-                                            os.startfile(bat_path)
-                                        self.after(2000, lambda: webbrowser.open("http://localhost:8000"))
-                                except Exception as e:
-                                    print("Error lanzando servidor web:", e) 
-                            except Exception as wb_err:
-                                print("Error abriendo el navegador:", wb_err)
-                                
-                        except Exception as e:
-                            print(f"Error processing AcademyEngine for tournament {new_tournament_id}:", e)
+                    self.save_and_publish_tournament(notify=False)
                 except Exception as e:
-                    print("Error during auto-migration to SQLite:", e)
-                    
-            except Exception as e:
-                print("Error saving to history:", e)
-                
+                    print("Error saving before reset:", e)
+
             self.manager = TournamentManager()
             self.exported_to_league = False
             self.time_left = 50 * 60
             self.round_minutes = 40
             self.date_var.set(datetime.now().strftime("%d-%m-%y"))
+            self.active_room_code = None
+            self._tournament_already_published = False
+            self._last_saved_history_filename = None
+            self._current_saved_tournament_id = None
             self.stop_timer()
             self.clear_autosave()
             self.show_setup_view()

@@ -753,9 +753,9 @@
             <h1>{{ room.title }}</h1>
             <div style="color: #94a3b8; font-size: 0.85rem; display: flex; align-items: center; gap: 12px; margin-top: 4px; flex-wrap: wrap;">
                 <span id="roomStatusBadge" class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">
-                    {% if room.status == 'LOBBY' %}🟢 INSCRIPCIONES ABIERTAS{% elif room.status == 'RUNNING' %}⚡ EN CURSO{% else %}🏁 FINALIZADO{% endif %}
+                    {% if room.status == 'LOBBY' %}🟢 INSCRIPCIONES ABIERTAS{% elif room.status == 'RUNNING' %}{% if room.current_round == 1 %}🟡 INSCRIPCIÓN CON RETRASO (RONDA 1){% else %}⚡ RONDA {{ room.current_round }} EN CURSO • INSCRIPCIONES CERRADAS{% endif %}{% else %}🏁 FINALIZADO{% endif %}
                 </span>
-                <span id="livePlayersCount">👥 {{ players|length }} Inscriptos</span>
+                <span id="livePlayersCount">👥 {{ players|length }} {{ 'Inscrito' if players|length == 1 else 'Inscritos' }}</span>
             </div>
         </div>
 
@@ -1154,7 +1154,7 @@ function renderRoomData(data) {
 
     // Actualizar conteos
     const pCount = data.players ? data.players.length : 0;
-    document.getElementById('livePlayersCount').innerText = `👥 ${pCount} Inscriptos`;
+    document.getElementById('livePlayersCount').innerText = `👥 ${pCount} ${pCount === 1 ? 'Inscrito' : 'Inscritos'}`;
     document.getElementById('tabCountSpan').innerText = pCount;
 
     // Estado Badge
@@ -1164,9 +1164,15 @@ function renderRoomData(data) {
         stBadge.style.color = '#4ade80';
         stBadge.style.background = 'rgba(34, 197, 94, 0.2)';
     } else if (data.status === 'RUNNING') {
-        stBadge.innerHTML = `⚡ RONDA ${data.current_round} EN CURSO`;
-        stBadge.style.color = '#38bdf8';
-        stBadge.style.background = 'rgba(56, 189, 248, 0.2)';
+        if (data.current_round === 1) {
+            stBadge.innerHTML = '🟡 INSCRIPCIÓN CON RETRASO (RONDA 1)';
+            stBadge.style.color = '#fbbf24';
+            stBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+        } else {
+            stBadge.innerHTML = `⚡ RONDA ${data.current_round} EN CURSO • INSCRIPCIONES CERRADAS`;
+            stBadge.style.color = '#38bdf8';
+            stBadge.style.background = 'rgba(56, 189, 248, 0.2)';
+        }
     } else {
         stBadge.innerHTML = '🏁 TORNEO FINALIZADO';
         stBadge.style.color = '#fbbf24';
