@@ -150,6 +150,136 @@ def migrate_rooms_schema(cursor):
         )
     ''')
 
+    try:
+        cursor.execute("SELECT COUNT(*) FROM players")
+        row = cursor.fetchone()
+        if not row or row[0] == 0:
+            seed_players_from_snapshot(cursor)
+    except Exception:
+        pass
+
+def seed_players_from_snapshot(cursor=None):
+    """
+    Popula las tablas players y academy_profiles con los datos del último snapshot publicado.
+    Garantiza que la búsqueda en vivo y check-in por celular reconozca a todos los duelistas oficiales
+    incluso en entornos cloud sin base de datos SQLite preexistente.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    manifest_path = os.path.join(base_dir, "mock_server", "public_api", "manifest.json")
+    if not os.path.exists(manifest_path):
+        return
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+        snapshot_filename = manifest.get("latest_snapshot")
+        if not snapshot_filename:
+            return
+        snapshot_path = os.path.join(base_dir, "mock_server", "public_api", snapshot_filename)
+        if not os.path.exists(snapshot_path):
+            return
+        with open(snapshot_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        leaderboard = data.get("leaderboard", [])
+        if not leaderboard:
+            return
+
+        from database import get_connection
+        should_commit = False
+        if cursor is None:
+            conn = get_connection()
+            cursor = conn.cursor()
+            should_commit = True
+        else:
+            conn = getattr(cursor, 'connection', None)
+
+        cursor.execute("CREATE TABLE IF NOT EXISTS stores (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, is_active BOOLEAN DEFAULT 0)")
+        cursor.execute("INSERT OR IGNORE INTO stores (id, name, is_active) VALUES (1, 'Subarashii Chile', 1)")
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS players (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                konami_id TEXT UNIQUE,
+                name TEXT NOT NULL,
+                phone TEXT,
+                email TEXT,
+                slug TEXT
+            )
+        ''')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS academy_profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id INTEGER NOT NULL,
+                store_id INTEGER,
+                format_name TEXT NOT NULL,
+                current_rating INTEGER DEFAULT 1000,
+                highest_rating INTEGER DEFAULT 1000,
+                dorm TEXT DEFAULT 'Slifer Red',
+                xp INTEGER DEFAULT 0,
+                level INTEGER DEFAULT 1,
+                matches_played INTEGER DEFAULT 0,
+                wins INTEGER DEFAULT 0,
+                losses INTEGER DEFAULT 0,
+                title TEXT,
+                FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+            )
+        ''')
+
+        for p in leaderboard:
+            p_id = p.get("player_id")
+            name = p.get("name")
+            if not name or not name.strip():
+                continue
+            name_clean = name.strip()
+            slug = p.get("slug")
+            dorm = p.get("dorm") or "Slifer Red"
+            rating = p.get("current_rating", 1000)
+            highest = p.get("highest_rating", rating)
+            level = p.get("level", 1)
+            xp = p.get("xp", 0)
+            matches = p.get("matches_played", 0)
+            wins = p.get("wins", 0)
+            losses = p.get("losses", 0)
+            kid = p.get("konami_id")
+
+            # Insert or update player
+            cursor.execute("SELECT id FROM players WHERE id = ? OR LOWER(name) = LOWER(?)", (p_id, name_clean))
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute("""
+                    INSERT INTO players (id, konami_id, name, slug)
+                    VALUES (?, ?, ?, ?)
+                """, (p_id, kid, name_clean, slug))
+                actual_pid = cursor.lastrowid or p_id
+            else:
+                actual_pid = row[0]
+                cursor.execute("""
+                    UPDATE players SET name = ?, slug = COALESCE(?, slug), konami_id = COALESCE(?, konami_id)
+                    WHERE id = ?
+                """, (name_clean, slug, kid, actual_pid))
+
+            # Insert or update academy profile
+            cursor.execute("SELECT id FROM academy_profiles WHERE player_id = ? AND format_name = 'GLOBAL'", (actual_pid,))
+            ap_row = cursor.fetchone()
+            if not ap_row:
+                cursor.execute("""
+                    INSERT INTO academy_profiles (
+                        player_id, store_id, format_name, current_rating, highest_rating,
+                        dorm, xp, level, matches_played, wins, losses
+                    ) VALUES (?, 1, 'GLOBAL', ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (actual_pid, rating, highest, dorm, xp, level, matches, wins, losses))
+            else:
+                cursor.execute("""
+                    UPDATE academy_profiles SET
+                        current_rating = ?, highest_rating = ?, dorm = ?,
+                        xp = ?, level = ?, matches_played = ?, wins = ?, losses = ?
+                    WHERE id = ?
+                """, (rating, highest, dorm, xp, level, matches, wins, losses, ap_row[0]))
+
+        if should_commit and conn:
+            conn.commit()
+    except Exception as e:
+        print(f"[SeedPlayers] Notice: {e}")
+
 class TournamentRoomManager:
     def __init__(self, conn=None):
         self._external_conn = conn
@@ -344,6 +474,26 @@ class TournamentRoomManager:
         except Exception:
             pass
 
+        if not player_id:
+            try:
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                manifest_path = os.path.join(base_dir, "mock_server", "public_api", "manifest.json")
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, 'r', encoding='utf-8') as f:
+                        m = json.load(f)
+                    snap_name = m.get("latest_snapshot")
+                    if snap_name:
+                        with open(os.path.join(base_dir, "mock_server", "public_api", snap_name), 'r', encoding='utf-8') as f:
+                            snap_data = json.load(f)
+                        for p in snap_data.get("leaderboard", []):
+                            if p.get("name", "").strip().lower() == clean_name.lower():
+                                player_id = p.get("player_id")
+                                if p.get("dorm"):
+                                    dorm = p.get("dorm")
+                                break
+            except Exception:
+                pass
+
         now_str = datetime.now().isoformat()
         try:
             cursor.execute("""
@@ -391,19 +541,60 @@ class TournamentRoomManager:
         if not query or len(query.strip()) < 2:
             return []
         cursor = self._get_cursor()
-        q = f"%{query.strip().lower()}%"
-        cursor.execute("""
-            SELECT p.id, p.name, p.konami_id, 
-                   COALESCE(a.dorm, 'Estudiante de Intercambio') as dorm,
-                   COALESCE(a.current_rating, 1000) as rating,
-                   COALESCE(a.level, 1) as level
-            FROM players p
-            LEFT JOIN academy_profiles a ON a.player_id = p.id AND a.format_name = 'GLOBAL'
-            WHERE LOWER(p.name) LIKE ? OR LOWER(p.konami_id) LIKE ?
-            ORDER BY a.current_rating DESC
-            LIMIT 8
-        """, (q, q))
-        return [dict(r) for r in cursor.fetchall()]
+        migrate_rooms_schema(cursor)
+        q_clean = query.strip().lower()
+        results = []
+
+        try:
+            q = f"%{q_clean}%"
+            cursor.execute("""
+                SELECT p.id, p.name, p.konami_id, 
+                       COALESCE(a.dorm, 'Estudiante de Intercambio') as dorm,
+                       COALESCE(a.current_rating, 1000) as rating,
+                       COALESCE(a.level, 1) as level
+                FROM players p
+                LEFT JOIN academy_profiles a ON a.player_id = p.id AND a.format_name = 'GLOBAL'
+                WHERE LOWER(p.name) LIKE ? OR (p.konami_id IS NOT NULL AND LOWER(p.konami_id) LIKE ?)
+                ORDER BY a.current_rating DESC
+                LIMIT 8
+            """, (q, q))
+            results = [dict(r) for r in cursor.fetchall()]
+        except Exception:
+            results = []
+
+        # Fallback y complemento directo desde el último snapshot de la Academia
+        if len(results) < 8:
+            try:
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                manifest_path = os.path.join(base_dir, "mock_server", "public_api", "manifest.json")
+                if os.path.exists(manifest_path):
+                    with open(manifest_path, 'r', encoding='utf-8') as f:
+                        m = json.load(f)
+                    snap_name = m.get("latest_snapshot")
+                    if snap_name:
+                        with open(os.path.join(base_dir, "mock_server", "public_api", snap_name), 'r', encoding='utf-8') as f:
+                            snap_data = json.load(f)
+                        existing_names = {r["name"].strip().lower() for r in results}
+                        for p in snap_data.get("leaderboard", []):
+                            p_name = p.get("name", "").strip()
+                            p_kid = str(p.get("konami_id") or "").strip()
+                            if q_clean in p_name.lower() or (p_kid and q_clean in p_kid.lower()):
+                                if p_name.lower() not in existing_names:
+                                    results.append({
+                                        "id": p.get("player_id"),
+                                        "name": p_name,
+                                        "konami_id": p.get("konami_id"),
+                                        "dorm": p.get("dorm") or "Estudiante de Intercambio",
+                                        "rating": p.get("current_rating", 1000),
+                                        "level": p.get("level", 1)
+                                    })
+                                    existing_names.add(p_name.lower())
+                                    if len(results) >= 8:
+                                        break
+            except Exception:
+                pass
+
+        return results
 
     def sync_tournament_to_room(self, room_code, manager, time_left=None, timer_running=False):
         """

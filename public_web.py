@@ -13,8 +13,10 @@ ORGANIZER_ADMIN_PASSWORD = os.environ.get("ORGANIZER_ADMIN_PASSWORD", "subarashi
 try:
     from database import init_db
     init_db()
+    from tournament_room_manager import seed_players_from_snapshot
+    seed_players_from_snapshot()
 except Exception as _e:
-    print(f"[PublicWeb] DB init notice: {_e}")
+    print(f"[PublicWeb] DB init/seed notice: {_e}")
 
 def organizer_auth_required(f):
     @wraps(f)
@@ -634,6 +636,12 @@ def api_organizer_sync():
             }
             with open(manifest_path, "w", encoding="utf-8") as f:
                 json.dump(manifest, f, indent=2, ensure_ascii=False)
+
+            try:
+                from tournament_room_manager import seed_players_from_snapshot
+                seed_players_from_snapshot()
+            except Exception:
+                pass
 
             return jsonify({
                 "success": True,
