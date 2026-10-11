@@ -354,7 +354,90 @@ def join_tournament_room(room_code=None):
     else:
         room = trm.get_room_by_code(room_code)
 
-    return render_template('join.html', room=room)
+    enrollment_info = {
+        "status": "OPEN",
+        "badge_text": "🟢 INSCRIPCIONES ABIERTAS",
+        "badge_color": "#4ade80",
+        "badge_bg": "rgba(34, 197, 94, 0.2)",
+        "can_join": True,
+        "message": "",
+        "time_left": None,
+        "timer_running": False
+    }
+
+    if room:
+        status = room.get('status', 'LOBBY')
+        curr_round = int(room.get('current_round') or 0)
+        
+        live_data = {}
+        try:
+            raw_live = room.get('live_data_json')
+            if raw_live:
+                live_data = json.loads(raw_live) if isinstance(raw_live, str) else raw_live
+        except Exception:
+            pass
+
+        time_left = live_data.get('time_left')
+        timer_running = live_data.get('timer_running', False)
+        enrollment_info["time_left"] = time_left
+        enrollment_info["timer_running"] = timer_running
+
+        if status == 'FINISHED':
+            enrollment_info.update({
+                "status": "FINISHED",
+                "badge_text": "🏁 TORNEO FINALIZADO",
+                "badge_color": "#94a3b8",
+                "badge_bg": "rgba(148, 163, 184, 0.2)",
+                "can_join": False,
+                "message": "Este torneo ya ha finalizado."
+            })
+        elif status == 'RUNNING' or curr_round > 0:
+            if curr_round == 1:
+                duration_secs = live_data.get("duration_secs", 50 * 60)
+                is_over_15 = False
+                if time_left is not None and time_left <= (duration_secs - 15 * 60):
+                    is_over_15 = True
+                
+                if is_over_15:
+                    enrollment_info.update({
+                        "status": "CLOSED",
+                        "badge_text": "🔴 INSCRIPCIONES CERRADAS",
+                        "badge_color": "#ef4444",
+                        "badge_bg": "rgba(239, 68, 68, 0.2)",
+                        "can_join": False,
+                        "message": "Las inscripciones para este torneo han cerrado (se superaron los 15 minutos límite de la Ronda 1)."
+                    })
+                else:
+                    enrollment_info.update({
+                        "status": "LATE",
+                        "badge_text": "🟡 INSCRIPCIÓN CON RETRASO (RONDA 1)",
+                        "badge_color": "#fbbf24",
+                        "badge_bg": "rgba(245, 158, 11, 0.2)",
+                        "can_join": True,
+                        "message": "⚠️ La Ronda 1 ya comenzó. Tu inscripción se procesará como ingreso tardío con retraso según el reglamento."
+                    })
+            else:
+                # Ronda 2 en adelante
+                enrollment_info.update({
+                    "status": "CLOSED",
+                    "badge_text": f"🔴 INSCRIPCIONES CERRADAS (RONDA {curr_round})",
+                    "badge_color": "#ef4444",
+                    "badge_bg": "rgba(239, 68, 68, 0.2)",
+                    "can_join": False,
+                    "message": f"Las inscripciones están cerradas. El torneo ya se encuentra disputando la Ronda {curr_round}."
+                })
+        else:
+            # LOBBY
+            enrollment_info.update({
+                "status": "OPEN",
+                "badge_text": "🟢 INSCRIPCIONES ABIERTAS",
+                "badge_color": "#4ade80",
+                "badge_bg": "rgba(34, 197, 94, 0.2)",
+                "can_join": True,
+                "message": ""
+            })
+
+    return render_template('join.html', room=room, enrollment=enrollment_info)
 
 @app.route('/sala/<room_code>')
 @app.route('/live/<room_code>')
@@ -382,6 +465,35 @@ def api_room_join(room_code):
         
         if not player_name:
             return jsonify({"success": False, "message": "Debes ingresar tu nombre o apodo."}), 400
+
+        room = trm.get_room_by_code(room_code)
+        if not room:
+            return jsonify({"success": False, "message": "La sala de torneo no existe o ya expiró."}), 404
+
+        # Comprobar si ya estaba registrado previamente (permitir reconexión de sesión)
+        cursor = trm._get_cursor()
+        cursor.execute("SELECT id FROM room_checkins WHERE room_id = ? AND (session_token = ? OR LOWER(player_name) = LOWER(?))", (room['id'], session_token, player_name))
+        is_already_registered = bool(cursor.fetchone())
+
+        if not is_already_registered:
+            status = (room.get('status') or 'LOBBY').upper()
+            curr_round = int(room.get('current_round') or 0)
+            if status == 'FINISHED':
+                return jsonify({"success": False, "message": "Las inscripciones están cerradas. El torneo ya ha finalizado."}), 400
+            elif status == 'RUNNING' or curr_round > 0:
+                if curr_round > 1:
+                    return jsonify({"success": False, "message": f"Inscripciones cerradas. El torneo ya se encuentra disputando la Ronda {curr_round}."}), 400
+                live_data = {}
+                try:
+                    raw_live = room.get('live_data_json')
+                    if raw_live:
+                        live_data = json.loads(raw_live) if isinstance(raw_live, str) else raw_live
+                except Exception:
+                    pass
+                time_left = live_data.get('time_left')
+                duration_secs = live_data.get('duration_secs', 50 * 60)
+                if time_left is not None and time_left <= (duration_secs - 15 * 60):
+                    return jsonify({"success": False, "message": "Inscripciones cerradas. Se ha superado el plazo límite de 15 minutos reglamentarios de la Ronda 1."}), 400
 
         ok, res = trm.register_player(
             room_code=room_code,
@@ -673,6 +785,7 @@ def api_organizer_sync():
                 "matches": pairings,
                 "standings": standings,
                 "time_left": timer_data.get("time_left"),
+                "duration_secs": timer_data.get("duration_secs", 50 * 60),
                 "timer_running": (timer_data.get("status") == "running"),
                 "synced_at": datetime.now().strftime("%H:%M:%S")
             }

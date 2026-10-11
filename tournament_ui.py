@@ -230,6 +230,10 @@ class TournamentUI(ctk.CTkFrame):
                             "status": "running" if getattr(self, 'timer_running', False) else "paused"
                         }
                         title = f"Torneo {self.manager.format_name} ({getattr(self, 'date_var', tk.StringVar()).get()})"
+                        status_val = "RUNNING" if getattr(self.manager, 'current_round', 0) > 0 else "LOBBY"
+                        if getattr(self.manager, 'status', '') == "finished":
+                            status_val = "FINISHED"
+
                         self.remote_sync.sync_room_state(
                             room_code=self.active_room_code,
                             title=title,
@@ -237,6 +241,7 @@ class TournamentUI(ctk.CTkFrame):
                             pairings=matches_data,
                             standings=standings_data,
                             timer_info=timer_info,
+                            status=status_val,
                             format_name=getattr(self.manager, 'format_name', 'EDISON')
                         )
                     except Exception as err:
