@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Calendario de Torneos - Duelorapido.cl{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>CALENDARIO Y TORNEOS OFICIALES</h1>
+    <p class="subtitle">Agenda de torneos competitivos, copas dominicales y ligas con premios Ultimate Rare en Subarashii Academy</p>
+</div>
+
+<!-- PRÓXIMOS TORNEOS DESTACADOS -->
+<div class="mb-4">
+    <h2>PRÓXIMAS FECHAS PROGRAMADAS</h2>
+    {% if upcoming_events %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1rem;">
+        {% for ev in upcoming_events %}
+        <div class="tourney-card" style="border-top: 4px solid {% if ev.league_id %}#f59e0b{% elif ev.format_name == 'EDISON' %}#38bdf8{% elif ev.format_name == 'GOAT' %}#8b5cf6{% else %}#22c55e{% endif %};">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                <span style="font-size: 0.8rem; font-weight: 800; background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 4px 10px; border-radius: 4px;">
+                    📅 {{ ev.display_date or ev.date }} — {{ ev.time }}
+                </span>
+                <span class="badge badge-dorm" style="background: rgba(255,255,255,0.08); font-size: 0.75rem;">
+                    {{ ev.format_name }}
+                </span>
+            </div>
+
+            <h3 style="margin: 0.5rem 0; color: #f8fafc; font-size: 1.25rem;">{{ ev.title }}</h3>
+
+            {% if ev.prize_description %}
+            <div style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 4px; margin: 0.75rem 0;">
+                <strong style="color: #fbbf24;">🏆 Premio Destacado:</strong>
+                <div style="color: #fde68a; font-size: 0.85rem; margin-top: 2px;">{{ ev.prize_description }}</div>
+            </div>
+            {% endif %}
+
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-top: 0.5rem;">
+                <span><strong>Modo:</strong> {{ 'Suizo' if ev.mode == 'swiss' else 'Moledoras' }}</span>
+                <span><strong>Entrada:</strong> ${{ "{:,.0f}".format(ev.entry_fee) if ev.entry_fee else "3.000" }}</span>
+            </div>
+
+            {% if ev.notes %}
+            <p style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem; font-style: italic;">
+                ℹ️ {{ ev.notes }}
+            </p>
+            {% endif %}
+
+            <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #22c55e; font-size: 0.8rem; font-weight: 700;">● Inscripciones Abiertas</span>
+                <a href="/ranking" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Ver Ranking</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="tourney-card" style="text-align: center; padding: 2rem;">
+        <p style="color: #94a3b8;">No hay torneos programados para los próximos días en este momento.</p>
+        <p style="font-size: 0.85rem; color: #64748b;">Los nuevos eventos son agendados directamente por el organizador desde la app de la Academia.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- LIGA DESTACADA CON PREMIO CARTA ULTIMATE RARE -->
+<div class="tourney-card" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); border: 1px solid #f59e0b; margin-top: 2rem; position: relative; overflow: hidden;">
+    <div style="position: absolute; right: -20px; top: -20px; font-size: 7rem; opacity: 0.05; user-select: none;">⭐</div>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+        <span style="background: #f59e0b; color: #0f172a; font-weight: 900; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px;">SISTEMA DE LIGAS</span>
+        <h3 style="color: #fbbf24; margin: 0;">Ligas Dominicales con Premio Carta Ultimate Rare</h3>
+    </div>
+    <p style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5;">
+        Nuestras ligas oficiales se disputan todos los <strong>domingos durante 1 o 2 meses</strong> (ciclos de 4 a 8 paradas competitivas). Cada torneo dominical otorga puntos de asistencia, rondas suizas y posición en el top.
+    </p>
+    <div style="background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 6px; margin-top: 10px; display: flex; flex-wrap: wrap; gap: 20px; font-size: 0.85rem;">
+        <div>✨ <strong>Premio Mayor:</strong> <span style="color: #fde68a;">Carta Ultimate Rare original para el Campeón General</span></div>
+        <div>📅 <strong>Frecuencia:</strong> Domingos (Horario programado por fecha)</div>
+        <div>⚔️ <strong>Impacto:</strong> Todos los duelos suman Rating ELO y XP para la Academia</div>
+    </div>
+</div>
+
+<!-- AGENDA COMPLETA EN FORMATO TABLA -->
+{% if all_events and all_events|length > 0 %}
+<div class="mt-4">
+    <h2>AGENDA COMPLETA DE EVENTOS</h2>
+    <div class="table-container">
+        <table class="ranking-table" style="font-size:0.9rem;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Torneo</th>
+                    <th>Formato</th>
+                    <th>Modo</th>
+                    <th>Premio</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ev in all_events %}
+                <tr>
+                    <td><strong>{{ ev.display_date or ev.date }}</strong></td>
+                    <td>{{ ev.time }}</td>
+                    <td>{{ ev.title }}</td>
+                    <td><span class="badge badge-dorm" style="font-size: 0.75rem;">{{ ev.format_name }}</span></td>
+                    <td>{{ 'Suizo' if ev.mode == 'swiss' else 'Moledoras' }}</td>
+                    <td style="color: #fde68a;">{{ ev.prize_description or "—" }}</td>
+                    <td>
+                        {% if ev.status == 'PROGRAMADO' %}
+                        <span style="color: #38bdf8; font-weight: 700;">PROGRAMADO</span>
+                        {% elif ev.status == 'EN_CURSO' %}
+                        <span style="color: #fbbf24; font-weight: 700;">EN CURSO</span>
+                        {% elif ev.status == 'FINALIZADO' %}
+                        <span style="color: #22c55e;">FINALIZADO</span>
+                        {% else %}
+                        <span style="color: #94a3b8;">{{ ev.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

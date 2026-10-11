@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h2 class="title" style="margin-bottom: 0;">Resultados Finales</h2>
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Formato: {{ manager.format_name }} | {{ manager.players|length }} Jugadores</span>
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+        {% if manager.current_round > 1 %}
+        <form method="POST" action="{{ url_for('api_rollback_round') }}" onsubmit="return confirm('¿Seguro que quieres deshacer y volver a la ronda anterior?');">
+            <button type="submit" class="btn btn-secondary">Retroceder a Última Ronda</button>
+        </form>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('api_reset_tournament') }}" onsubmit="return confirm('¿Seguro que quieres finalizar este torneo y limpiar todo para el próximo? (Asegúrate de exportar a ligas primero)');">
+            <button type="submit" class="btn btn-danger">Nuevo Torneo</button>
+        </form>
+    </div>
+</div>
+
+<div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
+    <h3 style="color: white; margin-bottom: 1.5rem;">Acciones Post-Torneo</h3>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        <form method="POST" action="{{ url_for('api_tournament_export_league') }}">
+            <button type="submit" class="btn" style="background: linear-gradient(135deg, #22c55e, #16a34a);">Actualizar Puntos de Liga</button>
+        </form>
+        
+        <!-- Próximamente: exportar imágenes, generador de posts, calcular premios -->
+        <a href="{{ url_for('generator') }}" class="btn btn-secondary" target="_blank">Crear Post del Campeón 📸</a>
+        <a href="{{ url_for('api_tournament_export_standings') }}" class="btn btn-secondary" target="_blank">Exportar Standing PNG 📷</a>
+        <button onclick="shareStandingsWhatsApp()" class="btn btn-secondary" style="background: #25D366; color: white;">Compartir WhatsApp 💬</button>
+        <a href="{{ url_for('prizes') }}" class="btn btn-secondary" target="_blank">Calcular Premios 💰</a>
+    </div>
+</div>
+
+<script>
+function shareStandingsWhatsApp() {
+    let text = "*Posiciones Finales* 🏆\n\n";
+    {% for p in standings %}
+    text += "{{ loop.index }}. {{ p.name }} - {{ p.points }} pts\n";
+    {% endfor %}
+    
+    let url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(text);
+    window.open(url, '_blank');
+}
+</script>
+
+<div class="glass-panel" style="padding: 2rem;">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Nombre</th>
+                    <th>Pts</th>
+                    <th>Rivales %</th>
+                    <th>2do Nivel %</th>
+                    <th>Nota Desempate</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rank, p in ranked %}
+                <tr style="{% if rank == 1 %}background: rgba(234, 179, 8, 0.15); border-left: 4px solid #eab308;{% endif %}">
+                    <td>
+                        {% if rank == 1 %}👑{% else %}{{ rank }}{% endif %}
+                    </td>
+                    <td style="color: white; font-weight: {% if rank == 1 %}800{% else %}500{% endif %};">{{ p.name }}</td>
+                    <td style="color: var(--primary); font-weight: 800;">{{ p.points }}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">{{ "%.4f"|format(p._omw) }}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">{{ "%.4f"|format(p._oomw) }}</td>
+                    <td style="font-size: 0.8rem; color: var(--text-muted);">{{ notes.get(p, '') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="text-align: center; padding: 4rem 2rem;">
+    <h1 class="title">
+        Dashboard Principal
+    </h1>
+    <p style="font-size: 1.1rem; color: var(--text-muted); max-width: 600px; margin: 0 auto 3rem;">
+        Selecciona un módulo para gestionar tu comunidad de Yu-Gi-Oh!
+    </p>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; max-width: 1000px; margin: 0 auto;">
+        
+        <!-- Módulo: Tiendas -->
+        <a href="{{ url_for('stores') }}" class="glass-panel card-hoverable" style="text-decoration: none; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <div style="background: rgba(59, 130, 246, 0.2); padding: 1rem; border-radius: 50%; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">🏪</span>
+            </div>
+            <h3 style="color: white; margin-bottom: 0.5rem;">Gestión de Tiendas</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Configura la tienda activa y visualiza métricas de asistencia.</p>
+        </a>
+
+        <!-- Módulo: Ligas -->
+        <a href="{{ url_for('leagues') }}" class="glass-panel card-hoverable" style="text-decoration: none; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <div style="background: rgba(34, 197, 94, 0.2); padding: 1rem; border-radius: 50%; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">🏆</span>
+            </div>
+            <h3 style="color: white; margin-bottom: 0.5rem;">Avance de Ligas</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Consulta posiciones, misiones (bingo) y exporta a Sheets.</p>
+        </a>
+
+        <!-- Módulo: Torneos -->
+        <a href="{{ url_for('tournament_index') }}" class="glass-panel card-hoverable" style="text-decoration: none; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; position: relative; overflow: hidden;">
+            <div style="background: rgba(239, 68, 68, 0.2); padding: 1rem; border-radius: 50%; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">⚔️</span>
+            </div>
+            <h3 style="color: white; margin-bottom: 0.5rem;">Gestor de Torneos</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Emparejamientos suizos, rondas y reportes.</p>
+            <div style="position: absolute; top: 1rem; right: -2rem; background: var(--danger); font-size: 0.7rem; font-weight: bold; padding: 0.2rem 2.5rem; transform: rotate(45deg);">NUEVO</div>
+        </a>
+
+        <!-- Módulo: Generador -->
+        <a href="{{ url_for('generator') }}" class="glass-panel card-hoverable" style="text-decoration: none; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <div style="background: rgba(139, 92, 246, 0.2); padding: 1rem; border-radius: 50%; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">📸</span>
+            </div>
+            <h3 style="color: white; margin-bottom: 0.5rem;">Deck Generator</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Genera gráficos atractivos de mazos para Instagram.</p>
+        </a>
+
+        <!-- Módulo: Premios -->
+        <a href="{{ url_for('prizes') }}" class="glass-panel card-hoverable" style="text-decoration: none; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+            <div style="background: rgba(234, 179, 8, 0.2); padding: 1rem; border-radius: 50%; margin-bottom: 1rem;">
+                <span style="font-size: 2rem;">💰</span>
+            </div>
+            <h3 style="color: white; margin-bottom: 0.5rem;">Premios</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Calculadora de reparto de premios interactiva.</p>
+        </a>
+
+    </div>
+</div>
+{% endblock %}

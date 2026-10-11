@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YGO Tools Web - Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&family=Orbitron:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    {% if current_user.is_authenticated %}
+    <nav class="navbar glass-panel">
+        <div class="nav-links">
+            <a href="{{ url_for('index') }}" style="font-size: 1.2rem; font-weight: 800; font-family: 'Orbitron', sans-serif;" class="text-gradient">YGO Tools</a>
+            <a href="{{ url_for('stores') }}">Tiendas</a>
+            <a href="{{ url_for('leagues') }}">Ligas</a>
+            <a href="{{ url_for('generator') }}">Generador Decks</a>
+        </div>
+        <div class="user-controls" style="display: flex; align-items: center;">
+            <span style="color: var(--text-muted); font-size: 0.9rem;">Hola, {{ current_user.username }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="margin-left: 1.5rem; padding: 0.4rem 1rem; font-size: 0.9rem;">Salir</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container animate-fade-in">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+</html>

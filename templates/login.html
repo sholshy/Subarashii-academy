@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card" style="max-width: 400px; margin: 5rem auto; text-align: center;">
+    <h2 class="title">Iniciar Sesión</h2>
+    <form method="POST" action="{{ url_for('login') }}">
+        <div style="text-align: left;">
+            <label>Usuario</label>
+            <input type="text" name="username" required>
+        </div>
+        <div style="text-align: left;">
+            <label>Contraseña</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Entrar al Sistema</button>
+    </form>
+    <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #94a3b8;">
+        ¿No tienes cuenta? <a href="{{ url_for('register') }}" style="color: var(--primary);">Registrar Administrador</a>
+    </p>
+</div>
+{% endblock %}

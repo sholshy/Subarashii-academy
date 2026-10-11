@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2 class="title" style="margin-bottom: 0;">Directorio de Tiendas</h2>
+    
+    <form method="POST" action="{{ url_for('stores') }}" style="display: flex; gap: 1rem; align-items: center; background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+        <input type="hidden" name="action" value="add">
+        <input type="text" name="store_name" placeholder="Nombre nueva tienda..." required style="margin-bottom: 0; min-width: 250px;">
+        <button type="submit" class="btn">Añadir Tienda</button>
+    </form>
+</div>
+
+<div class="table-container glass-panel">
+    <table>
+        <thead>
+            <tr>
+                <th>Tienda</th>
+                <th>Métricas Principales</th>
+                <th>Estado</th>
+                <th style="text-align: right;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in stores %}
+            <tr>
+                <td>
+                    <div style="font-weight: 600; font-size: 1.1rem; color: white;">{{ s.name }}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">ID: {{ s.id }}</div>
+                </td>
+                <td>
+                    <div style="display: flex; gap: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                        <div><strong style="color: white;">{{ s.stats.total_tournaments }}</strong> Torneos</div>
+                        <div><strong style="color: white;">{{ s.stats.unique_players }}</strong> Jugadores</div>
+                    </div>
+                </td>
+                <td>
+                    {% if s.is_active %}
+                        <span style="background-color: rgba(34, 197, 94, 0.2); color: #86efac; padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.85rem; font-weight: 500; border: 1px solid rgba(34,197,94,0.4);">Activa</span>
+                    {% else %}
+                        <span style="background-color: rgba(148, 163, 184, 0.2); color: #cbd5e1; padding: 0.3rem 0.8rem; border-radius: 999px; font-size: 0.85rem; font-weight: 500; border: 1px solid rgba(148,163,184,0.4);">Inactiva</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        {% if not s.is_active %}
+                        <form method="POST" action="{{ url_for('stores') }}" style="margin: 0;">
+                            <input type="hidden" name="action" value="set_active">
+                            <input type="hidden" name="store_name" value="{{ s.name }}">
+                            <button type="submit" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Hacer Activa</button>
+                        </form>
+                        
+                        <form method="POST" action="{{ url_for('stores') }}" style="margin: 0;" onsubmit="return confirm('¿Eliminar esta tienda permanentemente?');">
+                            <input type="hidden" name="action" value="remove">
+                            <input type="hidden" name="store_name" value="{{ s.name }}">
+                            <button type="submit" class="btn btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Eliminar</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="padding: 3rem; text-align: center; color: var(--text-muted);">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🏬</div>
+                    No hay tiendas registradas en el sistema.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<div class="glass-panel" style="margin-top: 2rem; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <h4 style="color: white; margin-bottom: 0.5rem;">Métricas Mensuales</h4>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Genera un gráfico de evolución de asistencia para la tienda activa.</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a href="{{ url_for('api_stores_export_metrics') }}" class="btn btn-secondary" target="_blank">Generar Gráfico PNG 📈</a>
+    </div>
+</div>
+
+<div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+    <a href="{{ url_for('stores_reset') }}" class="btn btn-danger" style="background-color: #7f1d1d; border-color: #7f1d1d; font-weight: bold;">☠️ REINICIAR TODA LA BASE DE DATOS ☠️</a>
+</div>
+
+{% endblock %}

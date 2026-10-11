@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+{% block title %}Unirse a Sala de Torneo - Duelorapido.cl{% endblock %}
+{% block head %}
+<style>
+.join-container {
+    max-width: 520px;
+    margin: 1.5rem auto 3rem;
+    padding: 0 1rem;
+}
+.room-badge-header {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+    border: 2px solid #38bdf8;
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(56, 189, 248, 0.2);
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.room-pin-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #38bdf8;
+    letter-spacing: 4px;
+    margin: 0.4rem 0;
+    text-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+}
+.pin-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+.join-card {
+    background: var(--bg-card);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.8rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+}
+.tab-switcher {
+    display: flex;
+    background: rgba(15, 23, 42, 0.7);
+    border-radius: 8px;
+    padding: 4px;
+    margin-bottom: 1.5rem;
+    border: 1px solid #334155;
+}
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tab-btn.active {
+    background: #38bdf8;
+    color: #0f172a;
+    box-shadow: 0 2px 10px rgba(56, 189, 248, 0.3);
+}
+.form-group {
+    margin-bottom: 1.25rem;
+    position: relative;
+}
+.form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    margin-bottom: 0.4rem;
+}
+.form-control {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    background: #0f172a;
+    border: 1.5px solid #334155;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 1rem;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.2s;
+}
+.form-control:focus {
+    outline: none;
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
+}
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e293b;
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 50;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+    display: none;
+}
+.search-item {
+    padding: 10px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.search-item:hover {
+    background: rgba(56, 189, 248, 0.15);
+}
+.s-name { font-weight: 700; color: #fff; font-size: 0.95rem; }
+.s-meta { font-size: 0.75rem; color: #94a3b8; }
+.s-dorm {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.btn-join {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+    border: none;
+    border-radius: 8px;
+    color: #0f172a;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-join:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(56, 189, 248, 0.5);
+}
+.already-registered-box {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1.5px solid #22c55e;
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    display: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="join-container">
+    {% if room %}
+    <!-- CABECERA DE LA SALA ACTIVA -->
+    <div class="room-badge-header">
+        <div class="pin-label">CÓDIGO DE SALA / PIN</div>
+        <div class="room-pin-display">#{{ room.room_code }}</div>
+        <h2 style="margin: 0.2rem 0; font-size: 1.3rem; color: #fff;">{{ room.title }}</h2>
+        <div style="margin-top: 0.5rem; display: flex; justify-content: center; gap: 8px;">
+            <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 800;">
+                {{ room.format_name }}
+            </span>
+            <span class="badge" style="background: {% if room.status == 'LOBBY' %}rgba(34, 197, 94, 0.2){% else %}rgba(245, 158, 11, 0.2){% endif %}; color: {% if room.status == 'LOBBY' %}#4ade80{% else %}#fbbf24{% endif %}; font-weight: 800;">
+                {% if room.status == 'LOBBY' %}🟢 INSCRIPCIONES ABIERTAS{% elif room.status == 'RUNNING' %}⚡ TORNEO EN CURSO{% else %}🏁 FINALIZADO{% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- AVISO SI YA ESTÁ INSCRITO EN ESTE TELÉFONO -->
+    <div id="alreadyBox" class="already-registered-box">
+        <div style="font-size: 1.5rem; margin-bottom: 4px;">✅</div>
+        <strong style="color: #4ade80; font-size: 1.05rem;" id="alreadyPlayerName">Ya estás en la sala</strong>
+        <p style="color: #cbd5e1; font-size: 0.85rem; margin: 6px 0 12px;">Tu sesión está activa en este teléfono.</p>
+        <a id="alreadyRoomLink" href="/sala/{{ room.room_code }}" class="btn btn-primary" style="display:inline-block; padding: 10px 20px; font-size: 0.85rem;">
+            📱 Ver mi Mesa y Pareos en Vivo
+        </a>
+    </div>
+
+    <!-- TARJETA DE CHECK-IN -->
+    <div id="checkinCard" class="join-card">
+        <h3 style="font-family: 'Orbitron'; font-size: 1.1rem; color: #f8fafc; margin-top: 0; text-align: center;">
+            REGISTRO RÁPIDO AL TORNEO
+        </h3>
+        <p style="text-align: center; color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.25rem;">
+            Sin usuarios ni contraseñas. Escanea y entra al instante.
+        </p>
+
+        <div class="tab-switcher">
+            <button class="tab-btn active" id="tabAcademy" onclick="setMode('academy')">🎓 Soy de la Academia</button>
+            <button class="tab-btn" id="tabNew" onclick="setMode('new')">✨ Soy Nuevo</button>
+        </div>
+
+        <form id="joinForm" onsubmit="submitJoin(event)">
+            <input type="hidden" id="roomCode" value="{{ room.room_code }}">
+            <input type="hidden" id="selectedDorm" value="Estudiante de Intercambio">
+
+            <!-- MODO 1: BÚSQUEDA RÁPIDA DE ACADEMIA -->
+            <div id="academyMode">
+                <div class="form-group">
+                    <label>Escribe tu nombre o Konami ID:</label>
+                    <input type="text" id="academySearchInput" class="form-control" 
+                           placeholder="ej: Alvaro Rojas, Johan..." autocomplete="off" oninput="onSearchInput(this.value)">
+                    <div id="searchResults" class="search-results"></div>
+                </div>
+            </div>
+
+            <!-- MODO 2: JUGADOR NUEVO -->
+            <div id="newMode" style="display: none;">
+                <div class="form-group">
+                    <label>Tu Nombre o Apodo:</label>
+                    <input type="text" id="playerNameInput" class="form-control" placeholder="ej: Maxi Duelista">
+                </div>
+                <div class="form-group">
+                    <label>Konami ID (Opcional):</label>
+                    <input type="text" id="konamiIdInput" class="form-control" placeholder="ej: 0300123456">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Mazo / Arquetipo (Opcional):</label>
+                <input type="text" id="deckInput" class="form-control" placeholder="ej: Quickdraw Dandy, Blackwing, Diva Zombie...">
+            </div>
+
+            <div id="selectedPill" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; border-radius: 8px; padding: 10px 14px; margin-bottom: 1.25rem;">
+                <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Duelista Seleccionado:</div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+                    <strong style="color: #fff; font-size: 1.05rem;" id="selectedNameTxt">Alvaro Rojas</strong>
+                    <span id="selectedDormPill" class="badge" style="background:#38bdf8; color:#0f172a; font-weight:800;">OBELISK BLUE</span>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-join">
+                ⚔️ UNIRME AL TORNEO
+            </button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- FORMULARIO PARA INGRESAR PIN SI NO HAY SALA ESPECIFICADA -->
+    <div class="join-card" style="text-align: center;">
+        <h2 style="font-family: 'Orbitron'; color: #38bdf8; font-size: 1.4rem; margin-top: 0;">
+            INGRESAR A SALA DE TORNEO
+        </h2>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Ingresa el código PIN de 4 dígitos proyectado en la pantalla de la tienda:
+        </p>
+        <form onsubmit="gotoRoom(event)">
+            <div class="form-group">
+                <input type="text" id="pinInput" class="form-control" 
+                       placeholder="ej. 4821" maxlength="8" 
+                       style="text-align: center; font-size: 1.8rem; font-family: 'Orbitron'; letter-spacing: 5px;" required>
+            </div>
+            <button type="submit" class="btn-join">
+                ENTRAR A LA SALA ➜
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+let currentMode = 'academy';
+let searchTimeout = null;
+
+function setMode(mode) {
+    currentMode = mode;
+    const tabA = document.getElementById('tabAcademy');
+    const tabN = document.getElementById('tabNew');
+    const boxA = document.getElementById('academyMode');
+    const boxN = document.getElementById('newMode');
+
+    if (mode === 'academy') {
+        tabA.classList.add('active');
+        tabN.classList.remove('active');
+        boxA.style.display = 'block';
+        boxN.style.display = 'none';
+    } else {
+        tabN.classList.add('active');
+        tabA.classList.remove('active');
+        boxN.style.display = 'block';
+        boxA.style.display = 'none';
+        document.getElementById('selectedPill').style.display = 'none';
+    }
+}
+
+function gotoRoom(e) {
+    e.preventDefault();
+    const pin = document.getElementById('pinInput').value.trim();
+    if (pin) {
+        window.location.href = '/unirse/' + encodeURIComponent(pin);
+    }
+}
+
+function onSearchInput(val) {
+    clearTimeout(searchTimeout);
+    const resultsBox = document.getElementById('searchResults');
+    if (val.trim().length < 2) {
+        resultsBox.style.display = 'none';
+        return;
+    }
+
+    searchTimeout = setTimeout(() => {
+        fetch('/api/search_players?q=' + encodeURIComponent(val.trim()))
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.length === 0) {
+                    resultsBox.innerHTML = '<div style="padding:10px; color:#94a3b8; font-size:0.85rem;">No se encontraron duelistas. Puedes usar la pestaña "Soy Nuevo".</div>';
+                    resultsBox.style.display = 'block';
+                    return;
+                }
+                let html = '';
+                data.forEach(p => {
+                    const dormClass = p.dorm.toLowerCase().replace(/\s+/g, '-');
+                    html += `
+                        <div class="search-item" onclick="selectPlayer('${p.name.replace(/'/g, "\\'")}', '${p.dorm}', '${p.konami_id || ''}')">
+                            <div>
+                                <div class="s-name">${p.name}</div>
+                                <div class="s-meta">${p.konami_id ? 'K-ID: ' + p.konami_id + ' • ' : ''}ELO: ${p.rating}</div>
+                            </div>
+                            <span class="s-dorm dorm-${dormClass}">${p.dorm}</span>
+                        </div>
+                    `;
+                });
+                resultsBox.innerHTML = html;
+                resultsBox.style.display = 'block';
+            })
+            .catch(err => {
+                console.error("Search error:", err);
+            });
+    }, 200);
+}
+
+function selectPlayer(name, dorm, konamiId) {
+    document.getElementById('academySearchInput').value = name;
+    document.getElementById('searchResults').style.display = 'none';
+    document.getElementById('selectedNameTxt').innerText = name;
+    document.getElementById('selectedDormPill').innerText = dorm.toUpperCase();
+    document.getElementById('selectedDorm').value = dorm;
+    if (konamiId) {
+        document.getElementById('konamiIdInput').value = konamiId;
+    }
+    document.getElementById('selectedPill').style.display = 'block';
+}
+
+function submitJoin(e) {
+    e.preventDefault();
+    const roomCode = document.getElementById('roomCode').value;
+    let name = "";
+    let konamiId = document.getElementById('konamiIdInput') ? document.getElementById('konamiIdInput').value.trim() : "";
+    const deck = document.getElementById('deckInput').value.trim();
+
+    if (currentMode === 'academy') {
+        name = document.getElementById('academySearchInput').value.trim();
+    } else {
+        name = document.getElementById('playerNameInput').value.trim();
+    }
+
+    if (!name) {
+        alert("Por favor ingresa tu nombre o selecciona un duelista.");
+        return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerText = "Registrando...";
+
+    // Obtener session_token previo o generar uno nuevo
+    let sessionToken = localStorage.getItem('duel_player_token');
+    if (!sessionToken) {
+        sessionToken = 'p_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+        localStorage.setItem('duel_player_token', sessionToken);
+    }
+
+    const payload = {
+        player_name: name,
+        konami_id: konamiId,
+        deck: deck,
+        session_token: sessionToken
+    };
+
+    fetch(`/api/room/${roomCode}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            localStorage.setItem(`duel_room_${roomCode}`, JSON.stringify({
+                name: name,
+                token: res.data.session_token || sessionToken,
+                dorm: res.data.dorm
+            }));
+            window.location.href = `/sala/${roomCode}`;
+        } else {
+            alert(res.message || "Error al inscribirse.");
+            btn.disabled = false;
+            btn.innerText = "⚔️ UNIRME AL TORNEO";
+        }
+    })
+    .catch(err => {
+        alert("Error de conexión al registrarse.");
+        btn.disabled = false;
+        btn.innerText = "⚔️ UNIRME AL TORNEO";
+    });
+}
+
+// Comprobar si ya estaba registrado
+document.addEventListener('DOMContentLoaded', () => {
+    const roomInput = document.getElementById('roomCode');
+    if (!roomInput) return;
+    const roomCode = roomInput.value;
+    const saved = localStorage.getItem(`duel_room_${roomCode}`);
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            if (data && data.name) {
+                document.getElementById('alreadyPlayerName').innerText = `¡Ya estás registrado como ${data.name}!`;
+                document.getElementById('alreadyBox').style.display = 'block';
+            }
+        } catch(e) {}
+    }
+});
+</script>
+{% endblock %}

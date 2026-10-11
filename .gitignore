@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database and Data
+data/ygo_data.db
+data/ygo_data.db-*
+data/tournament_autosave.json
+data/history/*
+!data/history/sample.json
+data_backup/
+
+# Logs and Caches
+*.log
+cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Outputs and Generated Graphics
+output/
+whatsapp_print_automation/session/
+*.png
+*.jpg
+*.jpeg
+*.gif
+# Except static assets
+!static/
+!body.png
+!background.png
+!face_*.png
+!carly_*.png
+!yugi_dance.gif
+
+# Temporary scripts/outputs
+vulture_output.txt
+remote_sync_config.json
+
+# Builds & Binaries
+build/
+dist/
+*.exe
+*.db
+tournament_*.json
+*.wav

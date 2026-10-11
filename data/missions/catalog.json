@@ -1,0 +1,22 @@
+{
+  "missions": [
+    {
+      "id": "MSN_WEEKLY_PARTICIPATION",
+      "name": "Asistencia Perfecta",
+      "description": "Participa en 2 torneos esta semana.",
+      "xp_reward": 50,
+      "type": "WEEKLY",
+      "target_value": 2,
+      "condition_type": "TOURNAMENT_COUNT"
+    },
+    {
+      "id": "MSN_WEEKLY_WINS",
+      "name": "Racha Semanal",
+      "description": "Gana 5 matches esta semana.",
+      "xp_reward": 50,
+      "type": "WEEKLY",
+      "target_value": 5,
+      "condition_type": "WIN_COUNT"
+    }
+  ]
+}

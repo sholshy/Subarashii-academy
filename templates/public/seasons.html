@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Temporadas - Duelorapido.cl{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>TEMPORADAS DE LA ACADEMIA</h1>
+    <p class="subtitle">Historial y progreso en vivo de las etapas competitivas de Subarashii Duel Academy</p>
+</div>
+
+<div class="two-columns">
+    {% set act = seasons_data.get('active_metrics', {}) %}
+    {% set s = act.get('season', {}) %}
+    <div class="tourney-card" style="border-color: var(--accent);">
+        <h3 style="color: var(--accent);">{{ s.get('name', 'Temporada 1') }}</h3>
+        <p><strong>Estado:</strong> <span style="color: #22c55e;">EN CURSO</span></p>
+        <p><strong>Inicio:</strong> {{ s.get('start_date', '—') }}</p>
+        <p><strong>Tiempo transcurrido:</strong> {{ act.get('days_elapsed', 0) }} días</p>
+        <p><strong>Torneos jugados:</strong> {{ act.get('tournaments_count', 0) }} torneos ({{ act.get('first_date', '—') }} al {{ act.get('last_date', '—') }})</p>
+        <p><strong>Partidas disputadas:</strong> {{ act.get('total_matches', 0) }} duelos oficializados</p>
+        <p><strong>Duelistas participantes:</strong> {{ act.get('active_players', 0) }}</p>
+        {% if act.get('progress_text') %}
+        <p style="margin-top: 10px; background: rgba(56, 189, 248, 0.1); border-left: 3px solid #38bdf8; padding: 8px 12px; border-radius: 4px;">
+            <strong>Meta de Cierre:</strong> {{ act.progress_text }}
+        </p>
+        {% endif %}
+        <p class="mt-4"><a href="/ranking" class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Ver Ranking Actual</a></p>
+    </div>
+    
+    <div class="tourney-card" style="opacity: 0.75;">
+        <h3>Pretemporada</h3>
+        <p><strong>Estado:</strong> FINALIZADA</p>
+        <p><strong>Descripción:</strong> Etapa fundacional de calibración de ELO y graduación inicial de dormitorios. Todos los historiales y duelos fueron preservados en los perfiles de los duelistas.</p>
+    </div>
+</div>
+
+{% set all_s = seasons_data.get('all_seasons', []) %}
+{% if all_s|length > 1 %}
+<div class="mt-4">
+    <h2>HISTORIAL DE TEMPORADAS CERRADAS</h2>
+    <div class="table-container">
+        <table class="ranking-table" style="font-size:0.9rem;">
+            <thead>
+                <tr>
+                    <th>Temporada</th>
+                    <th>Inicio</th>
+                    <th>Fin</th>
+                    <th>Torneos</th>
+                    <th>Duelistas</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in all_s if row.status == 'CLOSED' %}
+                <tr>
+                    <td><strong>{{ row.name }}</strong></td>
+                    <td>{{ row.start_date }}</td>
+                    <td>{{ row.end_date }}</td>
+                    <td>{{ row.tournaments_count }}</td>
+                    <td>{{ row.players_count }}</td>
+                    <td><span style="color: #94a3b8;">CERRADA</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

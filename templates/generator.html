@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="title">YGO Deck Post Generator</h2>
+
+<div style="display: flex; gap: 2rem;">
+    <!-- Formulario -->
+    <div class="glass-panel" style="flex: 1; padding: 2rem;">
+        <form method="POST">
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Ganador</label>
+            <input type="text" name="winner" placeholder="CHAMPION" required>
+
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Evento</label>
+            <input type="text" name="event" placeholder="YGO EVENT" required>
+
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Decklist</label>
+            <textarea name="decklist" rows="15" placeholder="3 Cyber Dragon&#10;2 Book of Moon&#10;1 Jinzo&#10;&#10;Extra Deck&#10;1 Thousand-Eyes Restrict&#10;&#10;Side Deck&#10;2 Dust Tornado" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; color: white; padding: 1rem; font-family: monospace;"></textarea>
+
+            <button type="submit" class="btn" style="width: 100%; margin-top: 1.5rem; font-size: 1.1rem; padding: 1rem;">Generar Gráfico 📸</button>
+        </form>
+    </div>
+
+    <!-- Previsualización -->
+    <div class="glass-panel" style="flex: 1; text-align: center; padding: 2rem; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        <h3 style="color: white; margin-bottom: 1.5rem;">Resultado</h3>
+        {% if image_filename %}
+            <img src="{{ url_for('download_image', filename=image_filename) }}" style="max-width: 100%; border: 2px solid var(--primary); border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+            <br>
+            <a href="{{ url_for('download_image', filename=image_filename) }}" class="btn" style="margin-top: 1.5rem; background-color: var(--success); text-decoration: none; display: inline-block;">Descargar PNG</a>
+        {% else %}
+            <div style="border: 2px dashed rgba(255,255,255,0.2); padding: 5rem 2rem; color: var(--text-muted); border-radius: 8px; width: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                <span style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">🖼️</span>
+                El gráfico generado aparecerá aquí.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

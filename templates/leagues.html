@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2 class="title" style="margin-bottom: 0;">Avance de Ligas</h2>
+    <div>
+        <form method="GET" action="{{ url_for('leagues') }}" style="display: inline-block; margin-right: 1rem;">
+            <select name="format" onchange="this.form.submit()" style="margin-bottom: 0; padding: 0.5rem; width: auto;">
+                <option value="GOAT" {% if current_format == 'GOAT' %}selected{% endif %}>GOAT</option>
+                <option value="EDISON" {% if current_format == 'EDISON' %}selected{% endif %}>EDISON</option>
+                <option value="ADVANCED" {% if current_format == 'ADVANCED' %}selected{% endif %}>ADVANCED</option>
+                <option value="SPEED DUEL" {% if current_format == 'SPEED DUEL' %}selected{% endif %}>SPEED DUEL</option>
+            </select>
+        </form>
+        <a href="{{ url_for('leagues_progress', format=current_format) }}" class="btn" style="background-color: var(--primary); margin-right: 1rem;">
+            Registrar Misiones
+        </a>
+        <a href="{{ url_for('api_leagues_export_png', format=current_format, mode='top8') }}" class="btn btn-secondary" style="margin-right: 1rem;" target="_blank">
+            Top 8 PNG 📷
+        </a>
+        <a href="{{ url_for('api_leagues_export_png', format=current_format, mode='trend') }}" class="btn btn-secondary" style="margin-right: 1rem;" target="_blank">
+            Tendencia PNG 📈
+        </a>
+        <a href="{{ url_for('leagues_export', format=current_format) }}" class="btn" style="background-color: var(--success);">
+            Exportar a CSV (Sheets)
+        </a>
+    </div>
+</div>
+
+<div class="glass-panel table-container" style="overflow-x: auto; padding: 2rem;">
+    <h3 style="color: white; margin-bottom: 1.5rem;">Clasificación Actual</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Jugador</th>
+                <th>Total</th>
+                <th>Torneo</th>
+                <th>Asistencia</th>
+                <th>Misiones</th>
+                <th>Bingo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rank, player in standings %}
+            {% set m, a, miss, bingo = player.get_points_composition() %}
+            <tr style="{% if rank == 1 %}background: rgba(234, 179, 8, 0.15); border-left: 4px solid #eab308;{% endif %}">
+                <td>{% if rank == 1 %}👑{% else %}{{ rank }}{% endif %}</td>
+                <td style="color: white; font-weight: {% if rank == 1 %}800{% else %}500{% endif %};">
+                    {{ player.name }}
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">{{ player.deck_name }}</div>
+                </td>
+                <td style="color: var(--primary); font-weight: 800; font-size: 1.1rem;">
+                    {{ player.get_total_points() }}
+                </td>
+                <td style="color: var(--text-muted);">{{ m }}</td>
+                <td style="color: var(--text-muted);">{{ a }}</td>
+                <td style="color: var(--text-muted);">{{ miss }}</td>
+                <td>
+                    {% if bingo > 0 %}
+                    <span style="background-color: rgba(34, 197, 94, 0.2); color: #86efac; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">
+                        {{ bingo }}
+                    </span>
+                    {% else %}
+                    <span style="color: var(--text-muted);">-</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                    No hay jugadores registrados en esta liga o formato.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="glass-panel" style="margin-top: 2rem; padding: 2rem;">
+    <h3 style="color: var(--primary); margin-bottom: 1rem;">Instrucciones de Exportación a Sheets</h3>
+    <ol style="margin-left: 1.5rem; color: #94a3b8;">
+        <li style="margin-bottom: 0.5rem;">Haz clic en el botón verde <strong>"Exportar a CSV"</strong> arriba a la derecha.</li>
+        <li style="margin-bottom: 0.5rem;">Abre Google Sheets (<a href="https://sheets.new" target="_blank" style="color: var(--primary);">sheets.new</a>).</li>
+        <li style="margin-bottom: 0.5rem;">Ve a <strong>Archivo > Importar > Subir</strong> y selecciona el archivo `.csv` descargado.</li>
+        <li style="margin-bottom: 0.5rem;">Selecciona <strong>"Reemplazar hoja de cálculo actual"</strong> o <strong>"Insertar nuevas hojas"</strong> según prefieras.</li>
+    </ol>
+</div>
+{% endblock %}

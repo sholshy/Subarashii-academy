@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h1 class="glitch-text" data-text="SUBARASHII DUEL ACADEMY">SUBARASHII DUEL ACADEMY</h1>
+        <p class="subtitle">Temporada 1 - El Despertar</p>
+        <div class="hero-actions">
+            <a href="/ranking" class="btn btn-primary">VER RANKING GLOBAL</a>
+        </div>
+    </div>
+</section>
+
+<section class="academy-stats">
+    <h2>ESTADÍSTICAS DE LA ACADEMIA</h2>
+    <div class="stats-grid">
+        <div class="stat-box">
+            <span class="label">Duelistas</span>
+            <span class="value">{{ stats.total_players }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="label">Rankeados Oficiales</span>
+            <span class="value">{{ stats.total_ranked }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="label">Torneos Jugados</span>
+            <span class="value">{{ stats.total_tournaments }}</span>
+        </div>
+        <div class="stat-box">
+            <span class="label">Matches Totales</span>
+            <span class="value">{{ stats.total_matches }}</span>
+        </div>
+    </div>
+</section>
+
+<section class="top-players">
+    <h2>TOP 3 — RANKING GLOBAL</h2>
+    <div class="cards-grid">
+        {% for p in top_players %}
+        <a href="/torneo/{{ p.slug }}" class="player-card dorm-{{ p.dorm.lower().replace(' ', '-') }}">
+            <div class="card-god-crest-wrap">
+                <img src="{% if 'slifer' in p.dorm.lower() %}/static/public/img/dorms/slifer_god.jpg{% elif 'ra' in p.dorm.lower() %}/static/public/img/dorms/ra_god.jpg{% elif 'obelisk' in p.dorm.lower() %}/static/public/img/dorms/obelisk_god.jpg{% else %}/static/public/img/dorms/academy_crest.jpg{% endif %}" alt="{{ p.dorm }}" class="card-god-crest-img">
+            </div>
+            <div class="card-header">
+                <span class="rank-badge">
+                    #{{ p.rank }}
+                    {% if p.trend == 'up' %}
+                        <span style="color: #22c55e;">▲</span>
+                    {% elif p.trend == 'down' %}
+                        <span style="color: #ef4444;">▼</span>
+                    {% else %}
+                        <span style="color: #eab308;">▬</span>
+                    {% endif %}
+                </span>
+                <h3>{{ p.name }}</h3>
+            </div>
+            <div class="card-dorm-banner">
+                <span class="card-house-pill">{{ p.dorm }}</span>
+            </div>
+            <div class="card-body">
+                <div class="stat"><span class="label">ELO RATING</span><span class="value">{{ p.current_rating }}</span></div>
+                <div class="stat"><span class="label">NIVEL</span><span class="value">LVL {{ p.level }}</span></div>
+            </div>
+        </a>
+        {% else %}
+        <p class="placeholder-text">Aún no hay suficientes duelistas rankeados para formar el Top 3.</p>
+        {% endfor %}
+    </div>
+</section>
+
+<div class="two-columns">
+    <section class="latest-achievements">
+        <h2>ÚLTIMOS LOGROS</h2>
+        <div class="ach-list">
+            {% for a in latest_achievements %}
+            <div class="ach-item">
+                <div class="ach-icon">{{ a.icon }}</div>
+                <div class="ach-text">
+                    <h4>{{ a.name }}</h4>
+                    <p>{{ a.player_name }}</p>
+                    <small>Hace poco</small>
+                </div>
+            </div>
+            {% else %}
+            <p class="placeholder-text">Aún no hay logros desbloqueados.</p>
+            {% endfor %}
+        </div>
+    </section>
+    
+    <section class="latest-tournament">
+        <h2>ÚLTIMO TORNEO</h2>
+        {% if latest_tournament %}
+        <div class="tourney-card">
+            <h3>Torneo #{{ latest_tournament.id }} ({{ latest_tournament.format_name }})</h3>
+            <p><strong>Fecha:</strong> {{ latest_tournament.date }}</p>
+            <p><strong>Participantes:</strong> {{ latest_tournament.participants }}</p>
+            <p><strong>Campeón:</strong> 🏆 {{ latest_tournament.winner }}</p>
+        </div>
+        {% else %}
+        <p class="placeholder-text">Aún no hay torneos registrados.</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

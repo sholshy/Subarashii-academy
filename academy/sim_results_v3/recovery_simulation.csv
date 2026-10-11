@@ -1,0 +1,7 @@
+Caso,Motor,Rating 30M,Rating 50M,Rating 100M
+Empieza Bien -> Cae -> Sube,K=16,1074.47,971.52,1028.57
+Empieza Mal -> Sube -> Arrasa,K=16,848.31,957.22,1086.2
+Empieza Bien -> Cae -> Sube,K=24,1074.47,927.97,997.63
+Empieza Mal -> Sube -> Arrasa,K=24,848.31,987.86,1096.37
+Empieza Bien -> Cae -> Sube,K=Consolidado,1074.47,889.17,963.79
+Empieza Mal -> Sube -> Arrasa,K=Consolidado,848.31,1007.04,1084.91

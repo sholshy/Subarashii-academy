@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+        <h2 class="title" style="margin-bottom: 0;">Ronda {{ manager.current_round }} de {{ manager.total_rounds }}</h2>
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Formato: {{ manager.format_name }} | {{ manager.players|length }} Jugadores</span>
+        
+        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{{ url_for('api_tournament_export_pairings') }}" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" target="_blank">Exportar Pareos PNG 📷</a>
+            <a href="{{ url_for('api_tournament_export_bracket') }}" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;" target="_blank">Exportar Top 8 PNG 🏆</a>
+            <button onclick="shareWhatsApp()" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; background: #25D366; color: white;">Compartir WhatsApp 💬</button>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 1rem;">
+        {% if manager.current_round > 1 %}
+        <form method="POST" action="{{ url_for('api_rollback_round') }}" onsubmit="return confirm('¿Seguro que quieres deshacer toda la ronda actual?');">
+            <button type="submit" class="btn btn-secondary">Retroceder Ronda</button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('api_reset_tournament') }}" onsubmit="return confirm('¿Volver a la sala de registro? (Se borrarán los pareos).');">
+            <button type="submit" class="btn btn-secondary">Volver al Setup</button>
+        </form>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('api_next_round') }}">
+            {% if manager.current_round >= manager.total_rounds %}
+            <button type="submit" class="btn btn-danger">Finalizar Torneo</button>
+            {% else %}
+            <button type="submit" class="btn">Siguiente Ronda ⏭️</button>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 3fr 2fr; gap: 2rem;">
+    <!-- Emparejamientos -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <h3 style="color: white; margin-bottom: 1.5rem;">Emparejamientos / Mesas</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            {% for m in matches %}
+            {% set p1_name = m.p1.name if m.p1 else "BYE" %}
+            {% set p2_name = m.p2.name if m.p2 else "BYE" %}
+            
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+                <div style="text-align: center; color: var(--primary); font-weight: bold; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                    Mesa {{ loop.index }}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="flex: 1; text-align: right; padding-right: 1rem; display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem;">
+                        <span style="font-size: 1.1rem; color: white;">{{ p1_name }}</span>
+                        {% if m.p1 %}
+                        <form method="POST" action="{{ url_for('api_drop_player') }}" style="margin: 0;" onsubmit="return confirm('¿Seguro que quieres retirar a {{ p1_name }} del torneo?');">
+                            <input type="hidden" name="player_name" value="{{ p1_name }}">
+                            <button type="submit" class="btn btn-danger" style="padding: 0.1rem 0.4rem; font-size: 0.7rem;" title="Retirar (Drop)">Drop</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    <div style="color: var(--text-muted); font-size: 0.8rem; background: var(--card-bg); padding: 0.2rem 0.5rem; border-radius: 4px;">VS</div>
+                    <div style="flex: 1; text-align: left; padding-left: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.1rem; color: white;">{{ p2_name }}</span>
+                        {% if m.p2 %}
+                        <form method="POST" action="{{ url_for('api_drop_player') }}" style="margin: 0;" onsubmit="return confirm('¿Seguro que quieres retirar a {{ p2_name }} del torneo?');">
+                            <input type="hidden" name="player_name" value="{{ p2_name }}">
+                            <button type="submit" class="btn btn-danger" style="padding: 0.1rem 0.4rem; font-size: 0.7rem;" title="Retirar (Drop)">Drop</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if m.reported %}
+                <div style="display: flex; justify-content: center; align-items: center; gap: 1rem;">
+                    <span style="color: var(--success); font-weight: 600; font-size: 0.9rem;">
+                        Resultado: {{ m.result_text }}
+                    </span>
+                    <form method="POST" action="{{ url_for('api_undo_match') }}" style="margin: 0;">
+                        <input type="hidden" name="p1_name" value="{{ p1_name }}">
+                        <input type="hidden" name="p2_name" value="{{ p2_name }}">
+                        <button type="submit" class="btn btn-secondary" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Corregir</button>
+                    </form>
+                </div>
+                {% else %}
+                <div style="display: flex; justify-content: center; gap: 0.5rem;">
+                    {% if m.p2 %}
+                    <form method="POST" action="{{ url_for('api_report_match') }}" style="margin: 0;">
+                        <input type="hidden" name="p1_name" value="{{ p1_name }}">
+                        <input type="hidden" name="p2_name" value="{{ p2_name }}">
+                        <input type="hidden" name="result" value="P1_WIN">
+                        <button type="submit" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Gana P1</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('api_report_match') }}" style="margin: 0;">
+                        <input type="hidden" name="p1_name" value="{{ p1_name }}">
+                        <input type="hidden" name="p2_name" value="{{ p2_name }}">
+                        <input type="hidden" name="result" value="P2_WIN">
+                        <button type="submit" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Gana P2</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('api_report_match') }}" style="margin: 0;">
+                        <input type="hidden" name="p1_name" value="{{ p1_name }}">
+                        <input type="hidden" name="p2_name" value="{{ p2_name }}">
+                        <input type="hidden" name="result" value="DRAW">
+                        <button type="submit" class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Empate</button>
+                    </form>
+                    {% else %}
+                    <!-- BYE -->
+                    <span style="color: var(--text-muted); font-size: 0.9rem;">Descansa (BYE Automático)</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Standings -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <h3 style="color: white; margin-bottom: 1.5rem;">Clasificación Actual</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Nombre</th>
+                        <th>Pts</th>
+                        <th>Tiebreak</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in standings %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td style="color: white; font-weight: 500;">{{ p.name }}</td>
+                        <td style="color: var(--primary); font-weight: 800;">{{ p.points }}</td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);">{{ "%.2f"|format(p._omw) }} / {{ "%.2f"|format(p._oomw) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function shareWhatsApp() {
+    let text = "*Emparejamientos Ronda {{ manager.current_round }}* ⚔️\n\n";
+    {% for m in matches %}
+    {% set p1_name = m.p1.name if m.p1 else "BYE" %}
+    {% set p2_name = m.p2.name if m.p2 else "BYE" %}
+    text += "Mesa {{ loop.index }}: {{ p1_name }} vs {{ p2_name }}\n";
+    {% endfor %}
+    
+    let url = "https://api.whatsapp.com/send?text=" + encodeURIComponent(text);
+    window.open(url, '_blank');
+}
+</script>
+{% endblock %}

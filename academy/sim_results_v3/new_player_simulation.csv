@@ -1,0 +1,7 @@
+Caso,Motor,10M,30M,50M,100M
+Empieza Pésimo (Malo),K=16,839.88,978.21,1116.11,1014.58
+Empieza Excelente (Bueno),K=16,1156.95,1115.97,1206.7,981.92
+Empieza Pésimo (Malo),K=24,839.88,978.21,1166.45,970.98
+Empieza Excelente (Bueno),K=24,1156.95,1115.97,1241.9,910.36
+Empieza Pésimo (Malo),K=Consolidado,839.88,978.21,1208.38,922.46
+Empieza Excelente (Bueno),K=Consolidado,1156.95,1115.97,1272.36,848.76

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2 class="title" style="margin-bottom: 0;">Configuración del Torneo</h2>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Agregar Jugador -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <h3 style="color: white; margin-bottom: 1.5rem;">Registrar Jugador</h3>
+        <form method="POST" action="{{ url_for('api_add_player') }}">
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Nombre del jugador (Nuevo o Frecuente)</label>
+            <input type="text" name="name" placeholder="Nombre..." required list="players_list">
+            <datalist id="players_list">
+                {% for fp in frequent_players %}
+                <option value="{{ fp.name }}">{{ fp.konami_id or 'Sin ID' }}</option>
+                {% endfor %}
+            </datalist>
+
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Konami ID (Opcional si es nuevo)</label>
+            <input type="text" name="konami_id" placeholder="0000000000">
+
+            <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">+ Añadir al Torneo</button>
+        </form>
+    </div>
+
+    <!-- Lista de Inscritos -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="color: white; margin: 0;">Jugadores Inscritos ({{ manager.players|length }})</h3>
+        </div>
+        
+        <div style="max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--border);">
+            {% for p in manager.players %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 1rem; border-bottom: 1px solid var(--border);">
+                <div>
+                    <strong style="color: white;">{{ p.name }}</strong>
+                    <span style="font-size: 0.8rem; color: var(--text-muted); margin-left: 0.5rem;">{{ p.konami_id or 'Sin ID' }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('api_remove_player') }}" style="margin: 0;">
+                    <input type="hidden" name="name" value="{{ p.name }}">
+                    <button type="submit" class="btn btn-danger" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">Quitar</button>
+                </form>
+            </div>
+            {% else %}
+            <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                Aún no hay jugadores inscritos.
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Iniciar Torneo -->
+<div class="glass-panel" style="padding: 2rem; margin-top: 2rem;">
+    <h3 style="color: white; margin-bottom: 1.5rem;">Iniciar Evento</h3>
+    <form method="POST" action="{{ url_for('api_start_tournament') }}" style="display: flex; gap: 2rem; align-items: flex-end;">
+        <div style="flex: 1;">
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Formato</label>
+            <select name="format_name" style="margin-bottom: 0;">
+                <option value="GOAT">GOAT Format (2005)</option>
+                <option value="EDISON">EDISON Format (2010)</option>
+                <option value="Speed Duel">Speed Duel</option>
+            </select>
+        </div>
+        <div style="flex: 1;">
+            <label style="color: var(--text-muted); font-size: 0.9rem;">Modo de Juego</label>
+            <select name="mode" style="margin-bottom: 0;">
+                <option value="swiss">Rondas Suizas</option>
+                <option value="grinder">Moledoras (Eliminación Simple)</option>
+            </select>
+        </div>
+        <button type="submit" class="btn" style="padding: 0.8rem 2rem; font-size: 1.1rem; {% if manager.players|length < 2 %}opacity: 0.5; cursor: not-allowed;{% endif %}" {% if manager.players|length < 2 %}disabled{% endif %}>
+            🚀 INICIAR TORNEO
+        </button>
+    </form>
+</div>
+{% endblock %}

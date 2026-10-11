@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card" style="max-width: 400px; margin: 5rem auto; text-align: center;">
+    <h2 class="title" style="color: var(--success);">Nuevo Administrador</h2>
+    <p style="margin-bottom: 1.5rem; color: #94a3b8; font-size: 0.9rem;">(Esta página debe deshabilitarse en producción para evitar registros no autorizados)</p>
+    <form method="POST" action="{{ url_for('register') }}">
+        <div style="text-align: left;">
+            <label>Usuario</label>
+            <input type="text" name="username" required>
+        </div>
+        <div style="text-align: left;">
+            <label>Contraseña</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn" style="width: 100%; margin-top: 1rem; background-color: var(--success);">Registrar Cuenta</button>
+    </form>
+    <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #94a3b8;">
+        <a href="{{ url_for('login') }}" style="color: var(--primary);">Volver al Login</a>
+    </p>
+</div>
+{% endblock %}

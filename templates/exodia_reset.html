@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto; text-align: center;">
+    <h2 class="title" style="color: var(--danger); margin-bottom: 1rem;">PELIGRO - Validación Mística</h2>
+    <p style="color: white; font-size: 1.1rem; margin-bottom: 2rem;">
+        ESTÁS A PUNTO DE BORRAR TODO.<br>
+        Esto eliminará permanentemente todas las tiendas, jugadores, ganancias y el historial de torneos completo.
+    </p>
+    
+    <div class="glass-panel" style="padding: 2rem; border-color: var(--danger);">
+        <p style="color: #ef4444; font-weight: bold; font-size: 1.2rem; margin-bottom: 1.5rem;">
+            Para enviar los datos al Reino de las Sombras, debes reunir las 5 partes de Exodia.
+        </p>
+        
+        <div id="cards-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 2rem; justify-items: center;">
+            <!-- Cartas generadas por JS -->
+        </div>
+        
+        <form id="reset-form" method="POST" action="{{ url_for('api_stores_factory_reset') }}">
+            <input type="hidden" name="pieces" id="pieces-input" value="">
+            <button type="button" onclick="submitReset()" class="btn btn-danger" style="background-color: #7f1d1d; font-size: 1.2rem; padding: 1rem 2rem; width: 100%;">
+                ¡INVOCAR Y OBLITERAR!
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const cardsData = [
+        { name: "Exodia", file: "Exodia the Forbidden One.jpg" },
+        { name: "Brazo Der", file: "Right Arm of the Forbidden One.jpg" },
+        { name: "Brazo Izq", file: "Left Arm of the Forbidden One.jpg" },
+        { name: "Pierna Der", file: "Right Leg of the Forbidden One.jpg" },
+        { name: "Pierna Izq", file: "Left Leg of the Forbidden One.jpg" },
+        { name: "Mago Oscuro", file: "Dark Magician.jpg" },
+        { name: "Dragón Blanco", file: "Blue-Eyes White Dragon.jpg" },
+        { name: "Olla de la Codicia", file: "Pot of Greed.jpg" },
+        { name: "Kuriboh", file: "Kuriboh.jpg" },
+        { name: "Fuerza de Espejo", file: "Mirror Force.jpg" },
+        { name: "Renace el Monstruo", file: "Monster Reborn.jpg" },
+        { name: "Jinzo", file: "Jinzo.jpg" },
+        { name: "Tifón Místico", file: "Mystical Space Typhoon.jpg" },
+        { name: "Llamada", file: "Call of the Haunted.jpg" },
+        { name: "Tormenta", file: "Heavy Storm.jpg" }
+    ];
+    
+    // Shuffle array
+    for (let i = cardsData.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cardsData[i], cardsData[j]] = [cardsData[j], cardsData[i]];
+    }
+    
+    const selectedPieces = new Set();
+    const grid = document.getElementById('cards-grid');
+    
+    cardsData.forEach(card => {
+        const div = document.createElement('div');
+        div.style.cursor = 'pointer';
+        div.style.transition = 'all 0.2s';
+        div.style.border = '4px solid transparent';
+        div.style.borderRadius = '8px';
+        div.style.padding = '4px';
+        
+        const img = document.createElement('img');
+        img.src = "{{ url_for('cache_image', filename='') }}" + card.file;
+        img.alt = card.name;
+        img.title = card.name;
+        img.style.width = '100px';
+        img.style.height = '145px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '4px';
+        img.style.display = 'block';
+        
+        // Fallback styling for broken images
+        img.onerror = function() {
+            this.style.display = 'none';
+            div.innerText = card.name;
+            div.style.width = '100px';
+            div.style.height = '145px';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.justifyContent = 'center';
+            div.style.background = '#1e293b';
+            div.style.color = 'white';
+            div.style.fontSize = '0.8rem';
+            div.style.textAlign = 'center';
+        };
+        
+        div.appendChild(img);
+        
+        div.onclick = () => {
+            if (selectedPieces.has(card.name)) {
+                selectedPieces.delete(card.name);
+                div.style.borderColor = 'transparent';
+                div.style.transform = 'scale(1)';
+            } else {
+                selectedPieces.add(card.name);
+                div.style.borderColor = '#eab308';
+                div.style.transform = 'scale(1.05)';
+            }
+        };
+        
+        grid.appendChild(div);
+    });
+    
+    function submitReset() {
+        if (confirm("Última advertencia. ¿Realmente quieres ejecutar la obliteración?")) {
+            document.getElementById('pieces-input').value = Array.from(selectedPieces).join(',');
+            document.getElementById('reset-form').submit();
+        }
+    }
+</script>
+{% endblock %}

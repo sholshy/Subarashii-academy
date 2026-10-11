@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+{% endblock %}
+{% block content %}
+<!-- HERO BANNER TEMÁTICO DE LA CASA Y DIOS EGIPCIO -->
+<div class="dorm-hero-banner {{ dorm_meta.badge_class }}">
+    <div class="dorm-hero-watermark" style="background-image: url('{{ dorm_meta.god_banner }}');"></div>
+    <div class="dorm-hero-content">
+        <div class="dorm-god-crest-wrap">
+            <img src="{{ dorm_meta.god_img }}" alt="{{ dorm_meta.god_name }}" class="dorm-god-crest-hero">
+            <div class="dorm-crest-halo"></div>
+        </div>
+        <div class="dorm-hero-info">
+            <div class="dorm-house-pill">{{ dorm_meta.house_title }}</div>
+            <h1 class="dorm-hero-player-name">{{ player.name }}</h1>
+            <p class="dorm-god-subtitle">⚡ Patrón Divino: <strong>{{ dorm_meta.god_name }}</strong></p>
+            <p class="dorm-motto-quote">"{{ dorm_meta.motto }}"</p>
+        </div>
+        <div class="dorm-hero-highlights">
+            <div class="dorm-highlight-card">
+                <span class="d-hl-label">RATING ELO</span>
+                <span class="d-hl-val" style="color: {{ dorm_meta.color }};">{{ player.current_rating }}</span>
+            </div>
+            <div class="dorm-highlight-card">
+                <span class="d-hl-label">POSICIÓN GLOBAL</span>
+                <span class="d-hl-val">{% if player.matches_played >= 10 %}#{{ player.rank }}{% else %}CALIBRACIÓN{% endif %}</span>
+            </div>
+            <div class="dorm-highlight-card">
+                <span class="d-hl-label">NIVEL</span>
+                <span class="d-hl-val">LVL {{ player.level }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="profile-layout">
+    <aside class="credential-sidebar">
+        <!-- DIGITAL CREDENTIAL FOR INSTAGRAM CON MARCO Y DIOS EGIPCIO -->
+        <div class="digital-credential {{ dorm_meta.badge_class }}">
+            <div class="cred-watermark" style="background-image: url('{{ dorm_meta.god_img }}');"></div>
+            
+            <div class="cred-header">
+                <div class="cred-brand">DUELORAPIDO.CL</div>
+                <div class="cred-academy">SUBARASHII DUEL ACADEMY</div>
+            </div>
+            <div class="cred-body">
+                <!-- Emblema de la Casa y Dios Egipcio -->
+                <div class="cred-god-badge">
+                    <img src="{{ dorm_meta.god_img }}" alt="{{ dorm_meta.god_name }}" class="cred-god-img">
+                </div>
+
+                <div class="cred-house-ribbon">{{ dorm_meta.house_title }}</div>
+                <h2 class="cred-name">{{ player.name }}</h2>
+                <div class="cred-patron">{{ dorm_meta.god_name }}</div>
+                
+                <div class="cred-stats-row">
+                    <div class="cred-stat">
+                        <span class="lbl">RATING</span>
+                        <span class="val">{{ player.current_rating }}</span>
+                    </div>
+                    <div class="cred-stat">
+                        <span class="lbl">GLOBAL</span>
+                        <span class="val">{% if player.matches_played >= 10 %}#{{ player.rank }}{% else %}PROV{% endif %}</span>
+                    </div>
+                    <div class="cred-stat">
+                        <span class="lbl">NIVEL</span>
+                        <span class="val">LVL {{ player.level }}</span>
+                    </div>
+                </div>
+                
+                <div class="cred-xp-bar mt-4 w-100">
+                    <div class="progress-text" style="font-size:0.7rem; margin-bottom:5px;">XP Progress ({{ player.xp % 100 }} / 100)</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ player.xp % 100 }}%; background: {{ dorm_meta.color }};"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="cred-footer">
+                <div class="qr-placeholder">QR</div>
+                <div class="cred-url">duelorapido.cl/torneo/{{ player.slug }}</div>
+            </div>
+        </div>
+        <div style="text-align:center; margin-top:1rem;">
+            <button id="btnExport" class="btn btn-primary" style="width:100%; font-size:0.9rem; padding: 0.8rem;">📸 DESCARGAR CREDENCIAL</button>
+        </div>
+    </aside>
+    
+    <div class="profile-details">
+        <section class="stats-section">
+            <h2>ESTADÍSTICAS GLOBALES</h2>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="label">Matches Jugados</span>
+                    <span class="value">{{ player.matches_played }}</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Victorias</span>
+                    <span class="value">{{ player.wins }}</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Win Rate</span>
+                    <span class="value">{{ player.win_rate }}%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="label">Peak Rating</span>
+                    <span class="value">{{ player.highest_rating }}</span>
+                </div>
+            </div>
+        </section>
+        
+        {% if explanation %}
+        <section class="explain-section mt-4">
+            <h2>¿POR QUÉ TIENE ESTE RANKING?</h2>
+            <p>
+                El ranking se ordena por <strong>rating (ELO)</strong>; si hay empate, desempata la <strong>XP</strong>.
+                {% if explanation.tied_on_rating %}Hay {{ explanation.tied_on_rating }} jugador(es) con su mismo rating.{% endif %}
+                {% if explanation.points_to_player_ahead %}Le faltan <strong>{{ explanation.points_to_player_ahead }}</strong> puntos para alcanzar al jugador de arriba.{% endif %}
+            </p>
+            <p>
+                <strong>Rating:</strong>
+                {{ explanation.rating_breakdown.base }} (base)
+                {{ '%+d'|format(explanation.rating_breakdown.from_duels) }} (duelos)
+                {% if explanation.rating_breakdown.other_adjustments %}{{ '%+d'|format(explanation.rating_breakdown.other_adjustments) }} (otros ajustes){% endif %}
+                = <strong>{{ explanation.rating }}</strong>
+            </p>
+            <p>
+                <strong>Confiabilidad del rating:</strong> {{ explanation.glicko.confidence }}
+                · rango probable {{ explanation.glicko.interval[0] }}–{{ explanation.glicko.interval[1] }}
+                {% if explanation.streak %}
+                · <strong>Racha actual:</strong> {{ explanation.streak.label }} (mejor racha: {{ explanation.streak.best_win_streak }}W)
+                {% endif %}
+            </p>
+
+            {% if explanation.rivalries %}
+            <h3>Rivalidades Frecuentes (Head-to-Head)</h3>
+            <ul>
+                {% for rv in explanation.rivalries[:3] %}
+                <li>vs <strong>{{ rv.opponent }}</strong>: {{ rv.wins }}W - {{ rv.losses }}L ({{ rv.matches }} duelos · balance {{ '%+d'|format(rv.net_elo) }} ELO)</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            <h3>Duelos ({{ explanation.duels_total }})</h3>
+            <div class="table-container">
+                <table class="ranking-table" style="font-size:0.85rem;">
+                    <thead>
+                        <tr><th>Fecha</th><th>Rival</th><th>Resultado</th><th>Prob. de ganar</th><th>K</th><th>Cambio</th><th>Rating</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in explanation.duels|reverse %}
+                        <tr>
+                            <td>{{ d.date[:10] }}</td>
+                            <td>{{ d.opponent or '—' }}{% if d.opponent_rating %} ({{ d.opponent_rating }}){% endif %}</td>
+                            <td>{{ d.result }}</td>
+                            <td>{% if d.expected_win_pct is not none %}{{ d.expected_win_pct }}%{% else %}—{% endif %}</td>
+                            <td>{{ d.k_factor if d.k_factor is not none else '—' }}</td>
+                            <td style="color: {{ '#22c55e' if d.rating_change > 0 else '#ef4444' if d.rating_change < 0 else 'inherit' }};">{{ '%+d'|format(d.rating_change) }}</td>
+                            <td>{{ d.rating_after }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" style="text-align:center;">Sin duelos registrados.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="mt-4">XP: de dónde viene ({{ explanation.xp }})</h3>
+            <ul>
+                {% set labels = {'MATCH': 'Duelos jugados', 'MISSION': 'Misiones cumplidas', 'ACHIEVEMENT': 'Logros', 'TOURNAMENT': 'Participación en torneos', 'OTHER': 'Otros'} %}
+                {% for src, v in explanation.xp_by_source.items() %}
+                <li>{{ labels.get(src, src) }}: <strong>{{ v.xp }} XP</strong> ({{ v.count }})</li>
+                {% endfor %}
+                {% if explanation.xp_unlogged > 0 %}<li>Anterior al registro detallado: {{ explanation.xp_unlogged }} XP</li>{% endif %}
+            </ul>
+            {% if explanation.missions %}
+            <h4>Misiones cumplidas</h4>
+            <ul>{% for m in explanation.missions %}<li>{{ m.description }} (+{{ m.xp }} XP)</li>{% endfor %}</ul>
+            {% endif %}
+        </section>
+        {% endif %}
+
+        <section class="chart-section">
+            <h2>EVOLUCIÓN DEL RATING</h2>
+            <div class="chart-container" style="position: relative; height:300px; width:100%">
+                <canvas id="ratingChart"></canvas>
+            </div>
+        </section>
+        
+        <div class="two-columns">
+            <section class="history-section">
+                <h2>HISTORIAL DE TORNEOS</h2>
+                <div class="table-container">
+                    <table class="ranking-table" style="font-size:0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Formato</th>
+                                <th>Pts</th>
+                                <th>Pos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in tournaments %}
+                            <tr>
+                                <td>{{ t.date }}</td>
+                                <td>{{ t.format_name }}</td>
+                                <td>{{ t.points }}</td>
+                                <td>
+                                    {% if t.rank == 1 %}🥇 1º{% elif t.rank == 2 %}🥈 2º{% elif t.rank == 3 %}🥉 3º{% else %}-{% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" style="text-align:center;">Sin participaciones.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            
+            <section class="formats-section">
+                <h2>POR FORMATO</h2>
+                <div class="formats-grid">
+                    {% for fmt, stats in formats.items() %}
+                    <div class="format-card">
+                        <h3>{{ fmt }}</h3>
+                        <p>Matches: {{ stats.matches_played }}</p>
+                        <p>W/L: {{ stats.wins }} - {{ stats.losses }}</p>
+                    </div>
+                    {% else %}
+                    <p class="placeholder-text">Sin datos.</p>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+        
+        <section class="achievements-section mt-4">
+            <h2>LOGROS OBTENIDOS ({{ achievements|length }})</h2>
+            <div class="ach-list">
+                {% for a in achievements %}
+                <div class="ach-item rarity-{{ a.rarity.lower() }}">
+                    <div class="ach-icon">🏆</div>
+                    <div class="ach-text">
+                        <h4>{{ a.name }}</h4>
+                        <p>{{ a.description }}</p>
+                        <small>{{ a.date[:10] }}</small>
+                    </div>
+                </div>
+                {% else %}
+                <p class="placeholder-text">Aún no ha desbloqueado logros.</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    document.getElementById('btnExport').addEventListener('click', function() {
+        const cred = document.querySelector('.digital-credential');
+        html2canvas(cred, { scale: 3, backgroundColor: "#000" }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'Credencial_{{ player.slug }}.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    });
+
+    const historyData = {{ history|tojson }};
+    const ctx = document.getElementById('ratingChart').getContext('2d');
+    const labels = historyData.map((d, i) => 'M' + (i+1));
+    const dataPts = historyData.map(d => d.new_rating);
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'ELO Rating',
+                data: dataPts,
+                borderColor: '#60a5fa',
+                backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { grid: { color: '#1e293b' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}

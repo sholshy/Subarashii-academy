@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2 class="title" style="margin-bottom: 0;">Calculadora de Premios</h2>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Entradas -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <h3 style="color: white; margin-bottom: 1.5rem;">Parámetros del Evento</h3>
+        
+        <form id="calculator-form" oninput="calculatePrizes()" onsubmit="event.preventDefault();">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                    <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Jugadores (Pagaron)</label>
+                    <input type="number" id="paid_players" value="0" min="0" style="width: 100%; text-align: right;">
+                </div>
+                <div>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Jugadores (Invitados)</label>
+                    <input type="number" id="invited_players" value="0" min="0" style="width: 100%; text-align: right;">
+                </div>
+
+                <div>
+                    <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Costo de Inscripción ($)</label>
+                    <input type="number" id="entry_fee" value="5000" min="0" step="100" style="width: 100%; text-align: right;">
+                </div>
+                <div>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">IVA (%)</label>
+                    <input type="number" id="iva_pct" value="19" min="0" step="0.1" style="width: 100%; text-align: right;">
+                </div>
+
+                <div>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Comisión Transbank (%)</label>
+                    <input type="number" id="commission_pct" value="2.9" min="0" step="0.1" style="width: 100%; text-align: right;">
+                </div>
+                <div>
+                    <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Costo por Caja ($)</label>
+                    <input type="number" id="box_cost" value="65000" min="0" step="1000" style="width: 100%; text-align: right;">
+                </div>
+
+                <div>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Sobres por Caja</label>
+                    <input type="number" id="packs_per_box" value="24" min="1" style="width: 100%; text-align: right;">
+                </div>
+                <div>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Margen Ganancia Tienda (%)</label>
+                    <input type="number" id="profit_margin_pct" value="40" min="0" step="1" style="width: 100%; text-align: right;">
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Resultados -->
+    <div class="glass-panel" style="padding: 2rem;">
+        <h3 style="color: white; margin-bottom: 1.5rem;">Resultados y Distribución</h3>
+
+        <div style="background: rgba(0, 0, 0, 0.3); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <span style="color: var(--text-muted);">Total Jugadores:</span>
+                <strong style="color: white; font-size: 1.1rem;" id="res_total_players">0</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <span style="color: var(--text-muted);">Ingreso Bruto:</span>
+                <strong style="color: white; font-size: 1.1rem;" id="res_gross">$0</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                <span style="color: var(--text-muted);">Ingreso Neto (Pozo):</span>
+                <strong style="color: var(--success); font-size: 1.2rem;" id="res_net">$0</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-muted);">Total Sobres a Repartir:</span>
+                <strong style="color: var(--primary); font-size: 1.3rem;" id="res_packs">0 Sobres</strong>
+            </div>
+        </div>
+
+        <h4 style="color: var(--primary); margin-bottom: 1rem;">Sugerencia de Distribución</h4>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;" id="distribution_container">
+            <!-- Dynamic distribution -->
+        </div>
+    </div>
+</div>
+
+<script>
+function val(id) {
+    return parseFloat(document.getElementById(id).value) || 0;
+}
+
+function formatCurrency(num) {
+    return '$' + Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function calculatePrizes() {
+    const paid = val('paid_players');
+    const invited = val('invited_players');
+    const fee = val('entry_fee');
+    const iva = val('iva_pct');
+    const comm = val('commission_pct');
+    const boxCost = val('box_cost');
+    const packsPerBox = Math.max(1, val('packs_per_box'));
+    const profitMargin = val('profit_margin_pct');
+
+    const totalPlayers = paid + invited;
+    const grossIncome = paid * fee;
+
+    // Calcular Neto por Inscripción
+    const netFromIva = fee / (1 + (iva / 100));
+    const commCost = fee * (comm / 100);
+    const netFee = netFromIva - commCost;
+
+    const totalNetIncome = netFee * paid;
+
+    // Costos de producto
+    const basePackCost = boxCost / packsPerBox;
+    const packCost = basePackCost * (1 + (profitMargin / 100));
+
+    let totalPacks = 0;
+    if (packCost > 0) {
+        totalPacks = Math.ceil(totalNetIncome / packCost);
+    }
+
+    // Actualizar UI
+    document.getElementById('res_total_players').innerText = `${totalPlayers} (${paid} Pagaron, ${invited} Inv.)`;
+    document.getElementById('res_gross').innerText = formatCurrency(grossIncome);
+    document.getElementById('res_net').innerText = formatCurrency(totalNetIncome);
+    document.getElementById('res_packs').innerText = `${totalPacks} Sobres`;
+
+    // Calcular distribución
+    const container = document.getElementById('distribution_container');
+    container.innerHTML = '';
+
+    if (totalPacks > 0) {
+        let remaining = totalPacks;
+        const dist = [];
+        
+        if (totalPacks === 1) {
+            dist.push({place: '1er Lugar', packs: 1, color: '#fbbf24'});
+        } else if (totalPacks === 2) {
+            dist.push({place: '1er Lugar', packs: 2, color: '#fbbf24'});
+        } else if (totalPacks === 3) {
+            dist.push({place: '1er Lugar', packs: 2, color: '#fbbf24'});
+            dist.push({place: '2do Lugar', packs: 1, color: '#9ca3af'});
+        } else if (totalPacks >= 4) {
+            // Ejemplo de distribución progresiva (aprox 50%, 25%, 12%, 12%)
+            let p1 = Math.ceil(totalPacks * 0.5);
+            let p2 = Math.ceil(totalPacks * 0.25);
+            let p34 = Math.floor((totalPacks - p1 - p2) / 2);
+            let p4 = totalPacks - p1 - p2 - p34;
+
+            dist.push({place: '1er Lugar', packs: p1, color: '#fbbf24'});
+            dist.push({place: '2do Lugar', packs: p2, color: '#9ca3af'});
+            if (p34 > 0) dist.push({place: '3er Lugar', packs: p34, color: '#b45309'});
+            if (p4 > 0) dist.push({place: '4to Lugar', packs: p4, color: '#b45309'});
+        }
+
+        dist.forEach(item => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.padding = '0.5rem 1rem';
+            div.style.background = 'rgba(255,255,255,0.05)';
+            div.style.borderRadius = '4px';
+            div.innerHTML = `<span style="color: ${item.color}; font-weight: bold;">${item.place}</span> <span style="color: white; font-weight: bold;">${item.packs} Sobres</span>`;
+            container.appendChild(div);
+        });
+    } else {
+        container.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">No hay suficientes ingresos para repartir premios.</span>';
+    }
+}
+
+// Calcular al cargar la página
+document.addEventListener('DOMContentLoaded', calculatePrizes);
+</script>
+{% endblock %}

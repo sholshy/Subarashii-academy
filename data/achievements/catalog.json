@@ -1,0 +1,58 @@
+{
+  "achievements": [
+    {
+      "id": "ACH_FIRST_MATCH",
+      "name": "Primera Sangre",
+      "description": "Juega tu primer match oficial en Subarashii.",
+      "xp_reward": 50,
+      "retroactive": true,
+      "condition_type": "STAT_CHECK",
+      "condition_config": {"stat": "matches_played", "operator": ">=", "value": 1}
+    },
+    {
+      "id": "ACH_TEN_MATCHES",
+      "name": "Duelista de Intercambio",
+      "description": "Gradúate jugando tus primeros 10 matches oficiales.",
+      "xp_reward": 100,
+      "retroactive": true,
+      "condition_type": "STAT_CHECK",
+      "condition_config": {"stat": "matches_played", "operator": ">=", "value": 10}
+    },
+    {
+      "id": "ACH_FIRST_WIN",
+      "name": "Sabor a Victoria",
+      "description": "Gana tu primer match oficial.",
+      "xp_reward": 50,
+      "retroactive": true,
+      "condition_type": "STAT_CHECK",
+      "condition_config": {"stat": "wins", "operator": ">=", "value": 1}
+    },
+    {
+      "id": "ACH_KING_SLAYER",
+      "name": "Matarreyes",
+      "description": "Derrota al jugador Top 1 del ranking oficial.",
+      "xp_reward": 150,
+      "retroactive": false,
+      "condition_type": "EVENT_CHECK",
+      "condition_config": {"event": "BEAT_RANK_1"}
+    },
+    {
+      "id": "ACH_CHAMPION",
+      "name": "Campeón de la Academia",
+      "description": "Gana el 1er Lugar en un torneo oficial.",
+      "xp_reward": 200,
+      "retroactive": true,
+      "condition_type": "EVENT_CHECK",
+      "condition_config": {"event": "TOURNAMENT_PLACEMENT", "value": 1}
+    },
+    {
+      "id": "ACH_OBELISK",
+      "name": "Élite Azul",
+      "description": "Alcanza el codiciado dormitorio Obelisk Blue (1120+ ELO y graduado).",
+      "xp_reward": 200,
+      "retroactive": true,
+      "condition_type": "STAT_CHECK",
+      "condition_config": {"stat": "current_rating", "operator": ">=", "value": 1120, "requires_graduation": true}
+    }
+  ]
+}

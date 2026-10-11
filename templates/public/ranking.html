@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Ranking - Duelorapido.cl{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>RANKING GLOBAL</h1>
+    <p class="subtitle">Clasificación oficial de duelistas con 10 o más matches.</p>
+</div>
+<div class="table-container">
+    <table class="ranking-table">
+        <thead>
+            <tr>
+                <th>Rk</th>
+                <th></th>
+                <th>Duelista</th>
+                <th>Dormitorio</th>
+                <th>ELO Rating</th>
+                <th>Nivel (XP)</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in official %}
+            <tr onclick="window.location='/torneo/{{ p.slug }}'" style="cursor:pointer;" class="dorm-row-{{ p.dorm.lower().replace(' ', '-') }}">
+                <td class="rank-col">{{ p.rank }}</td>
+                <td class="trend-col" style="font-size:1.2rem; text-align:center;">
+                    {% if p.trend == 'up' %}
+                        <span style="color: #22c55e;">▲</span>
+                    {% elif p.trend == 'down' %}
+                        <span style="color: #ef4444;">▼</span>
+                    {% else %}
+                        <span style="color: #eab308;">▬</span>
+                    {% endif %}
+                </td>
+                <td class="name-col"><strong>{{ p.name }}</strong></td>
+                <td>
+                    <span class="dorm-badge dorm-{{ p.dorm.lower().replace(' ', '-') }}">
+                        <img src="{% if 'slifer' in p.dorm.lower() %}/static/public/img/dorms/slifer_god.jpg{% elif 'ra' in p.dorm.lower() %}/static/public/img/dorms/ra_god.jpg{% elif 'obelisk' in p.dorm.lower() %}/static/public/img/dorms/obelisk_god.jpg{% else %}/static/public/img/dorms/academy_crest.jpg{% endif %}" alt="{{ p.dorm }}" class="dorm-badge-mini-god">
+                        {{ p.dorm }}
+                    </span>
+                </td>
+                <td class="elo-col">{{ p.current_rating }}</td>
+                <td>LVL {{ p.level }} <span class="xp-sub">({{ p.xp }} XP)</span></td>
+                <td><span class="status-badge rankeado">Rankeado</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" style="text-align:center;">No hay jugadores que cumplan los requisitos todavía.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="page-header" style="margin-top: 4rem;">
+    <h1>ESTUDIANTES DE INTERCAMBIO</h1>
+    <p class="subtitle">Duelistas en etapa de calibración. Completa 10 matches para obtener clasificación oficial.</p>
+</div>
+<div class="table-container">
+    <table class="ranking-table provisional-table">
+        <thead>
+            <tr>
+                <th>Pos</th>
+                <th>Duelista</th>
+                <th>Rating Prov.</th>
+                <th>Win Rate</th>
+                <th>Progreso</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in provisional %}
+            <tr onclick="window.location='/torneo/{{ p.slug }}'" style="cursor:pointer;" class="dorm-row-intercambio">
+                <td class="rank-col prov">{{ p.prov_rank }}</td>
+                <td class="name-col"><strong>{{ p.name }}</strong></td>
+                <td class="elo-col prov">{{ p.current_rating }}</td>
+                <td>{{ p.win_rate }}%</td>
+                <td>
+                    <div class="progress-container">
+                        <div class="progress-text">{{ p.matches_played }} / 10 MATCHES</div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" style="width: {{ (p.matches_played / 10) * 100 }}%"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

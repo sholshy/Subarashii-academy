@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: subarashii-academy
+    runtime: python
+    plan: free
+    region: ohio
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ORGANIZER_API_KEY
+        value: subarashii_secret_organizer_key_2026
+      - key: ORGANIZER_ADMIN_PASSWORD
+        value: subarashii2026

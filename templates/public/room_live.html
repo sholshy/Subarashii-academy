@@ -1,0 +1,1870 @@
+{% extends "base.html" %}
+{% block title %}Sala {{ room.room_code }} - {{ room.title }} - Duelorapido.cl{% endblock %}
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+.room-container {
+    max-width: 960px;
+    margin: 1.5rem auto 3rem;
+    padding: 0 1rem;
+}
+.room-top-header {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+    border: 2px solid #38bdf8;
+    border-radius: 14px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+.room-info-block h1 {
+    margin: 0.2rem 0;
+    font-size: 1.6rem;
+    color: #f8fafc;
+}
+.room-code-badge {
+    background: rgba(56, 189, 248, 0.15);
+    border: 1.5px solid #38bdf8;
+    padding: 8px 16px;
+    border-radius: 10px;
+    text-align: center;
+}
+.room-code-badge .pin {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #38bdf8;
+    letter-spacing: 3px;
+    line-height: 1;
+}
+.room-code-badge small {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+/* TIMER WIDGET */
+.timer-live-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1.5px solid #38bdf8;
+    padding: 8px 16px;
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
+    transition: all 0.3s ease;
+}
+.timer-live-badge.warning {
+    border-color: #f59e0b;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+}
+.timer-live-badge.danger {
+    border-color: #ef4444;
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.5);
+    animation: timerPulse 1s infinite;
+}
+@keyframes timerPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+}
+.timer-live-digits {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.7rem;
+    font-weight: 900;
+    color: #38bdf8;
+    line-height: 1;
+    letter-spacing: 1.5px;
+}
+.timer-live-badge.warning .timer-live-digits { color: #fbbf24; }
+.timer-live-badge.danger .timer-live-digits { color: #f87171; }
+.timer-live-status {
+    font-size: 0.65rem;
+    color: #94a3b8;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* MY MATCH HERO CARD */
+.my-match-hero {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 58, 138, 0.4) 100%);
+    border: 2px solid #38bdf8;
+    border-radius: 14px;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+.my-match-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 0.75rem;
+}
+.table-big-badge {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 900;
+    background: #38bdf8;
+    color: #0f172a;
+    padding: 5px 16px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+}
+.duel-vs-grid {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    text-align: center;
+}
+.player-duel-side {
+    flex: 1;
+    min-width: 140px;
+}
+.player-duel-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0.3rem 0;
+}
+.vs-circle {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #0f172a;
+    border: 2px solid #f59e0b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Orbitron';
+    font-weight: 900;
+    color: #fbbf24;
+    font-size: 0.9rem;
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+}
+.opp-profile-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 8px;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid #f59e0b;
+    color: #fbbf24;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.opp-profile-link:hover {
+    background: #f59e0b;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
+
+/* FASE 2: REPORT PANEL */
+.match-report-panel {
+    margin-top: 1.5rem;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+}
+.report-panel-title {
+    font-family: 'Orbitron', sans-serif;
+    color: #38bdf8;
+    font-size: 0.95rem;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+.report-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+.btn-rep {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    font-size: 0.82rem;
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+.btn-rep.win {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: #22c55e;
+    color: #4ade80;
+}
+.btn-rep.win:hover {
+    background: #22c55e;
+    color: #0f172a;
+}
+.btn-rep.loss {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #f87171;
+}
+.btn-rep.loss:hover {
+    background: #ef4444;
+    color: #fff;
+}
+.btn-rep.draw {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #f59e0b;
+    color: #fbbf24;
+}
+.btn-rep.draw:hover {
+    background: #f59e0b;
+    color: #0f172a;
+}
+
+/* REPORT PENDING BANNER */
+.report-pending-box {
+    margin-top: 1.25rem;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px dashed #38bdf8;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+}
+.pulse-mini-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #38bdf8;
+    box-shadow: 0 0 10px #38bdf8;
+    animation: pulse 1.5s infinite;
+    flex-shrink: 0;
+}
+
+/* CONFIRM ACTION BOX */
+.report-confirm-action-box {
+    margin-top: 1.5rem;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98));
+    border: 2px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+}
+.confirm-score-display {
+    font-family: 'Orbitron', monospace;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #38bdf8;
+    margin: 8px 0 14px;
+}
+.confirm-score-display small {
+    display: block;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    margin-top: 4px;
+}
+.confirm-buttons-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.btn-confirm-yes {
+    background: #22c55e;
+    color: #0f172a;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 0.85rem;
+    padding: 11px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    transition: all 0.2s;
+}
+.btn-confirm-yes:hover {
+    background: #16a34a;
+    transform: translateY(-2px);
+}
+.btn-confirm-no {
+    background: transparent;
+    color: #ef4444;
+    border: 1.5px solid #ef4444;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    font-size: 0.82rem;
+    padding: 11px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-confirm-no:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* DISPUTED ALERT */
+.report-dispute-alert {
+    margin-top: 1.25rem;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1.5px solid #ef4444;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+}
+
+/* OFFICIAL FINISHED MATCH */
+.match-official-result {
+    margin-top: 1.25rem;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid #22c55e;
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.result-check-icon {
+    font-size: 1.5rem;
+    color: #22c55e;
+    font-weight: 900;
+}
+.result-score-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #4ade80;
+}
+
+/* LOBBY WAITING BANNER */
+.lobby-waiting-banner {
+    background: linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1.5px solid #22c55e;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+.lobby-pulse-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 15px #22c55e;
+    animation: pulse 1.8s infinite;
+}
+@keyframes pulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+
+/* TABS */
+.room-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 6px;
+    overflow-x: auto;
+}
+.r-tab {
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.r-tab.active {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border-bottom: 3px solid #38bdf8;
+}
+
+/* PAIRING TABLES */
+.pairing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+.pairing-card {
+    background: var(--bg-card);
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 1.25rem;
+    position: relative;
+    transition: transform 0.15s, border-color 0.15s;
+}
+.pairing-card:hover {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+}
+.pairing-table-tag {
+    font-family: 'Orbitron';
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+}
+.p-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.p-row:last-child { border-bottom: none; }
+.p-name { font-weight: 700; color: #fff; font-size: 1rem; }
+
+/* TABLÓN DE CARTAS (TRADE BOARD) */
+.trade-board-header {
+    background: var(--bg-card);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.trade-filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.trade-filter-btn {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid #334155;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.trade-filter-btn.active {
+    background: #38bdf8;
+    border-color: #38bdf8;
+    color: #0f172a;
+    font-weight: 800;
+}
+.trade-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 1.25rem;
+}
+.trade-card {
+    background: var(--bg-card);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    gap: 14px;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+}
+.trade-card:hover {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+}
+.trade-card-thumb {
+    width: 75px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #475569;
+    flex-shrink: 0;
+    background: #0f172a;
+    cursor: pointer;
+}
+.trade-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.trade-badge-type {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+.trade-badge-busco {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    border: 1px solid #38bdf8;
+}
+.trade-badge-vendo {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid #22c55e;
+}
+.trade-badge-cambio {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border: 1px solid #a855f7;
+}
+
+/* MODAL Y FORMULARIO PUBLICAR CARTA */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+.modal-content-card {
+    background: #0f172a;
+    border: 2px solid #38bdf8;
+    border-radius: 16px;
+    padding: 1.75rem;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 15px 45px rgba(56, 189, 248, 0.4);
+}
+.card-search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #1e293b;
+    border: 1px solid #38bdf8;
+    border-radius: 8px;
+    max-height: 230px;
+    overflow-y: auto;
+    z-index: 50;
+    display: none;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+}
+.card-result-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #334155;
+    transition: background 0.15s;
+}
+.card-result-item:hover {
+    background: rgba(56, 189, 248, 0.15);
+}
+.card-result-item img {
+    width: 32px;
+    height: 46px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+#qrcode {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem auto;
+    background: #fff;
+    padding: 14px;
+    border-radius: 10px;
+    width: 200px;
+    height: 200px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="room-container">
+    <!-- CABECERA DE LA SALA -->
+    <div class="room-top-header">
+        <div class="room-info-block">
+            <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: 800;">
+                SALA EN VIVO • {{ room.format_name }}
+            </span>
+            <h1>{{ room.title }}</h1>
+            <div style="color: #94a3b8; font-size: 0.85rem; display: flex; align-items: center; gap: 12px; margin-top: 4px; flex-wrap: wrap;">
+                <span id="roomStatusBadge" class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">
+                    {% if room.status == 'LOBBY' %}🟢 INSCRIPCIONES ABIERTAS{% elif room.status == 'RUNNING' %}⚡ EN CURSO{% else %}🏁 FINALIZADO{% endif %}
+                </span>
+                <span id="livePlayersCount">👥 {{ players|length }} Inscriptos</span>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+            <!-- RELOJ DIGITAL DE LA RONDA -->
+            <div id="roomTimerWidget" class="timer-live-badge" style="display: none;">
+                <span style="font-size: 1.4rem;">⏱️</span>
+                <div style="display: flex; flex-direction: column;">
+                    <span id="roomTimerDigits" class="timer-live-digits">--:--</span>
+                    <span id="roomTimerStatus" class="timer-live-status">TIEMPO RONDA</span>
+                </div>
+            </div>
+
+            <!-- PIN DE SALA -->
+            <div class="room-code-badge">
+                <small>PIN DE SALA</small>
+                <div class="pin">#{{ room.room_code }}</div>
+            </div>
+            
+            <button onclick="toggleQRModal(true)" class="btn" style="background: #1e293b; border: 1px solid #38bdf8; color: #38bdf8; padding: 12px; border-radius: 8px; cursor: pointer;" title="Mostrar QR para que otros escaneen">
+                📱 QR
+            </button>
+        </div>
+    </div>
+
+    <!-- SECCIÓN PERSONALIZADA: MI MATCH EN VIVO & FASE 2 -->
+    <div id="myMatchSection" style="display: none;">
+        <!-- Se inyecta dinámicamente con JS si el usuario está registrado en este teléfono -->
+    </div>
+
+    <!-- AVISO PARA QUIENES AÚN NO SE HAN REGISTRADO -->
+    <div id="joinPromptSection" style="display: none; background: rgba(56, 189, 248, 0.1); border: 1px dashed #38bdf8; border-radius: 10px; padding: 1.25rem; text-align: center; margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 0.4rem; color: #fff; font-size: 1.1rem;">¿Estás en la tienda y quieres jugar este torneo?</h3>
+        <p style="color: #cbd5e1; font-size: 0.85rem; margin: 0 0 1rem;">Regístrate con tu teléfono en 5 segundos sin contraseñas.</p>
+        <a href="/unirse/{{ room.room_code }}" class="btn btn-primary" style="display: inline-block; padding: 10px 24px; font-weight: 800; font-size: 0.85rem;">
+            ⚔️ Inscribirme a este Torneo
+        </a>
+    </div>
+
+    <!-- PESTAÑAS DE CONTENIDO -->
+    <div class="room-tabs">
+        <button class="r-tab active" id="tabPairings" onclick="switchRoomTab('pairings')">⚡ Pareos de Ronda</button>
+        <button class="r-tab" id="tabTrades" onclick="switchRoomTab('trades')">🃏 Tablón de Cartas (<span id="tabTradeCount">0</span>)</button>
+        <button class="r-tab" id="tabStandings" onclick="switchRoomTab('standings')">🏆 Standings en Vivo</button>
+        <button class="r-tab" id="tabPlayers" onclick="switchRoomTab('players')">👥 Jugadores (<span id="tabCountSpan">{{ players|length }}</span>)</button>
+    </div>
+
+    <!-- CONTENIDO 1: PAREOS DE LA RONDA -->
+    <div id="contentPairings">
+        <div id="pairingsList">
+            <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 10px; border: 1px solid #334155;">
+                <p style="color: #94a3b8; font-size: 1.05rem; margin: 0;">Esperando que el organizador genere los primeros pareos...</p>
+                <small style="color: #64748b; display: block; margin-top: 8px;">Las mesas asignadas se actualizarán automáticamente aquí.</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENIDO 2: TABLÓN DE CARTAS (TRADE BOARD) -->
+    <div id="contentTrades" style="display: none;">
+        <div class="trade-board-header">
+            <div>
+                <h3 style="margin: 0; color: #fff; font-size: 1.15rem; font-family: 'Orbitron';">🃏 Tablón de Compra, Venta y Cambio</h3>
+                <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.82rem;">
+                    Publica las cartas que buscas o vendes durante el torneo con imágenes oficiales de YGOPRODeck.
+                </p>
+            </div>
+            <button onclick="openPublishTradeModal()" class="btn btn-primary" style="font-weight: 800; font-size: 0.85rem; padding: 9px 18px;">
+                ➕ Publicar Carta
+            </button>
+        </div>
+
+        <div class="trade-filter-bar">
+            <button class="trade-filter-btn active" onclick="filterTrades('ALL', this)">Todas</button>
+            <button class="trade-filter-btn" onclick="filterTrades('BUSCO', this)">🔍 Busco</button>
+            <button class="trade-filter-btn" onclick="filterTrades('VENDO', this)">💰 Vendo</button>
+            <button class="trade-filter-btn" onclick="filterTrades('CAMBIO', this)">🔄 Cambio</button>
+        </div>
+
+        <div id="tradePostsGrid" class="trade-cards-grid">
+            <div style="grid-column: 1/-1; text-align: center; padding: 2.5rem; background: var(--bg-card); border-radius: 10px; border: 1px solid #334155;">
+                <p style="color: #94a3b8; margin: 0;">Cargando publicaciones del tablón...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENIDO 3: STANDINGS EN VIVO -->
+    <div id="contentStandings" style="display: none;">
+        <div class="table-container">
+            <table class="ranking-table" style="font-size: 0.95rem;">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">Pos</th>
+                        <th>Duelista</th>
+                        <th style="text-align: center;">Pts</th>
+                        <th style="text-align: center;">OMW%</th>
+                        <th style="text-align: center;">Duelos</th>
+                    </tr>
+                </thead>
+                <tbody id="standingsTableBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: #94a3b8; padding: 2rem;">
+                            Los standings estarán disponibles al iniciar la Ronda 1.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- CONTENIDO 4: LISTA DE JUGADORES REGISTRADOS -->
+    <div id="contentPlayers" style="display: none;">
+        <div id="playersGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem;">
+            {% for p in players %}
+            <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #fff; display: block; font-size: 0.95rem;">{{ p.player_name }}</strong>
+                    <small style="color: #94a3b8; font-size: 0.75rem;">{{ p.deck_archetype or 'Duelista Oficial' }}</small>
+                </div>
+                <span class="badge dorm-{{ p.dorm.lower().replace(' ', '-') }}" style="font-size: 0.7rem; font-weight: 800;">
+                    {{ p.dorm }}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA PUBLICAR CARTA EN EL TABLÓN -->
+<div id="publishTradeModal" class="modal-overlay" onclick="closePublishTradeModal()">
+    <div class="modal-content-card" onclick="event.stopPropagation()">
+        <h3 style="font-family: 'Orbitron'; color: #38bdf8; margin: 0 0 6px;">PUBLICAR EN EL TABLÓN</h3>
+        <p style="color: #94a3b8; font-size: 0.8rem; margin: 0 0 1.25rem;">
+            Los jugadores de la sala verán tu carta en vivo.
+        </p>
+
+        <!-- TIPO DE POST -->
+        <label style="display: block; font-size: 0.8rem; color: #cbd5e1; font-weight: 700; margin-bottom: 6px;">¿Qué deseas hacer?</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 1.25rem;">
+            <button type="button" id="btnTypeBusco" onclick="setPostType('BUSCO')" class="btn-rep win" style="font-size: 0.8rem;">🔍 BUSCO</button>
+            <button type="button" id="btnTypeVendo" onclick="setPostType('VENDO')" class="btn-rep" style="font-size: 0.8rem;">💰 VENDO</button>
+            <button type="button" id="btnTypeCambio" onclick="setPostType('CAMBIO')" class="btn-rep" style="font-size: 0.8rem;">🔄 CAMBIO</button>
+        </div>
+
+        <!-- BÚSQUEDA YGOPRODECK -->
+        <div style="position: relative; margin-bottom: 1.25rem;">
+            <label style="display: block; font-size: 0.8rem; color: #cbd5e1; font-weight: 700; margin-bottom: 6px;">
+                Nombre de la Carta (API Yu-Gi-Oh!):
+            </label>
+            <input type="text" id="cardSearchInput" placeholder="Escribe el nombre en inglés (ej. Cyber Dragon, Dark Magician)..." 
+                   oninput="onSearchInput(this.value)" autocomplete="off"
+                   style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1.5px solid #334155; border-radius: 8px; padding: 10px 14px; color: #fff; font-size: 0.9rem;">
+            <div id="cardSearchResultsDropdown" class="card-search-results-dropdown"></div>
+        </div>
+
+        <!-- PREVIEW DE CARTA SELECCIONADA -->
+        <div id="selectedCardPreview" style="display: none; background: #1e293b; border: 1px solid #38bdf8; border-radius: 8px; padding: 10px; margin-bottom: 1.25rem; align-items: center; gap: 12px;">
+            <img id="selectedCardImg" src="" style="width: 45px; height: 65px; object-fit: cover; border-radius: 4px;">
+            <div style="flex: 1;">
+                <strong id="selectedCardTitle" style="color: #fff; font-size: 0.95rem; display: block;"></strong>
+                <small id="selectedCardType" style="color: #94a3b8; font-size: 0.75rem;"></small>
+            </div>
+            <button type="button" onclick="clearSelectedCard()" style="background: none; border: none; color: #ef4444; font-size: 1.2rem; cursor: pointer;">✕</button>
+        </div>
+
+        <!-- DETALLES OPCIONALES: RAREZA, IDIOMA, EDICIÓN -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem;">
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #cbd5e1; font-weight: 700; margin-bottom: 4px;">Rareza:</label>
+                <select id="tradeRaritySelect" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; color: #fff; font-size: 0.85rem;">
+                    <option value="">Cualquier Rareza</option>
+                    <option value="Common">Common</option>
+                    <option value="Rare">Rare</option>
+                    <option value="Super Rare">Super Rare</option>
+                    <option value="Ultra Rare">Ultra Rare</option>
+                    <option value="Secret Rare">Secret Rare</option>
+                    <option value="Ultimate Rare">Ultimate Rare</option>
+                    <option value="Ghost Rare">Ghost Rare</option>
+                    <option value="Quarter Century Secret Rare">Quarter Century Secret Rare</option>
+                    <option value="Collector's Rare">Collector's Rare</option>
+                    <option value="Starlight Rare">Starlight Rare</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-size: 0.75rem; color: #cbd5e1; font-weight: 700; margin-bottom: 4px;">Idioma:</label>
+                <select id="tradeLangSelect" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; color: #fff; font-size: 0.85rem;">
+                    <option value="Cualquiera">Cualquiera</option>
+                    <option value="Español">Español</option>
+                    <option value="Inglés">Inglés</option>
+                    <option value="Japonés / OCG">Japonés / OCG</option>
+                </select>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; font-size: 0.75rem; color: #cbd5e1; font-weight: 700; margin-bottom: 4px;">Edición:</label>
+            <select id="tradeEditionSelect" style="width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px; color: #fff; font-size: 0.85rem;">
+                <option value="Cualquiera">Cualquiera</option>
+                <option value="1st Edition">1st Edition (1ra Edición)</option>
+                <option value="Unlimited">Unlimited</option>
+                <option value="Limited / Promo">Limited / Promo</option>
+            </select>
+        </div>
+
+        <!-- NOTAS O PRECIO -->
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; font-size: 0.75rem; color: #cbd5e1; font-weight: 700; margin-bottom: 4px;">Notas / Precio / Oferta:</label>
+            <textarea id="tradeNotesInput" rows="2" placeholder="Ej: Estado Near Mint, pago hasta $15.000 o permuto por staples de Edison..." 
+                      style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 8px 10px; color: #fff; font-size: 0.85rem;"></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <button type="button" onclick="closePublishTradeModal()" class="btn btn-secondary" style="flex: 1;">Cancelar</button>
+            <button type="button" id="btnSubmitTrade" onclick="submitTradePost()" class="btn btn-primary" style="flex: 2; font-weight: 800;">
+                Publicar en Sala
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL QR PARA PROYECTAR O COMPARTIR -->
+<div id="qrModal" class="modal-overlay" onclick="toggleQRModal(false)">
+    <div class="modal-content-card" style="text-align: center; max-width: 360px;" onclick="event.stopPropagation()">
+        <h3 style="font-family: 'Orbitron'; color: #38bdf8; margin: 0 0 4px;">ESCANEA PARA UNIRTE</h3>
+        <p style="color: #94a3b8; font-size: 0.8rem; margin: 0;">O ingresa a <strong>duelorapido.cl/unirse</strong> con el PIN:</p>
+        
+        <div style="font-family: 'Orbitron'; font-size: 2.2rem; font-weight: 900; color: #38bdf8; margin: 10px 0;">
+            #{{ room.room_code }}
+        </div>
+
+        <div id="qrcode"></div>
+
+        <button onclick="toggleQRModal(false)" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
+            Cerrar
+        </button>
+    </div>
+</div>
+
+<!-- MODAL DE DOBLE CONFIRMACIÓN DE DROP (RETIRO) -->
+<div id="dropTournamentModal" class="modal-overlay" onclick="closeDropModal()">
+    <div class="modal-content-card" style="max-width: 480px; border-color: #ef4444;" onclick="event.stopPropagation()">
+        
+        <!-- PASO 1: EXPLICACIÓN DE REGLAS E IMPACTO DEPORTIVO -->
+        <div id="dropStep1">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                <span style="font-size: 2rem;">🚪</span>
+                <div>
+                    <h3 style="font-family: 'Orbitron'; color: #f87171; margin: 0; font-size: 1.15rem;">RETIRARSE DEL TORNEO</h3>
+                    <small style="color: #94a3b8;">Paso 1 de 2: Información de Reglas Oficiales</small>
+                </div>
+            </div>
+
+            <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.45; margin: 0 0 1rem;">
+                ¿Deseas retirarte de las rondas restantes de este torneo? Por favor lee atentamente cómo funciona el retiro (Drop):
+            </p>
+
+            <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 1.25rem; font-size: 0.82rem; line-height: 1.45; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; gap: 8px;">
+                    <span style="color: #f87171; font-weight: 900;">1.</span>
+                    <span style="color: #e2e8f0;"><strong>Rondas Siguientes:</strong> Ya no se te emparejará en las rondas futuras. No recibirás más mesas asignadas.</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <span style="color: #38bdf8; font-weight: 900;">2.</span>
+                    <span style="color: #e2e8f0;"><strong>Tus Partidas Jugadas:</strong> Todos los resultados que ya completaste se mantienen intactos y oficiales. No se borra tu historial previo.</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <span style="color: #4ade80; font-weight: 900;">3.</span>
+                    <span style="color: #e2e8f0;"><strong>Tus Oponentes Anteriores:</strong> Tus oponentes <strong>no se ven perjudicados</strong>. Conservan todos sus puntos de victoria o empate.</span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <span style="color: #fbbf24; font-weight: 900;">4.</span>
+                    <span style="color: #e2e8f0;"><strong>Desempate (OMW%):</strong> Tus victorias y derrotas siguen contando para el porcentaje de desempate de tus rivales pasados, manteniendo la justicia de los standings.</span>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="closeDropModal()" class="btn btn-secondary" style="flex: 1;">
+                    Seguir Jugando
+                </button>
+                <button type="button" onclick="goToDropStep2()" class="btn" style="flex: 1.4; background: #dc2626; color: #fff; font-family: 'Orbitron'; font-weight: 800; font-size: 0.82rem; border: none; border-radius: 8px; cursor: pointer;">
+                    Entendido, Continuar &rarr;
+                </button>
+            </div>
+        </div>
+
+        <!-- PASO 2: CONFIRMACIÓN FINAL IRREVERSIBLE -->
+        <div id="dropStep2" style="display: none; text-align: center;">
+            <span style="font-size: 2.8rem; display: block; margin-bottom: 8px;">⚠️</span>
+            <h3 style="font-family: 'Orbitron'; color: #f87171; margin: 0 0 6px; font-size: 1.2rem;">CONFIRMACIÓN DEFINITIVA</h3>
+            <p style="color: #fecaca; font-size: 0.88rem; margin: 0 0 1.25rem;">
+                Esta acción es <strong>irreversible</strong>. Una vez confirmado tu retiro, el organizador no podrá reasignarte en los emparejamientos del torneo.
+            </p>
+
+            <div style="background: rgba(220, 38, 38, 0.15); border: 1.5px dashed #ef4444; border-radius: 10px; padding: 12px; margin-bottom: 1.5rem; text-align: left;">
+                <p style="color: #f87171; font-size: 0.82rem; margin: 0; font-weight: 700;">
+                    ¿Confirmas que deseas abandonar el torneo ahora mismo?
+                </p>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="button" onclick="goToDropStep1()" class="btn btn-secondary" style="flex: 1;">
+                    &larr; Volver
+                </button>
+                <button type="button" id="btnConfirmDropFinal" onclick="confirmDropPlayer()" class="btn" style="flex: 1.5; background: #b91c1c; color: #fff; font-family: 'Orbitron'; font-weight: 900; font-size: 0.82rem; border: 1px solid #ef4444; border-radius: 8px; padding: 12px; cursor: pointer; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.4);">
+                    🚪 SÍ, RETIRARME (DROP)
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+const roomCode = "{{ room.room_code }}";
+let savedUserData = null;
+let currentRoundNum = 0;
+let currentMyMatch = null;
+let currentTradesList = [];
+let activeTradeFilter = 'ALL';
+
+// Estado del timer local
+let localTimeLeft = null;
+let localTimerRunning = false;
+let timerInterval = null;
+
+// Publicación de cartas
+let currentPostType = 'BUSCO';
+let selectedCardData = null;
+let searchDebounceTimeout = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar QR
+    const joinUrl = window.location.origin + "/unirse/" + roomCode;
+    new QRCode(document.getElementById("qrcode"), {
+        text: joinUrl,
+        width: 180,
+        height: 180,
+        colorDark : "#0f172a",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+    });
+
+    // Leer usuario en este dispositivo
+    const local = localStorage.getItem(`duel_room_${roomCode}`);
+    if (local) {
+        try {
+            savedUserData = JSON.parse(local);
+        } catch(e) {}
+    }
+
+    if (!savedUserData) {
+        document.getElementById('joinPromptSection').style.display = 'block';
+    }
+
+    // Iniciar timer local tick
+    timerInterval = setInterval(tickLocalTimer, 1000);
+
+    // Iniciar polling
+    fetchRoomStatus();
+    setInterval(fetchRoomStatus, 3500);
+
+    // Cargar tablón de cartas
+    loadRoomTrades();
+    setInterval(loadRoomTrades, 10000);
+});
+
+function toggleQRModal(show) {
+    document.getElementById('qrModal').style.display = show ? 'flex' : 'none';
+}
+
+function switchRoomTab(tab) {
+    ['Pairings', 'Trades', 'Standings', 'Players'].forEach(t => {
+        const elTab = document.getElementById('tab' + t);
+        const elContent = document.getElementById('content' + t);
+        if (elTab) elTab.classList.remove('active');
+        if (elContent) elContent.style.display = 'none';
+    });
+
+    if (tab === 'pairings') {
+        document.getElementById('tabPairings').classList.add('active');
+        document.getElementById('contentPairings').style.display = 'block';
+    } else if (tab === 'trades') {
+        document.getElementById('tabTrades').classList.add('active');
+        document.getElementById('contentTrades').style.display = 'block';
+        loadRoomTrades();
+    } else if (tab === 'standings') {
+        document.getElementById('tabStandings').classList.add('active');
+        document.getElementById('contentStandings').style.display = 'block';
+    } else if (tab === 'players') {
+        document.getElementById('tabPlayers').classList.add('active');
+        document.getElementById('contentPlayers').style.display = 'block';
+    }
+}
+
+// =========================================================================
+// POLLING & DATA RENDERING
+// =========================================================================
+function fetchRoomStatus() {
+    fetch(`/api/room/${roomCode}/status`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            renderRoomData(data.data);
+        })
+        .catch(err => console.error("Error polling room status:", err));
+}
+
+function renderRoomData(data) {
+    const live = data.live_data || {};
+    currentRoundNum = data.current_round || 0;
+
+    // Actualizar conteos
+    const pCount = data.players ? data.players.length : 0;
+    document.getElementById('livePlayersCount').innerText = `👥 ${pCount} Inscriptos`;
+    document.getElementById('tabCountSpan').innerText = pCount;
+
+    // Estado Badge
+    const stBadge = document.getElementById('roomStatusBadge');
+    if (data.status === 'LOBBY') {
+        stBadge.innerHTML = '🟢 INSCRIPCIONES ABIERTAS';
+        stBadge.style.color = '#4ade80';
+        stBadge.style.background = 'rgba(34, 197, 94, 0.2)';
+    } else if (data.status === 'RUNNING') {
+        stBadge.innerHTML = `⚡ RONDA ${data.current_round} EN CURSO`;
+        stBadge.style.color = '#38bdf8';
+        stBadge.style.background = 'rgba(56, 189, 248, 0.2)';
+    } else {
+        stBadge.innerHTML = '🏁 TORNEO FINALIZADO';
+        stBadge.style.color = '#fbbf24';
+        stBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+    }
+
+    // Sincronizar Reloj de Ronda
+    syncTimerData(live.time_left, live.timer_running, data.status);
+
+    // Renderizar sección "Mi Match" & Fase 2
+    renderMyMatch(data);
+
+    // Renderizar Pareos de la ronda
+    renderPairings(live.matches || []);
+
+    // Renderizar Standings
+    renderStandings(live.standings || []);
+
+    // Renderizar Lista de Jugadores
+    renderPlayersList(data.players || []);
+}
+
+// =========================================================================
+// CRONÓMETRO DE RONDA
+// =========================================================================
+function syncTimerData(timeLeftSec, isRunning, roomStatus) {
+    const widget = document.getElementById('roomTimerWidget');
+    if (roomStatus !== 'RUNNING' || timeLeftSec === null || timeLeftSec === undefined) {
+        widget.style.display = 'none';
+        localTimeLeft = null;
+        localTimerRunning = false;
+        return;
+    }
+
+    widget.style.display = 'flex';
+    localTimeLeft = Math.max(0, parseInt(timeLeftSec));
+    localTimerRunning = Boolean(isRunning);
+    updateTimerDOM();
+}
+
+function tickLocalTimer() {
+    if (localTimerRunning && localTimeLeft !== null && localTimeLeft > 0) {
+        localTimeLeft--;
+        updateTimerDOM();
+    }
+}
+
+function updateTimerDOM() {
+    if (localTimeLeft === null) return;
+    const widget = document.getElementById('roomTimerWidget');
+    const digitsEl = document.getElementById('roomTimerDigits');
+    const statusEl = document.getElementById('roomTimerStatus');
+
+    const m = Math.floor(localTimeLeft / 60);
+    const s = localTimeLeft % 60;
+    digitsEl.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+    widget.classList.remove('warning', 'danger');
+    if (localTimeLeft === 0) {
+        widget.classList.add('danger');
+        statusEl.innerText = '¡TIEMPO CUMPLIDO!';
+    } else if (localTimeLeft <= 300) { // 5 min
+        widget.classList.add('warning');
+        statusEl.innerText = localTimerRunning ? 'ÚLTIMOS MINUTOS' : 'PAUSADO';
+    } else {
+        statusEl.innerText = localTimerRunning ? 'TIEMPO RONDA' : 'PAUSADO';
+    }
+}
+
+// =========================================================================
+// MI MATCH EN VIVO, PERFIL DEL RIVAL & FASE 2 AUTO-REPORTE
+// =========================================================================
+function renderMyMatch(data) {
+    const mySection = document.getElementById('myMatchSection');
+    if (!savedUserData || !savedUserData.name) {
+        mySection.style.display = 'none';
+        currentMyMatch = null;
+        return;
+    }
+
+    const myName = savedUserData.name.trim().toLowerCase();
+    const live = data.live_data || {};
+    const matches = live.matches || [];
+
+    // Comprobar si el usuario se ha retirado (Drop)
+    const droppedList = (data.dropped_players || []).map(d => (d.player_name || '').trim().toLowerCase());
+    const isDropped = droppedList.includes(myName) || localStorage.getItem(`duel_dropped_${roomCode}`) === 'true';
+
+    if (isDropped) {
+        mySection.innerHTML = `
+            <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 2px solid #ef4444; border-radius: 14px; padding: 1.5rem; text-align: center; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.25);">
+                <span style="font-size: 2.2rem; display: block; margin-bottom: 6px;">🚪</span>
+                <div style="font-family: 'Orbitron'; font-size: 1.15rem; font-weight: 900; color: #f87171; letter-spacing: 0.5px;">
+                    TE HAS RETIRADO DE ESTE TORNEO (DROPPED)
+                </div>
+                <p style="color: #cbd5e1; font-size: 0.85rem; max-width: 520px; margin: 8px auto 0; line-height: 1.45;">
+                    Has salido de los emparejamientos de las rondas restantes. Tus partidas y victorias anteriores se mantienen intactas en los registros oficiales y tus oponentes conservan sus resultados y porcentaje de desempate (OMW%).
+                </p>
+                <div style="margin-top: 14px;">
+                    <button onclick="switchRoomTab('trades')" class="btn" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; font-size: 0.8rem; font-weight: 800; padding: 7px 16px; border-radius: 8px;">
+                        🃏 Ver el Tablón de Cartas
+                    </button>
+                </div>
+            </div>
+        `;
+        mySection.style.display = 'block';
+        currentMyMatch = null;
+        return;
+    }
+
+    if (data.status === 'LOBBY') {
+        mySection.innerHTML = `
+            <div class="lobby-waiting-banner">
+                <div class="lobby-pulse-dot"></div>
+                <div>
+                    <h3 style="margin: 0; color: #fff; font-size: 1.15rem;">¡Hola, ${savedUserData.name}! Estás dentro de la sala</h3>
+                    <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.85rem;">
+                        Esperando que el organizador cierre inscripciones e inicie la <strong>Ronda 1</strong>. En cuanto se empareje, verás tu mesa asignada aquí.
+                    </p>
+                </div>
+            </div>
+        `;
+        mySection.style.display = 'block';
+        currentMyMatch = null;
+        return;
+    }
+
+    let myMatch = null;
+    let opponentName = "BYE";
+    let opponentSlug = null;
+    let opponentDorm = "Academia";
+    let isP1 = true;
+
+    for (let m of matches) {
+        if (m.p1 && m.p1.toLowerCase() === myName) {
+            myMatch = m;
+            opponentName = m.p2 || "BYE";
+            opponentSlug = m.p2_slug || null;
+            opponentDorm = m.p2_dorm || "Academia";
+            isP1 = true;
+            break;
+        } else if (m.p2 && m.p2.toLowerCase() === myName) {
+            myMatch = m;
+            opponentName = m.p1 || "BYE";
+            opponentSlug = m.p1_slug || null;
+            opponentDorm = m.p1_dorm || "Academia";
+            isP1 = false;
+            break;
+        }
+    }
+
+    if (!myMatch) {
+        mySection.style.display = 'none';
+        currentMyMatch = null;
+        return;
+    }
+
+    currentMyMatch = { ...myMatch, isP1, opponentName, opponentSlug };
+
+    // Construcción de la tarjeta de match
+    let subActionHtml = '';
+
+    if (myMatch.is_bye) {
+        subActionHtml = `
+            <div class="match-official-result">
+                <span class="result-check-icon">⭐</span>
+                <div>
+                    <div class="result-score-title">RONDA LIBRE (BYE +3 PTS)</div>
+                    <small style="color: #94a3b8;">No tienes rival esta ronda. ¡Disfruta el descanso o visita el Tablón de Cartas!</small>
+                </div>
+            </div>
+        `;
+    } else if (myMatch.reported) {
+        subActionHtml = `
+            <div class="match-official-result">
+                <span class="result-check-icon">✓</span>
+                <div>
+                    <div class="result-score-title">RESULTADO CONFIRMADO: ${myMatch.result_text}</div>
+                    <small style="color: #94a3b8;">¡Partida completada y validada en el sistema oficial!</small>
+                </div>
+            </div>
+        `;
+    } else {
+        // FASE 2: Interfaz interactiva de Auto-reporte y Confirmación Mutua
+        const rep = myMatch.report;
+        if (!rep || rep.status === 'PENDING') {
+            subActionHtml = `
+                <div class="match-report-panel">
+                    <div class="report-panel-title">⚡ Auto-Reportar Resultado de la Mesa</div>
+                    <p style="color: #cbd5e1; font-size: 0.82rem; margin: 4px 0 10px;">
+                        ¿Terminaron el duelo? Selecciona el resultado para que <strong>${opponentName}</strong> lo confirme:
+                    </p>
+                    <div class="report-buttons-grid">
+                        <button onclick="handleReportResult(2, 0)" class="btn-rep win">🏆 Gané 2-0</button>
+                        <button onclick="handleReportResult(2, 1)" class="btn-rep win">⚔️ Gané 2-1</button>
+                        <button onclick="handleReportResult(1, 2)" class="btn-rep loss">🛡️ Perdí 1-2</button>
+                        <button onclick="handleReportResult(0, 2)" class="btn-rep loss">💀 Perdí 0-2</button>
+                        <button onclick="handleReportResult(1, 1)" class="btn-rep draw">⚖️ Empate 1-1</button>
+                    </div>
+                </div>
+            `;
+        } else if (rep.status === 'PENDING_CONFIRMATION') {
+            const isReporter = (rep.reported_by || '').trim().toLowerCase() === myName;
+            if (isReporter) {
+                subActionHtml = `
+                    <div class="report-pending-box">
+                        <div class="pulse-mini-dot"></div>
+                        <div>
+                            <strong style="color: #38bdf8; font-size: 0.95rem;">
+                                Reporte enviado: ${isP1 ? rep.score_p1 + ' - ' + rep.score_p2 : rep.score_p2 + ' - ' + rep.score_p1}
+                            </strong>
+                            <p style="margin: 3px 0 0; color: #cbd5e1; font-size: 0.82rem;">
+                                Esperando que <strong>${opponentName}</strong> confirme en su teléfono móvil...
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // El rival debe confirmar o disputar
+                subActionHtml = `
+                    <div class="report-confirm-action-box">
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #f59e0b; margin-bottom: 4px;">
+                            🔔 Tu Rival Reportó el Marcador
+                        </div>
+                        <p style="color: #f1f5f9; font-size: 0.9rem; margin: 0 0 6px;">
+                            <strong>${rep.reported_by}</strong> reportó el siguiente marcador de la partida:
+                        </p>
+                        <div class="confirm-score-display">
+                            ${rep.score_p1} - ${rep.score_p2}
+                            <small>(${myMatch.p1}: ${rep.score_p1} | ${myMatch.p2}: ${rep.score_p2})</small>
+                        </div>
+                        <div class="confirm-buttons-row">
+                            <button onclick="handleConfirmReport()" class="btn-confirm-yes">
+                                ✅ CONFIRMAR RESULTADO
+                            </button>
+                            <button onclick="handleDisputeReport()" class="btn-confirm-no">
+                                🚨 DISPUTAR / LLAMAR JUEZ
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        } else if (rep.status === 'DISPUTED') {
+            subActionHtml = `
+                <div class="report-dispute-alert">
+                    <span style="font-size: 1.6rem;">🚨</span>
+                    <div>
+                        <strong style="color: #ef4444; font-size: 1.05rem;">Mesa en Disputa</strong>
+                        <p style="margin: 3px 0 0; color: #fecaca; font-size: 0.82rem;">
+                            Se ha llamado al Juez o al Organizador a la Mesa #${myMatch.table} para verificar los resultados.
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    mySection.innerHTML = `
+        <div class="my-match-hero">
+            <div class="my-match-header">
+                <div>
+                    <span style="font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; font-weight: 800; letter-spacing: 1px;">TU ENCUENTRO OFICIAL</span>
+                    <div style="font-size: 1.15rem; color: #f8fafc; font-weight: 800;">RONDA #${data.current_round}</div>
+                </div>
+                <div class="table-big-badge">MESA #${myMatch.table}</div>
+            </div>
+
+            <div class="duel-vs-grid">
+                <div class="player-duel-side">
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">TÚ</div>
+                    <div class="player-duel-name" style="color: #38bdf8;">${savedUserData.name}</div>
+                    <span class="badge dorm-${(savedUserData.dorm || '').toLowerCase().replace(/\\s+/g, '-')}" style="font-size:0.7rem;">
+                        ${savedUserData.dorm || 'Academia'}
+                    </span>
+                </div>
+
+                <div class="vs-circle">VS</div>
+
+                <div class="player-duel-side">
+                    <div style="font-size: 0.75rem; color: #94a3b8; font-weight: 700;">TU RIVAL</div>
+                    <div class="player-duel-name">${opponentName}</div>
+                    <span class="badge dorm-${opponentDorm.toLowerCase().replace(/\\s+/g, '-')}" style="font-size:0.7rem;">
+                        ${opponentDorm}
+                    </span>
+                    ${opponentSlug ? `
+                        <div>
+                            <a href="/torneo/${opponentSlug}" target="_blank" class="opp-profile-link" title="Ver historial y estadísticas de tu oponente">
+                                🏛️ Perfil de Academia &rarr;
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+
+            ${subActionHtml}
+
+            <!-- OPCIÓN DE RETIRO (DROP) DEL TORNEO -->
+            <div style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: flex-end; align-items: center;">
+                <button type="button" onclick="openDropModal()" style="background: transparent; border: 1px solid #475569; color: #94a3b8; font-size: 0.75rem; font-weight: 700; padding: 6px 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#ef4444'; this.style.color='#f87171'" onmouseout="this.style.borderColor='#475569'; this.style.color='#94a3b8'">
+                    🚪 Retirarme del Torneo (Drop)
+                </button>
+            </div>
+        </div>
+    `;
+    mySection.style.display = 'block';
+}
+
+
+// Envío de Auto-reporte
+function handleReportResult(myScore, oppScore) {
+    if (!currentMyMatch) return;
+    const s1 = currentMyMatch.isP1 ? myScore : oppScore;
+    const s2 = currentMyMatch.isP1 ? oppScore : myScore;
+
+    if (!confirm(`¿Confirmas reportar ${myScore} - ${oppScore}? Tu oponente deberá validarlo en su teléfono.`)) {
+        return;
+    }
+
+    fetch(`/api/room/${roomCode}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            round_num: currentRoundNum,
+            table_num: currentMyMatch.table,
+            reporter_name: savedUserData.name,
+            score_p1: s1,
+            score_p2: s2
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            fetchRoomStatus();
+        } else {
+            alert("Error al reportar: " + (data.message || 'No se pudo enviar.'));
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error de red al reportar resultado.");
+    });
+}
+
+function handleConfirmReport() {
+    if (!currentMyMatch) return;
+    if (!confirm("¿Confirmas que este es el resultado correcto de la mesa?")) return;
+
+    fetch(`/api/room/${roomCode}/confirm_report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            round_num: currentRoundNum,
+            table_num: currentMyMatch.table,
+            confirmer_name: savedUserData.name
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            fetchRoomStatus();
+        } else {
+            alert("Error al confirmar: " + (data.message || 'Intenta de nuevo.'));
+        }
+    })
+    .catch(err => alert("Error de red al confirmar."));
+}
+
+function handleDisputeReport() {
+    if (!currentMyMatch) return;
+    if (!confirm("¿Deseas disputar este resultado y solicitar la presencia del juez en tu mesa?")) return;
+
+    fetch(`/api/room/${roomCode}/dispute_report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            round_num: currentRoundNum,
+            table_num: currentMyMatch.table,
+            disputer_name: savedUserData.name
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            fetchRoomStatus();
+        } else {
+            alert("Error al disputar: " + (data.message || 'Intenta de nuevo.'));
+        }
+    })
+    .catch(err => alert("Error de red al disputar."));
+}
+
+// =========================================================================
+// GESTIÓN DE DROP (RETIRO DEL TORNEO)
+// =========================================================================
+function openDropModal() {
+    goToDropStep1();
+    document.getElementById('dropTournamentModal').style.display = 'flex';
+}
+
+function closeDropModal() {
+    document.getElementById('dropTournamentModal').style.display = 'none';
+}
+
+function goToDropStep1() {
+    document.getElementById('dropStep1').style.display = 'block';
+    document.getElementById('dropStep2').style.display = 'none';
+}
+
+function goToDropStep2() {
+    document.getElementById('dropStep1').style.display = 'none';
+    document.getElementById('dropStep2').style.display = 'block';
+}
+
+function confirmDropPlayer() {
+    if (!savedUserData || !savedUserData.name || !savedUserData.session_token) {
+        alert("No se encontraron tus datos de sesión en este dispositivo.");
+        return;
+    }
+
+    const btn = document.getElementById('btnConfirmDropFinal');
+    btn.disabled = true;
+    btn.innerText = "Procesando retiro...";
+
+    fetch(`/api/room/${roomCode}/drop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            player_name: savedUserData.name,
+            session_token: savedUserData.session_token,
+            round_num: currentRoundNum
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerText = "🚪 SÍ, RETIRARME (DROP)";
+        if (data.success) {
+            localStorage.setItem(`duel_dropped_${roomCode}`, 'true');
+            closeDropModal();
+            fetchRoomStatus();
+        } else {
+            alert("No se pudo procesar el retiro: " + (data.message || 'Error desconocido'));
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerText = "🚪 SÍ, RETIRARME (DROP)";
+        console.error(err);
+        alert("Error de conexión al procesar el retiro del torneo.");
+    });
+}
+
+
+// =========================================================================
+// TABLÓN DE CARTAS (TRADE BOARD)
+// =========================================================================
+function loadRoomTrades() {
+    fetch(`/api/room/${roomCode}/trades`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            currentTradesList = data.trades || [];
+            document.getElementById('tabTradeCount').innerText = currentTradesList.length;
+            renderTradePosts();
+        })
+        .catch(err => console.error("Error cargando trades:", err));
+}
+
+function filterTrades(type, btn) {
+    activeTradeFilter = type;
+    document.querySelectorAll('.trade-filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderTradePosts();
+}
+
+function renderTradePosts() {
+    const grid = document.getElementById('tradePostsGrid');
+    let filtered = currentTradesList;
+    if (activeTradeFilter !== 'ALL') {
+        filtered = currentTradesList.filter(t => t.post_type === activeTradeFilter);
+    }
+
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 3rem 1rem; background: var(--bg-card); border-radius: 10px; border: 1px solid #334155;">
+                <p style="color: #94a3b8; font-size: 1.05rem; margin: 0;">No hay publicaciones en esta categoría todavía.</p>
+                <small style="color: #64748b; display: block; margin-top: 6px;">¡Sé el primero en publicar una carta que buscas o vendes!</small>
+            </div>
+        `;
+        return;
+    }
+
+    const myToken = savedUserData ? savedUserData.session_token : '';
+    const myName = savedUserData ? savedUserData.name.toLowerCase() : '';
+
+    let html = '';
+    filtered.forEach(t => {
+        let badgeClass = 'trade-badge-busco';
+        let badgeIcon = '🔍';
+        if (t.post_type === 'VENDO') {
+            badgeClass = 'trade-badge-vendo';
+            badgeIcon = '💰';
+        } else if (t.post_type === 'CAMBIO') {
+            badgeClass = 'trade-badge-cambio';
+            badgeIcon = '🔄';
+        }
+
+        const isOwner = (t.session_token && t.session_token === myToken) || (t.player_name && t.player_name.toLowerCase() === myName);
+        const cardImg = t.card_image_url || 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
+
+        html += `
+            <div class="trade-card">
+                <img src="${cardImg}" class="trade-card-thumb" alt="${t.card_name}" onclick="window.open('${cardImg}', '_blank')">
+                <div class="trade-card-body">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
+                            <span class="trade-badge-type ${badgeClass}">
+                                ${badgeIcon} ${t.post_type}
+                            </span>
+                            ${isOwner ? `
+                                <button onclick="deleteTradePost(${t.id})" style="background: none; border: none; color: #ef4444; font-size: 0.8rem; cursor: pointer; padding: 0;" title="Eliminar publicación">
+                                    🗑️
+                                </button>
+                            ` : ''}
+                        </div>
+                        <h4 style="margin: 6px 0 4px; color: #fff; font-size: 0.95rem; font-family: 'Orbitron'; line-height: 1.2;">
+                            ${t.card_name}
+                        </h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
+                            ${t.rarity ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${t.rarity}</span>` : ''}
+                            ${t.language && t.language !== 'Cualquiera' ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${t.language}</span>` : ''}
+                            ${t.edition && t.edition !== 'Cualquiera' ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${t.edition}</span>` : ''}
+                        </div>
+                        ${t.notes ? `
+                            <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; font-style: italic; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 4px;">
+                                "${t.notes}"
+                            </p>
+                        ` : ''}
+                    </div>
+
+                    <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 700;">
+                            👤 ${t.player_name}
+                        </span>
+                        <span style="font-size: 0.68rem; color: #64748b;">
+                            ${formatTradeTime(t.created_at)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    grid.innerHTML = html;
+}
+
+function formatTradeTime(isoStr) {
+    if (!isoStr) return '';
+    try {
+        const d = new Date(isoStr);
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch(e) {
+        return '';
+    }
+}
+
+// Modal Publicar
+function openPublishTradeModal() {
+    if (!savedUserData || !savedUserData.name) {
+        alert("Debes inscribirte o estar identificado en la sala para publicar cartas.");
+        return;
+    }
+    document.getElementById('publishTradeModal').style.display = 'flex';
+}
+
+function closePublishTradeModal() {
+    document.getElementById('publishTradeModal').style.display = 'none';
+    clearSelectedCard();
+}
+
+function setPostType(type) {
+    currentPostType = type;
+    const bBusco = document.getElementById('btnTypeBusco');
+    const bVendo = document.getElementById('btnTypeVendo');
+    const bCambio = document.getElementById('btnTypeCambio');
+
+    bBusco.className = type === 'BUSCO' ? 'btn-rep win' : 'btn-rep';
+    bVendo.className = type === 'VENDO' ? 'btn-rep win' : 'btn-rep';
+    bCambio.className = type === 'CAMBIO' ? 'btn-rep win' : 'btn-rep';
+}
+
+function onSearchInput(val) {
+    clearTimeout(searchDebounceTimeout);
+    const drop = document.getElementById('cardSearchResultsDropdown');
+    if (!val || val.trim().length < 2) {
+        drop.style.display = 'none';
+        return;
+    }
+
+    searchDebounceTimeout = setTimeout(() => {
+        fetch(`/api/cards/search?q=${encodeURIComponent(val.trim())}`)
+            .then(r => r.json())
+            .then(cards => {
+                if (!cards || cards.length === 0) {
+                    drop.innerHTML = `<div style="padding: 10px; color: #94a3b8; font-size: 0.8rem; text-align: center;">No se encontraron cartas en YGOPRODeck.</div>`;
+                    drop.style.display = 'block';
+                    return;
+                }
+
+                let html = '';
+                cards.forEach(c => {
+                    const cJson = JSON.stringify(c).replace(/"/g, '&quot;');
+                    html += `
+                        <div class="card-result-item" onclick="selectCard(${cJson})">
+                            <img src="${c.image_url}" alt="${c.name}">
+                            <div style="flex: 1;">
+                                <strong style="color: #fff; font-size: 0.85rem; display: block;">${c.name}</strong>
+                                <small style="color: #94a3b8; font-size: 0.72rem;">${c.type}</small>
+                            </div>
+                        </div>
+                    `;
+                });
+                drop.innerHTML = html;
+                drop.style.display = 'block';
+            })
+            .catch(err => console.error("Error buscando cartas:", err));
+    }, 300);
+}
+
+function selectCard(card) {
+    selectedCardData = card;
+    document.getElementById('cardSearchResultsDropdown').style.display = 'none';
+    document.getElementById('cardSearchInput').value = card.name;
+
+    const prev = document.getElementById('selectedCardPreview');
+    document.getElementById('selectedCardImg').src = card.image_url;
+    document.getElementById('selectedCardTitle').innerText = card.name;
+    document.getElementById('selectedCardType').innerText = card.type;
+    prev.style.display = 'flex';
+
+    // Rellenar rarezas sugeridas si existen
+    const raritySel = document.getElementById('tradeRaritySelect');
+    if (card.rarities && card.rarities.length > 0) {
+        let opts = `<option value="">Cualquier Rareza</option>`;
+        card.rarities.forEach(r => {
+            opts += `<option value="${r}">${r}</option>`;
+        });
+        raritySel.innerHTML = opts;
+    }
+}
+
+function clearSelectedCard() {
+    selectedCardData = null;
+    document.getElementById('cardSearchInput').value = '';
+    document.getElementById('selectedCardPreview').style.display = 'none';
+    document.getElementById('cardSearchResultsDropdown').style.display = 'none';
+}
+
+function submitTradePost() {
+    const cardName = selectedCardData ? selectedCardData.name : document.getElementById('cardSearchInput').value.trim();
+    if (!cardName) {
+        alert("Por favor selecciona o escribe el nombre de la carta.");
+        return;
+    }
+
+    const rarity = document.getElementById('tradeRaritySelect').value;
+    const lang = document.getElementById('tradeLangSelect').value;
+    const edition = document.getElementById('tradeEditionSelect').value;
+    const notes = document.getElementById('tradeNotesInput').value.trim();
+
+    const btn = document.getElementById('btnSubmitTrade');
+    btn.disabled = true;
+    btn.innerText = 'Publicando...';
+
+    fetch(`/api/room/${roomCode}/trades`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            player_name: savedUserData.name,
+            session_token: savedUserData.session_token || '',
+            post_type: currentPostType,
+            card_name: cardName,
+            card_id: selectedCardData ? selectedCardData.id : null,
+            card_image_url: selectedCardData ? selectedCardData.image_url : '',
+            rarity: rarity,
+            language: lang,
+            edition: edition,
+            notes: notes
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerText = 'Publicar en Sala';
+        if (data.success) {
+            closePublishTradeModal();
+            loadRoomTrades();
+            switchRoomTab('trades');
+        } else {
+            alert("Error al publicar: " + (data.message || 'Intenta nuevamente.'));
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerText = 'Publicar en Sala';
+        alert("Error de red al publicar en el tablón.");
+    });
+}
+
+function deleteTradePost(postId) {
+    if (!confirm("¿Deseas eliminar esta publicación del tablón?")) return;
+    const token = savedUserData ? (savedUserData.session_token || '') : '';
+    fetch(`/api/room/${roomCode}/trades/${postId}?token=${encodeURIComponent(token)}`, {
+        method: 'DELETE'
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            loadRoomTrades();
+        }
+    })
+    .catch(err => console.error(err));
+}
+
+// =========================================================================
+// PAREOS Y STANDINGS GENERALES
+// =========================================================================
+function renderPairings(matches) {
+    const container = document.getElementById('pairingsList');
+    if (!matches || matches.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 10px; border: 1px solid #334155;">
+                <p style="color: #94a3b8; font-size: 1.05rem; margin: 0;">Aún no se han generado pareos para esta ronda.</p>
+                <small style="color: #64748b; display: block; margin-top: 8px;">En cuanto el juez inicie la ronda, las mesas se cargarán aquí.</small>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `<div class="pairing-grid">`;
+    matches.forEach(m => {
+        let statusBadge = `<span style="color: #38bdf8; font-size: 0.75rem; font-weight: 800;">EN JUEGO</span>`;
+        if (m.reported) {
+            statusBadge = `<span style="color: #22c55e; font-size: 0.75rem; font-weight: 800;">${m.result_text}</span>`;
+        } else if (m.is_bye) {
+            statusBadge = `<span style="color: #f59e0b; font-size: 0.75rem; font-weight: 800;">BYE</span>`;
+        }
+
+        html += `
+            <div class="pairing-card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span class="pairing-table-tag">MESA #${m.table}</span>
+                    ${statusBadge}
+                </div>
+                <div class="p-row">
+                    <span class="p-name">${m.p1 || 'BYE'}</span>
+                </div>
+                <div class="p-row">
+                    <span class="p-name">${m.p2 || 'BYE'}</span>
+                </div>
+            </div>
+        `;
+    });
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function renderStandings(standings) {
+    const tbody = document.getElementById('standingsTableBody');
+    if (!standings || standings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:2rem;">Los standings se calcularán al finalizar las partidas.</td></tr>`;
+        return;
+    }
+
+    let html = '';
+    standings.forEach(s => {
+        html += `
+            <tr>
+                <td><strong style="color: #38bdf8; font-family: 'Orbitron';">#${s.rank}</strong></td>
+                <td><strong style="color: #fff;">${s.name}</strong></td>
+                <td style="text-align: center; font-family: 'Orbitron'; font-weight: 800; color: #fbbf24;">${s.points}</td>
+                <td style="text-align: center; color: #94a3b8;">${s.omw}</td>
+                <td style="text-align: center; color: #94a3b8;">${s.matches_played}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
+}
+
+function renderPlayersList(players) {
+    const grid = document.getElementById('playersGrid');
+    if (!players || players.length === 0) {
+        grid.innerHTML = '<p style="color:#94a3b8;">No hay jugadores en la sala.</p>';
+        return;
+    }
+
+    let html = '';
+    players.forEach(p => {
+        const dormClass = (p.dorm || 'estudiante-de-intercambio').toLowerCase().replace(/\\s+/g, '-');
+        html += `
+            <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #fff; display: block; font-size: 0.95rem;">${p.player_name}</strong>
+                    <small style="color: #94a3b8; font-size: 0.75rem;">${p.deck_archetype || 'Duelista Oficial'}</small>
+                </div>
+                <span class="badge dorm-${dormClass}" style="font-size: 0.7rem; font-weight: 800;">
+                    ${p.dorm}
+                </span>
+            </div>
+        `;
+    });
+    grid.innerHTML = html;
+}
+</script>
+{% endblock %}

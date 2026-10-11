@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h2 class="title" style="margin-bottom: 0;">Registrar Misiones (Bingo)</h2>
+    <a href="{{ url_for('leagues', format=current_format) }}" class="btn" style="background-color: var(--border); color: white;">
+        Volver a Posiciones
+    </a>
+</div>
+
+<div class="glass-panel" style="max-width: 600px; margin: 0 auto; padding: 2rem;">
+    <form method="GET" action="{{ url_for('leagues_progress') }}" id="filter-form" style="margin-bottom: 2rem;">
+        <input type="hidden" name="format" value="{{ current_format }}">
+        <div style="margin-bottom: 1rem;">
+            <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold;">Formato:</label>
+            <select name="format_select" onchange="document.querySelector('[name=format]').value=this.value; document.getElementById('filter-form').submit();" style="width: 100%;">
+                <option value="GOAT" {% if current_format == 'GOAT' %}selected{% endif %}>GOAT</option>
+                <option value="EDISON" {% if current_format == 'EDISON' %}selected{% endif %}>EDISON</option>
+                <option value="ADVANCED" {% if current_format == 'ADVANCED' %}selected{% endif %}>ADVANCED</option>
+                <option value="SPEED DUEL" {% if current_format == 'SPEED DUEL' %}selected{% endif %}>SPEED DUEL</option>
+            </select>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+            <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold;">Jugador:</label>
+            <select name="player" onchange="document.getElementById('filter-form').submit();" style="width: 100%;">
+                <option value="">-- Seleccionar Jugador --</option>
+                {% for p in players %}
+                <option value="{{ p }}" {% if p == selected_player %}selected{% endif %}>{{ p }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if selected_player and tournaments %}
+        <div style="margin-bottom: 1rem;">
+            <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold;">Torneo / Semana:</label>
+            <select name="tournament_idx" onchange="document.getElementById('filter-form').submit();" style="width: 100%;">
+                {% for t in tournaments %}
+                <option value="{{ t.idx }}" {% if t.idx == selected_tournament_idx %}selected{% endif %}>{{ t.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% elif selected_player %}
+        <p style="color: var(--danger); font-size: 0.9rem; margin-top: 1rem; text-align: center;">Este jugador no ha participado en ningún torneo de este formato.</p>
+        {% endif %}
+    </form>
+
+    {% if selected_player and tournaments %}
+    <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 2rem 0;">
+
+    <form method="POST" action="{{ url_for('leagues_progress') }}">
+        <input type="hidden" name="format" value="{{ current_format }}">
+        <input type="hidden" name="player_name" value="{{ selected_player }}">
+        <input type="hidden" name="tournament_idx" value="{{ selected_tournament_idx }}">
+
+        <h3 style="color: white; margin-bottom: 1rem; text-align: center;">Cartón de Misiones</h3>
+        <p style="text-align: center; color: #eab308; font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Marca las misiones completadas. (+3 pts por línea, +5 pts por cartón lleno)
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 2rem;">
+            {% for i in range(9) %}
+            <label style="display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.3); border: 2px solid var(--border); border-radius: 8px; padding: 2rem; cursor: pointer; transition: all 0.2s;">
+                <input type="checkbox" name="bingo_{{ i }}" {% if current_grid[i] %}checked{% endif %} style="width: 25px; height: 25px; margin: 0; cursor: pointer; accent-color: var(--primary);">
+            </label>
+            {% endfor %}
+        </div>
+
+        <button type="submit" class="btn" style="width: 100%; font-weight: bold; font-size: 1.1rem; padding: 1rem;">
+            Guardar Misiones
+        </button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

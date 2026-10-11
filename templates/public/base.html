@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Duelorapido.cl - Subarashii Academy{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='public/css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand">DUELORAPIDO<span>.CL</span></a>
+            <div class="nav-links">
+                <a href="/ranking">Ranking</a>
+                <a href="/temporadas">Temporadas</a>
+                <a href="/calendario">Calendario</a>
+                <a href="/logros">Logros</a>
+                <a href="/hall-of-fame">Hall of Fame</a>
+                <a href="/unirse" style="color: #38bdf8; font-weight: 800;">📱 Sala en Vivo</a>
+            </div>
+        </div>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        <p>&copy; 2026 Duelorapido.cl & Subarashii Duel Academy</p>
+    </footer>
+</body>
+</html>
