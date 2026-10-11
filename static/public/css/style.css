@@ -300,8 +300,16 @@ main { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; min-height: 80vh
 }
 
 /* Profile Layout */
-.profile-layout { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; }
-@media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
+.profile-layout { display: grid; grid-template-columns: 340px 1fr; gap: 2rem; align-items: start; }
+.credential-sidebar {
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
+}
+@media (max-width: 900px) { 
+    .profile-layout { grid-template-columns: 1fr; } 
+    .credential-sidebar { max-width: 340px; width: 100%; }
+}
 
 /* ==========================================================================
    DIGITAL CREDENTIAL RE-DISEÑADA (MARCO Y DIOS EGIPCIO)
@@ -315,6 +323,9 @@ main { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem; min-height: 80vh
     position: relative;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
 }
 .cred-watermark {
     position: absolute;
@@ -626,31 +637,65 @@ footer { text-align: center; padding: 2rem; border-top: 1px solid #334155; color
         font-size: 1.05rem;
     }
     
-    /* Digital credential */
+    /* Digital credential en móviles: Mantener formato tarjeta vertical 3:4 o ID Card */
+    .credential-sidebar {
+        width: 100%;
+        max-width: 320px;
+        margin: 0 auto 2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
     .digital-credential {
-        border-radius: 14px;
+        width: 100%;
+        max-width: 320px;
+        border-radius: 16px;
+        margin: 0 auto;
     }
     .cred-header {
-        padding: 1rem;
+        padding: 0.85rem 1rem;
     }
     .cred-brand {
         font-size: 1rem;
     }
+    .cred-academy {
+        font-size: 0.7rem;
+    }
     .cred-body {
-        padding: 1.25rem 1rem;
+        padding: 1rem 0.85rem;
+    }
+    .cred-god-badge {
+        width: 72px;
+        height: 72px;
+        margin-bottom: 0.5rem;
     }
     .cred-name {
-        font-size: 1.45rem;
+        font-size: 1.35rem;
+        word-break: break-word;
+    }
+    .cred-patron {
+        font-size: 0.75rem;
+        margin-bottom: 0.85rem;
+    }
+    .cred-stats-row {
+        padding: 0.6rem 0.4rem;
+    }
+    .cred-stat .lbl {
+        font-size: 0.6rem;
     }
     .cred-stat .val {
         font-size: 1.15rem;
     }
     .cred-footer {
-        padding: 0.75rem 1rem;
+        padding: 0.65rem 0.85rem;
         gap: 8px;
     }
+    .qr-box {
+        width: 42px;
+        height: 42px;
+    }
     .cred-url {
-        font-size: 0.65rem;
+        font-size: 0.62rem;
     }
     
     /* Ranking tables */
