@@ -739,6 +739,134 @@
     color: #64748b;
     font-family: 'Inter', sans-serif;
 }
+
+/* ==========================================================================
+   MOBILE OPTIMIZATIONS PARA SALA EN VIVO (CELULARES)
+   ========================================================================== */
+@media (max-width: 768px) {
+    .room-container {
+        margin: 0.75rem auto 2rem;
+        padding: 0 0.5rem;
+    }
+    .room-top-header {
+        padding: 1rem 0.85rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        border-radius: 10px;
+    }
+    .room-info-block h1 {
+        font-size: 1.3rem;
+    }
+    .room-code-badge {
+        padding: 6px 12px;
+        flex: 1;
+    }
+    .room-code-badge .pin {
+        font-size: 1.5rem;
+    }
+    .timer-live-badge {
+        flex: 1;
+        justify-content: center;
+        padding: 6px 10px;
+    }
+    .timer-live-digits {
+        font-size: 1.4rem;
+    }
+
+    /* Pestañas táctiles desplazables horizontalmente */
+    .room-tabs {
+        gap: 6px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .r-tab {
+        padding: 8px 12px;
+        font-size: 0.78rem;
+    }
+
+    /* My match hero en móviles */
+    .my-match-hero {
+        padding: 1rem 0.85rem;
+        border-radius: 10px;
+        margin-bottom: 1.25rem;
+    }
+    .table-big-badge {
+        font-size: 1.1rem;
+        padding: 4px 10px;
+    }
+    .duel-vs-grid {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .player-duel-side {
+        width: 100%;
+        min-width: 0;
+    }
+    .player-duel-name {
+        font-size: 1.15rem;
+    }
+    .vs-circle {
+        width: 36px;
+        height: 36px;
+        font-size: 0.75rem;
+    }
+
+    /* Botones de reporte en móviles (touch-friendly) */
+    .report-buttons-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .btn-rep {
+        padding: 12px 10px;
+        font-size: 0.9rem;
+    }
+
+    /* Poster de standings en móviles */
+    .tournament-results-poster {
+        padding: 1rem 0.75rem;
+        border-radius: 10px;
+    }
+    .poster-title {
+        font-size: 1.25rem;
+        letter-spacing: 1.5px;
+    }
+    .poster-subtitle-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        font-size: 0.75rem;
+    }
+    .poster-table th, .poster-table td {
+        padding: 10px 8px;
+    }
+    .poster-name {
+        font-size: 0.92rem;
+    }
+    .poster-pts {
+        font-size: 1.1rem;
+    }
+
+    /* Tablón de cartas */
+    .trade-board-header {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 0.75rem;
+    }
+    .trade-board-header button {
+        width: 100%;
+    }
+    .trade-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Modal de publicación y búsqueda */
+    .modal-content-card {
+        padding: 1.25rem 1rem;
+        max-height: 94vh;
+    }
+}
 </style>
 {% endblock %}
 

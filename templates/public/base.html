@@ -12,16 +12,45 @@
     <nav class="navbar">
         <div class="nav-container">
             <a href="/" class="brand">DUELORAPIDO<span>.CL</span></a>
-            <div class="nav-links">
+            <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" onclick="toggleMobileNav()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="nav-links" id="navLinks">
                 <a href="/ranking">Ranking</a>
                 <a href="/temporadas">Temporadas</a>
                 <a href="/calendario">Calendario</a>
                 <a href="/logros">Logros</a>
                 <a href="/hall-of-fame">Hall of Fame</a>
-                <a href="/unirse" style="color: #38bdf8; font-weight: 800;">📱 Sala en Vivo</a>
+                <a href="/unirse" class="nav-live-pill">📱 Sala en Vivo</a>
             </div>
         </div>
     </nav>
+    <script>
+        function toggleMobileNav() {
+            const links = document.getElementById('navLinks');
+            const toggle = document.getElementById('navToggle');
+            if (links && toggle) {
+                links.classList.toggle('nav-open');
+                toggle.classList.toggle('active');
+            }
+        }
+        // Cerrar menú al hacer clic en un enlace en móviles
+        document.addEventListener('DOMContentLoaded', function() {
+            const links = document.querySelectorAll('.nav-links a');
+            links.forEach(l => {
+                l.addEventListener('click', () => {
+                    const nav = document.getElementById('navLinks');
+                    const toggle = document.getElementById('navToggle');
+                    if (nav && nav.classList.contains('nav-open')) {
+                        nav.classList.remove('nav-open');
+                        if (toggle) toggle.classList.remove('active');
+                    }
+                });
+            });
+        });
+    </script>
     <main>
         {% block content %}{% endblock %}
     </main>
