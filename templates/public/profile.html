@@ -166,7 +166,10 @@
                         <tr>
                             <th class="th-date">Fecha</th>
                             <th class="th-opp">Rival</th>
-                            <th class="th-res">Resultado</th>
+                            <th class="th-res">
+                                <span class="res-full">Resultado</span>
+                                <span class="res-short">Res.</span>
+                            </th>
                             <th class="th-prob col-desktop">Prob.</th>
                             <th class="th-k col-desktop">K</th>
                             <th class="th-delta">Cambio</th>
@@ -175,23 +178,33 @@
                     </thead>
                     <tbody>
                         {% for d in explanation.duels|reverse %}
+                        {% set is_win = (d.result == 'Victoria') %}
+                        {% set is_loss = (d.result == 'Derrota') %}
+                        {% set res_class = 'win' if is_win else 'loss' if is_loss else 'draw' %}
                         <tr>
-                            <td class="td-date">{{ d.date[8:10] }}/{{ d.date[5:7] }}</td>
+                            <td class="td-date">
+                                {% if d.date and d.date|length >= 10 %}
+                                    {{ d.date[8:10] }}/{{ d.date[5:7] }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
                             <td class="td-opp">
-                                <strong>{{ d.opponent or '—' }}</strong>
-                                {% if d.opponent_rating %}<small class="opp-elo">({{ d.opponent_rating }})</small>{% endif %}
+                                <span class="opp-name">{{ d.opponent or '—' }}</span>
+                                {% if d.opponent_rating %}<span class="opp-elo">({{ d.opponent_rating }})</span>{% endif %}
                             </td>
                             <td class="td-res">
-                                <span class="res-badge {{ 'win' if d.result == 'Victoria' else 'loss' if d.result == 'Derrota' else 'draw' }}">
-                                    {{ 'Victoria' if d.result == 'Victoria' else 'Derrota' if d.result == 'Derrota' else d.result }}
+                                <span class="res-badge {{ res_class }}" title="{{ d.result }}">
+                                    <span class="res-icon">{% if is_win %}✓{% elif is_loss %}✗{% else %}▬{% endif %}</span>
+                                    <span class="res-text">{{ d.result }}</span>
                                 </span>
                             </td>
                             <td class="col-desktop">{% if d.expected_win_pct is not none %}{{ d.expected_win_pct }}%{% else %}—{% endif %}</td>
                             <td class="col-desktop">{{ d.k_factor if d.k_factor is not none else '—' }}</td>
-                            <td class="td-delta" style="font-weight: 800; font-family: 'Orbitron', monospace; color: {{ '#22c55e' if d.rating_change > 0 else '#ef4444' if d.rating_change < 0 else '#94a3b8' }};">
+                            <td class="td-delta" style="color: {{ '#22c55e' if d.rating_change > 0 else '#ef4444' if d.rating_change < 0 else '#94a3b8' }};">
                                 {{ '%+d'|format(d.rating_change) }}
                             </td>
-                            <td class="td-elo" style="font-weight: 800; font-family: 'Orbitron', monospace; color: #fff;">
+                            <td class="td-elo">
                                 {{ d.rating_after }}
                             </td>
                         </tr>
