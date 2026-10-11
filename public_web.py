@@ -642,6 +642,7 @@ def api_organizer_sync():
             if not existing:
                 trm.create_or_get_room(title=title, room_code=room_code)
                 
+            room_status = data.get("status", "RUNNING" if (pairings and len(pairings) > 0) else "LOBBY")
             live_data = {
                 "title": title,
                 "current_round": current_round,
@@ -653,7 +654,7 @@ def api_organizer_sync():
             }
             trm.update_room_status(
                 room_code=room_code,
-                status="RUNNING",
+                status=room_status,
                 current_round=current_round,
                 live_data_json=live_data
             )
@@ -667,7 +668,7 @@ def api_organizer_sync():
 @app.route('/api/organizer/events/<room_code>', methods=['GET'])
 @organizer_auth_required
 def api_organizer_events(room_code):
-    """Devuelve reportes y drops de una sala para que la app de escritorio los procese."""
+    """Devuelve jugadores registrados, reportes y drops de una sala para que la app de escritorio los procese."""
     from tournament_room_manager import TournamentRoomManager
     trm = TournamentRoomManager()
     
@@ -675,6 +676,7 @@ def api_organizer_events(room_code):
     if not room:
         return jsonify({"success": False, "error": "Sala no encontrada."}), 404
         
+    players = trm.get_room_players(room_code)
     reports = trm.get_room_match_reports(room_code)
     drops = trm.get_room_dropped_players(room_code)
     
@@ -682,6 +684,8 @@ def api_organizer_events(room_code):
         "success": True,
         "room_code": room_code,
         "round": room.get("current_round", 1),
+        "status": room.get("status", "LOBBY"),
+        "players": players,
         "reports": reports,
         "drops": drops
     })

@@ -16,10 +16,10 @@ class RemoteSyncClient:
             base_dir = os.path.dirname(os.path.abspath(__file__))
             self.config_path = os.path.join(base_dir, "remote_sync_config.json")
             
-        self.remote_url = "http://127.0.0.1:8000"
+        self.remote_url = "https://subarashii-academy.onrender.com"
         self.api_key = "subarashii_secret_organizer_key_2026"
-        self.enabled = False
-        self.timeout = 6  # segundos
+        self.enabled = True
+        self.timeout = 8  # segundos
         
         self.load_config()
 
@@ -31,7 +31,7 @@ class RemoteSyncClient:
                     data = json.load(f)
                     self.remote_url = data.get("remote_url", self.remote_url).rstrip("/")
                     self.api_key = data.get("api_key", self.api_key).strip()
-                    self.enabled = data.get("enabled", False)
+                    self.enabled = data.get("enabled", self.enabled)
             except Exception as e:
                 print(f"[RemoteSyncClient] Error al leer configuración: {e}")
 
@@ -82,7 +82,7 @@ class RemoteSyncClient:
         except Exception as e:
             return False, f"Error de conexión: {str(e)}"
 
-    def sync_room_state(self, room_code: str, title: str, current_round: int, pairings: list, standings: list, timer_info: dict) -> Tuple[bool, str]:
+    def sync_room_state(self, room_code: str, title: str, current_round: int, pairings: list, standings: list, timer_info: dict, status: str = "LOBBY") -> Tuple[bool, str]:
         """Envía el estado actual del torneo y sus rondas al servidor cloud."""
         if not self.enabled:
             return False, "Sincronización remota desactivada."
@@ -93,6 +93,7 @@ class RemoteSyncClient:
                 "room_code": room_code,
                 "title": title,
                 "current_round": current_round,
+                "status": status,
                 "pairings": pairings,
                 "standings": standings,
                 "timer": timer_info
@@ -103,6 +104,7 @@ class RemoteSyncClient:
             return False, f"Fallo al sincronizar: {resp.status_code} {resp.text[:100]}"
         except Exception as e:
             return False, f"Error de red al sincronizar sala: {str(e)}"
+
 
     def fetch_room_events(self, room_code: str) -> Tuple[bool, Dict[str, Any]]:
         """Obtiene reportes y jugadores dropeados desde el servidor hosting."""

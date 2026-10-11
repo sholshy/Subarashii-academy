@@ -427,7 +427,22 @@ class TournamentUI(ctk.CTkFrame):
         self.active_room_code = room['room_code']
 
         # Sincronizar estado actual del manager
-        self.sync_active_room()
+        # Sincronizar estado inicial (crear la sala también en Render en estado LOBBY)
+        if getattr(self, 'remote_sync', None) and self.remote_sync.enabled:
+            def _create_room_in_cloud():
+                try:
+                    self.remote_sync.sync_room_state(
+                        room_code=room['room_code'],
+                        title=title,
+                        current_round=0,
+                        pairings=[],
+                        standings=[],
+                        timer_info={},
+                        status="LOBBY"
+                    )
+                except Exception as err:
+                    print("[TournamentUI] Error syncing lobby to cloud:", err)
+            threading.Thread(target=_create_room_in_cloud, daemon=True).start()
 
         win = ctk.CTkToplevel(self)
         win.title(f"📱 Sala Interactiva de Torneo - PIN #{room['room_code']}")
@@ -453,7 +468,11 @@ class TournamentUI(ctk.CTkFrame):
         ctk.CTkLabel(left_f, text="PIN DE ACCESO:", font=UI_FONT_SMALL, text_color="#94a3b8").pack(pady=(15, 0))
         ctk.CTkLabel(left_f, text=f"#{room['room_code']}", font=("Orbitron", 28, "bold"), text_color="#38bdf8").pack(pady=(0, 6))
 
-        url = f"http://localhost:8000/unirse/{room['room_code']}"
+        base_url = "https://subarashii-academy.onrender.com"
+        if getattr(self, 'remote_sync', None) and self.remote_sync.remote_url:
+            base_url = self.remote_sync.remote_url.rstrip("/")
+        url = f"{base_url}/unirse/{room['room_code']}"
+
         qr = qrcode.QRCode(box_size=5, border=2)
         qr.add_data(url)
         qr.make(fit=True)
@@ -464,7 +483,8 @@ class TournamentUI(ctk.CTkFrame):
         qr_lbl.image = qr_photo
         qr_lbl.pack(pady=4)
 
-        ctk.CTkLabel(left_f, text=f"duelorapido.cl/unirse/{room['room_code']}", font=("Roboto", 10), text_color="#64748b").pack(pady=(4, 10))
+        display_url = base_url.replace("https://", "").replace("http://", "") + f"/unirse/{room['room_code']}"
+        ctk.CTkLabel(left_f, text=display_url, font=("Roboto", 10), text_color="#38bdf8").pack(pady=(4, 10))
 
         ctk.CTkButton(left_f, text="🌐 Abrir Sala en Navegador", font=UI_FONT_SMALL, fg_color="#334155", hover_color="#475569",
                       command=lambda: webbrowser.open(url)).pack(fill="x", padx=15, pady=(0, 15))
@@ -537,6 +557,22 @@ class TournamentUI(ctk.CTkFrame):
             if not polling_active or not win.winfo_exists():
                 return
             try:
+                # Si la sincronización en la nube está activa, consultar y sincronizar check-ins de Render
+                if getattr(self, 'remote_sync', None) and self.remote_sync.enabled:
+                    try:
+                        ok, cloud_events = self.remote_sync.fetch_room_events(room['room_code'])
+                        if ok and cloud_events and "players" in cloud_events:
+                            for cp in cloud_events["players"]:
+                                trm.register_player(
+                                    room_code=room['room_code'],
+                                    player_name=cp.get("player_name", ""),
+                                    konami_id=cp.get("konami_id", "") or "",
+                                    deck_archetype=cp.get("deck_archetype", "") or "",
+                                    session_token=cp.get("session_token", "") or ""
+                                )
+                    except Exception:
+                        pass
+
                 plist = trm.get_room_players(room['room_code'])
                 lbl_players_count.configure(text=f"Jugadores en Sala: {len(plist)}")
                 for item in tree.get_children():
@@ -562,6 +598,7 @@ class TournamentUI(ctk.CTkFrame):
 
         win.protocol("WM_DELETE_WINDOW", on_close)
         poll_room()
+
 
     def toggle_audio(self):
         self.audio_muted = not self.audio_muted
