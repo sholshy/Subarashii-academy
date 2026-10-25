@@ -1064,16 +1064,15 @@ class TournamentUI(ctk.CTkFrame):
 
                 plist = trm.get_room_players(room['room_code'])
                 lbl_players_count.configure(text=f"Jugadores en Sala: {len(plist)}")
+                from utils import format_iso_to_local_time
                 for item in tree.get_children():
                     tree.delete(item)
                 for p in plist:
-                    t_str = p.get('checked_in_at', '')
-                    if t_str and 'T' in t_str:
-                        t_str = t_str.split('T')[1][:5]
+                    t_str = format_iso_to_local_time(p.get('checked_in_at', ''))
                     tree.insert("", "end", values=(
                         p['player_name'],
                         p.get('dorm', 'Intercambio'),
-                        t_str or '-'
+                        t_str
                     ))
             except Exception:
                 pass

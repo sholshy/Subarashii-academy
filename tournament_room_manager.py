@@ -3,10 +3,14 @@ import json
 import uuid
 import random
 import string
-from datetime import datetime
+from datetime import datetime, timezone
 import sqlite3
 
 from database import get_connection, migrate_calendar_and_leagues_schema
+
+def get_utc_now_iso():
+    """Retorna la fecha y hora actual en UTC con formato ISO y sufijo Z."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def migrate_rooms_schema(cursor):
     """
@@ -302,7 +306,7 @@ class TournamentRoomManager:
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
 
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         # Si ya existe una sala activa para este scheduled_id
         if scheduled_id:
@@ -377,7 +381,7 @@ class TournamentRoomManager:
     def update_room_status(self, room_code, status, current_round=None, live_data_json=None, format_name=None, title=None):
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         fields = ["status = ?", "updated_at = ?"]
         params = [status, now_str]
@@ -494,7 +498,7 @@ class TournamentRoomManager:
             except Exception:
                 pass
 
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
         try:
             cursor.execute("""
                 INSERT INTO room_checkins (
@@ -817,7 +821,7 @@ class TournamentRoomManager:
 
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         cursor.execute("""
             INSERT INTO room_trade_posts (
@@ -884,7 +888,7 @@ class TournamentRoomManager:
 
         p1_name = current_match['p1']
         p2_name = current_match['p2']
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
@@ -942,7 +946,7 @@ class TournamentRoomManager:
 
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         cursor.execute("""
             SELECT * FROM room_match_reports
@@ -991,7 +995,7 @@ class TournamentRoomManager:
 
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         cursor.execute("""
             UPDATE room_match_reports
@@ -1032,7 +1036,7 @@ class TournamentRoomManager:
         clean_name = player_name.strip()
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
-        now_str = datetime.now().isoformat()
+        now_str = get_utc_now_iso()
 
         # 1. Actualizar checkin
         cursor.execute("""

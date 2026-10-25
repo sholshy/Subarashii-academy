@@ -44,3 +44,23 @@ def normalize_player_name(name: str) -> str:
                   if unicodedata.category(c) != 'Mn')
     
     return name
+
+def format_iso_to_local_time(iso_str: str) -> str:
+    """Convierte una cadena de fecha/hora ISO (típicamente UTC) a hora local en formato 24h (HH:MM)."""
+    if not iso_str:
+        return "-"
+    try:
+        s = str(iso_str).strip()
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        elif not ("+" in s or "-" in s[10:]):
+            s = s + "+00:00"
+        from datetime import datetime
+        dt = datetime.fromisoformat(s)
+        dt_local = dt.astimezone()
+        return dt_local.strftime("%H:%M")
+    except Exception:
+        if "T" in str(iso_str):
+            return str(iso_str).split("T")[1][:5]
+        return str(iso_str)[:5]
+

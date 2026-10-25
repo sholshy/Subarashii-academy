@@ -2044,8 +2044,19 @@ function renderTradePosts() {
 function formatTradeTime(isoStr) {
     if (!isoStr) return '';
     try {
-        const d = new Date(isoStr);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let s = String(isoStr).trim();
+        if (!s.includes('T') && !s.includes('-')) {
+            return s;
+        }
+        // Si no tiene 'Z' ni offset explícito (+/-), asumimos UTC del servidor
+        if (!s.endsWith('Z') && !s.includes('+') && !/-\d{2}(:\d{2})?$/.test(s)) {
+            s += 'Z';
+        }
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return s;
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${hh}:${mm}`;
     } catch(e) {
         return '';
     }
