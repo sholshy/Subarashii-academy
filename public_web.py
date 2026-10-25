@@ -844,8 +844,9 @@ def api_organizer_events(room_code):
     if not room:
         return jsonify({"success": False, "error": "Sala no encontrada."}), 404
         
+    curr_round = room.get("current_round", 1)
     players = trm.get_room_players(room_code)
-    reports = trm.get_room_match_reports(room_code)
+    reports = trm.get_room_match_reports(room_code, round_num=curr_round)
     drops = trm.get_room_dropped_players(room_code)
     
     return jsonify({

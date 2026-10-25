@@ -636,7 +636,7 @@ class TournamentUI(ctk.CTkFrame):
                     # Mezclar reportes remotos confirmados
                     cloud_reports = cloud_data.get("reports", [])
                     for cr in cloud_reports:
-                        if cr.get("status") == "CONFIRMED":
+                        if cr.get("status") == "CONFIRMED" and cr.get("round_num") == curr_round:
                             existing = any(r['table_num'] == cr.get('table_num') and r['status'] == 'CONFIRMED' for r in reports)
                             if not existing:
                                 reports.append(cr)
@@ -649,12 +649,15 @@ class TournamentUI(ctk.CTkFrame):
             matches = self.manager.get_current_matches()
             changed = False
             for rep in reports:
+                if rep.get('round_num') and rep.get('round_num') != curr_round:
+                    continue
                 tbl_idx = rep['table_num'] - 1
                 if 0 <= tbl_idx < len(matches):
                     m = matches[tbl_idx]
                     if rep.get('status') == 'CONFIRMED' and not m.reported:
                         res_str = f"{rep['score_p1']}-{rep['score_p2']}"
                         m.report(res_str)
+                        self.manager.recalculate_all_player_stats()
                         self.refresh_round_after_result_change(m)
                         changed = True
 
@@ -2507,6 +2510,7 @@ class TournamentUI(ctk.CTkFrame):
         (ideal si un jugador no tiene teléfono, se quedó sin batería o hay una disputa).
         """
         match.report(score_str)
+        self.manager.recalculate_all_player_stats()
 
         if getattr(self, 'active_room_code', None):
             try:

@@ -236,6 +236,7 @@ class TournamentManager:
         manager.format_name = data.get("format_name", "GOAT")
         manager.tournament_profit = data.get("tournament_profit", 0.0)
         manager.total_packs_given = data.get("total_packs_given", 0)
+        manager.recalculate_all_player_stats()
 
         return manager
         
@@ -433,6 +434,93 @@ class TournamentManager:
         standings = sorted(self.players, key=lambda x: (x.active, x.points, x._omw, x._oomw), reverse=True)
         standings = self.apply_head_to_head_tiebreakers(standings)
         return standings
+
+    def recalculate_all_player_stats(self):
+        """
+        Recalcula limpiamente puntos, partidas jugadas, historial de resultados (W/L/D)
+        y oponentes de todos los jugadores basándose en los pareos y resultados oficiales.
+        Garantiza consistencia absoluta e inmunidad contra estados corruptos o puntos duplicados.
+        """
+        for p in self.players:
+            p.points = 0
+            p.matches_played = 0
+            p.match_results = []
+            p.opponents = []
+            p.had_bye = False
+
+        for round_matches in self.rounds:
+            for match in round_matches:
+                p1 = match.p1
+                p2 = match.p2
+
+                if p1 and p2:
+                    p1.opponents.append(p2)
+                    p2.opponents.append(p1)
+
+                if not match.reported:
+                    continue
+
+                res = match.result_text
+                effective = res
+                if isinstance(res, str) and "-" in res:
+                    try:
+                        parts = res.replace(" ", "").split("-")
+                        s1, s2 = int(parts[0]), int(parts[1])
+                        if s1 > s2: effective = "P1_WIN"
+                        elif s2 > s1: effective = "P2_WIN"
+                        elif s1 == s2 and s1 > 0: effective = "DRAW"
+                        else: effective = "DOUBLE_LOSS"
+                    except Exception:
+                        pass
+
+                if effective == "BYE":
+                    if p1:
+                        p1.points += 3
+                        p1.matches_played += 1
+                        p1.had_bye = True
+                        p1.match_results.append('W')
+                elif effective == "LATE_LOSS":
+                    if p2:
+                        p2.matches_played += 1
+                        p2.match_results.append('L')
+                elif effective == "P1_WIN":
+                    if p1:
+                        p1.points += 3
+                        p1.matches_played += 1
+                        p1.match_results.append('W')
+                    if p2:
+                        p2.points += 0
+                        p2.matches_played += 1
+                        p2.match_results.append('L')
+                elif effective == "P2_WIN":
+                    if p1:
+                        p1.points += 0
+                        p1.matches_played += 1
+                        p1.match_results.append('L')
+                    if p2:
+                        p2.points += 3
+                        p2.matches_played += 1
+                        p2.match_results.append('W')
+                elif effective == "DRAW":
+                    if p1:
+                        p1.points += 1
+                        p1.matches_played += 1
+                        p1.match_results.append('D')
+                    if p2:
+                        p2.points += 1
+                        p2.matches_played += 1
+                        p2.match_results.append('D')
+                elif effective == "DOUBLE_LOSS":
+                    if p1:
+                        p1.points += 0
+                        p1.matches_played += 1
+                        p1.match_results.append('DL')
+                    if p2:
+                        p2.points += 0
+                        p2.matches_played += 1
+                        p2.match_results.append('DL')
+
+        return self.get_standings()
 
     def standings_key(self, player):
         return (player.points, round(player._omw, 4), round(player._oomw, 4))
@@ -759,21 +847,21 @@ class TournamentManager:
             if match.p2:
                 match.p2.points -= 0
                 if match.p2.match_results: match.p2.match_results.pop()
-        elif result_type == "P2_WIN":
+        elif effective_type == "P2_WIN":
             if match.p1:
                 match.p1.points -= 0
                 if match.p1.match_results: match.p1.match_results.pop()
             if match.p2:
                 match.p2.points -= 3
                 if match.p2.match_results: match.p2.match_results.pop()
-        elif result_type == "DRAW":
+        elif effective_type == "DRAW":
             if match.p1:
                 match.p1.points -= 1
                 if match.p1.match_results: match.p1.match_results.pop()
             if match.p2:
                 match.p2.points -= 1
                 if match.p2.match_results: match.p2.match_results.pop()
-        elif result_type == "DOUBLE_LOSS":
+        elif effective_type == "DOUBLE_LOSS":
             if match.p1:
                 match.p1.points -= 0
                 if match.p1.match_results: match.p1.match_results.pop()
@@ -786,6 +874,7 @@ class TournamentManager:
         
         match.reported = False
         match.result_text = "Pendiente"
+        self.recalculate_all_player_stats()
         
     def rollback_round(self):
         if self.current_round <= 1:
