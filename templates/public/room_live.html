@@ -548,6 +548,48 @@
 }
 
 /* MODAL Y FORMULARIO PUBLICAR CARTA */
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #printPosterSection, #printPosterSection * {
+        visibility: visible !important;
+    }
+    #printPosterSection {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 2.5cm 2cm !important;
+        box-sizing: border-box !important;
+        background: white !important;
+        color: #0f172a !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        text-align: center !important;
+        border: none !important;
+        box-shadow: none !important;
+        z-index: 999999 !important;
+    }
+    #printPosterSection .print-poster-border {
+        border: 4px solid #0f172a !important;
+        padding: 1.5cm !important;
+        width: 100% !important;
+        height: 100% !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+    #printPosterSection img, #printPosterSection canvas {
+        filter: none !important;
+    }
+}
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -1100,9 +1142,67 @@
 
         <div id="qrcode"></div>
 
-        <button onclick="toggleQRModal(false)" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
-            Cerrar
-        </button>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button onclick="printRoomPoster()" class="btn btn-primary" style="flex: 1; font-weight: 800; font-size: 0.85rem;" title="Imprimir cartel oficial A4 para la pared">
+                🖨️ Imprimir Cartel A4
+            </button>
+            <button onclick="toggleQRModal(false)" class="btn btn-secondary" style="flex: 1;">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN OCULTA EN PANTALLA QUE SE RENDERIZA ÚNICAMENTE AL IMPRIMIR EL CARTEL A4 -->
+<div id="printPosterSection" style="display: none;">
+    <div class="print-poster-border">
+        <div style="width: 100%;">
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 34pt; font-weight: 900; letter-spacing: 2px; color: #0f172a; margin-bottom: 4px;">
+                DUELORAPIDO.CL
+            </div>
+            <div style="font-family: 'Inter', sans-serif; font-size: 16pt; font-weight: 800; color: #0284c7; letter-spacing: 2px; text-transform: uppercase;">
+                SUBARASHII DUEL ACADEMY
+            </div>
+            <div style="height: 3px; background: #cbd5e1; width: 90%; margin: 18px auto 22px;"></div>
+            
+            <div style="display: inline-block; padding: 6px 20px; border-radius: 8px; border: 2px solid #0284c7; font-family: 'Orbitron', sans-serif; font-size: 14pt; font-weight: 800; color: #0284c7; margin-bottom: 12px;">
+                FORMATO {{ room.format_name }}
+            </div>
+            <div style="font-family: 'Orbitron', sans-serif; font-size: 20pt; font-weight: 900; color: #1e293b; margin-bottom: 8px;">
+                {{ room.title }}
+            </div>
+            <div style="font-family: 'Inter', sans-serif; font-size: 18pt; font-weight: 900; color: #0f172a;">
+                ¡ESCANEA PARA UNIRTE AL TORNEO!
+            </div>
+        </div>
+
+        <div style="margin: 25px 0;">
+            <div style="display: inline-block; padding: 16px; background: #fff; border: 3px solid #0284c7; border-radius: 16px;">
+                <div id="printQrcodeCanvas"></div>
+            </div>
+        </div>
+
+        <div style="width: 100%;">
+            <div style="display: inline-block; width: 75%; padding: 18px 25px; background: #f8fafc; border: 2.5px solid #0284c7; border-radius: 16px; margin-bottom: 25px;">
+                <div style="font-family: 'Inter', sans-serif; font-size: 13pt; font-weight: 800; color: #64748b; letter-spacing: 1.5px; text-transform: uppercase;">
+                    PIN DE SALA / TORNEO
+                </div>
+                <div style="font-family: 'Orbitron', sans-serif; font-size: 44pt; font-weight: 900; color: #0f172a; letter-spacing: 4px; margin-top: 4px;">
+                    #{{ room.room_code }}
+                </div>
+            </div>
+
+            <div style="text-align: left; max-width: 550px; margin: 0 auto; font-family: 'Inter', sans-serif; font-size: 13pt; line-height: 1.8; color: #1e293b;">
+                <p style="margin: 6px 0;"><strong>1.</strong> Abre la cámara de tu teléfono o lector QR.</p>
+                <p style="margin: 6px 0;"><strong>2.</strong> Escanea el código o entra a <strong>duelorapido.cl/unirse</strong>.</p>
+                <p style="margin: 6px 0;"><strong>3.</strong> Ingresa tu nombre y verás tu mesa asignada en vivo.</p>
+            </div>
+
+            <div style="height: 2px; background: #cbd5e1; width: 90%; margin: 25px auto 14px;"></div>
+            <div style="font-family: 'Inter', sans-serif; font-size: 11pt; color: #64748b;">
+                Duelorapido.cl • Sistema Oficial de Torneos • Subarashii Academy
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1237,6 +1337,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function toggleQRModal(show) {
     document.getElementById('qrModal').style.display = show ? 'flex' : 'none';
+}
+
+function printRoomPoster() {
+    // Generar el QR de alta resolución para el cartel de impresión si no se ha generado
+    const printContainer = document.getElementById("printQrcodeCanvas");
+    if (printContainer && printContainer.children.length === 0) {
+        const joinUrl = window.location.origin + "/unirse/" + roomCode;
+        new QRCode(printContainer, {
+            text: joinUrl,
+            width: 320,
+            height: 320,
+            colorDark: "#0f172a",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    // Pequeño timeout para permitir que el QR termine de renderizarse antes de llamar al print del navegador
+    setTimeout(() => {
+        window.print();
+    }, 250);
 }
 
 function switchRoomTab(tab) {

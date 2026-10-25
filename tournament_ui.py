@@ -783,6 +783,145 @@ class TournamentUI(ctk.CTkFrame):
         ctk.CTkButton(btn_box, text="Cerrar", command=win.destroy, font=UI_FONT_SMALL, width=90, fg_color="#334155", hover_color="#475569").pack(side="left", padx=8)
 
 
+    def open_print_poster_dialog(self, room_code: str, url: str, title: str, format_name: str):
+        """Abre un diálogo de vista previa y configuración para imprimir el cartel A4 con QR de la sala."""
+        import room_qr_printer as rqp
+        import tempfile
+        import os
+        from PIL import Image, ImageTk
+
+        printers = rqp.get_system_printers()
+        default_printer = rqp.get_default_printer_name() or (printers[0] if printers else "Impresora Predeterminada")
+
+        date_str = self.date_var.get() if hasattr(self, 'date_var') else datetime.now().strftime("%d-%m-%Y")
+        poster_img = rqp.generate_room_qr_poster(
+            room_code=room_code,
+            url=url,
+            title=title,
+            format_name=format_name,
+            store_name="Subarashii Duel Academy",
+            date_str=date_str
+        )
+
+        pwin = ctk.CTkToplevel(self)
+        pwin.title(f"🖨️ Imprimir Cartel QR para Pared - Sala #{room_code}")
+        pwin.geometry("780x640")
+        pwin.configure(fg_color="#0f172a")
+        pwin.transient(self)
+        pwin.grab_set()
+
+        # Header
+        top_f = ctk.CTkFrame(pwin, fg_color="#1e293b", corner_radius=10)
+        top_f.pack(fill="x", padx=15, pady=(15, 10))
+        ctk.CTkLabel(top_f, text="🖨️ IMPRIMIR CARTEL DE SALA CON QR PARA LA PARED", font=("Orbitron", 14, "bold"), text_color="#38bdf8").pack(anchor="w", padx=15, pady=(10, 2))
+        ctk.CTkLabel(top_f, text="Genera un cartel oficial en tamaño A4 listo para imprimir y colgar en la tienda. Los duelistas podrán escanearlo fácilmente para ingresar a la sala en vivo.", font=UI_FONT_SMALL, text_color="#94a3b8", wraplength=730, justify="left").pack(anchor="w", padx=15, pady=(0, 10))
+
+        body_f = ctk.CTkFrame(pwin, fg_color="transparent")
+        body_f.pack(fill="both", expand=True, padx=15, pady=0)
+
+        # Vista previa a escala a la izquierda
+        prev_f = ctk.CTkFrame(body_f, fg_color="#1e293b", corner_radius=10, width=320)
+        prev_f.pack(side="left", fill="y", padx=(0, 10))
+
+        ctk.CTkLabel(prev_f, text="VISTA PREVIA (A4):", font=UI_FONT_SMALL, text_color="#94a3b8").pack(pady=(10, 4))
+
+        thumb_w = 260
+        thumb_h = int(thumb_w * (poster_img.height / poster_img.width))
+        thumb_img = poster_img.resize((thumb_w, thumb_h), Image.Resampling.LANCZOS)
+        thumb_photo = ImageTk.PhotoImage(thumb_img)
+
+        prev_lbl = tk.Label(prev_f, image=thumb_photo, bg="#0f172a", borderwidth=1, relief="solid")
+        prev_lbl.image = thumb_photo
+        prev_lbl.pack(padx=15, pady=4)
+
+        # Panel de opciones a la derecha
+        opts_f = ctk.CTkFrame(body_f, fg_color="#1e293b", corner_radius=10)
+        opts_f.pack(side="left", fill="both", expand=True)
+
+        ctk.CTkLabel(opts_f, text="CONFIGURACIÓN DE IMPRESIÓN", font=("Orbitron", 12, "bold"), text_color="#f8fafc").pack(anchor="w", padx=15, pady=(15, 10))
+
+        # Selector de impresora
+        ctk.CTkLabel(opts_f, text="Impresora de destino:", font=UI_FONT_SMALL, text_color="#cbd5e1").pack(anchor="w", padx=15, pady=(5, 2))
+        printer_var = tk.StringVar(value=default_printer)
+        printer_values = printers if printers else [default_printer]
+        printer_menu = ctk.CTkOptionMenu(opts_f, values=printer_values, variable=printer_var, width=380, fg_color="#334155", button_color="#0284c7")
+        printer_menu.pack(anchor="w", padx=15, pady=(0, 12))
+
+        # Detalles del cartel
+        det_box = ctk.CTkFrame(opts_f, fg_color="#0f172a", corner_radius=8)
+        det_box.pack(fill="x", padx=15, pady=5)
+
+        info_lines = [
+            ("PIN de Sala:", f"#{room_code}"),
+            ("Formato:", format_name),
+            ("Torneo:", title),
+            ("Fecha:", date_str),
+            ("Resolución:", "300 DPI (A4 de alta calidad)")
+        ]
+        for lbl, val in info_lines:
+            row = ctk.CTkFrame(det_box, fg_color="transparent")
+            row.pack(fill="x", padx=12, pady=3)
+            ctk.CTkLabel(row, text=lbl, font=UI_FONT_SMALL, text_color="#94a3b8", width=120, anchor="w").pack(side="left")
+            ctk.CTkLabel(row, text=val, font=UI_FONT_SMALL, text_color="#f8fafc", anchor="w").pack(side="left")
+
+        # Estado o mensaje
+        status_lbl = ctk.CTkLabel(opts_f, text="", font=UI_FONT_SMALL, text_color="#38bdf8")
+        status_lbl.pack(pady=10)
+
+        # Acciones de guardado / impresión
+        def do_print():
+            target_p = printer_var.get()
+            status_lbl.configure(text=f"Enviando trabajo a '{target_p}'...", text_color="#38bdf8")
+            pwin.update_idletasks()
+
+            def _worker():
+                try:
+                    rqp.print_image_to_printer(poster_img, printer_name=target_p, doc_name=f"Cartel_Sala_{room_code}")
+                    self.after(0, lambda: [
+                        status_lbl.configure(text="¡Cartel enviado a imprimir con éxito! 🖨️", text_color="#22c55e"),
+                        messagebox.showinfo("Impresión Exitosa", f"El cartel con el QR y PIN #{room_code} fue enviado a la impresora:\n{target_p}\n\n¡Listo para colgar en la pared!")
+                    ])
+                except Exception as err:
+                    self.after(0, lambda: [
+                        status_lbl.configure(text=f"Error al imprimir: {err}", text_color="#ef4444"),
+                        messagebox.showerror("Error al Imprimir", f"Ocurrió un error al enviar el cartel a la impresora:\n{err}")
+                    ])
+            threading.Thread(target=_worker, daemon=True).start()
+
+        def do_save_pdf():
+            from tkinter import filedialog
+            default_fn = f"Cartel_QR_Sala_{room_code}.pdf"
+            path = filedialog.asksaveasfilename(
+                parent=pwin,
+                title="Guardar Cartel como PDF",
+                initialfile=default_fn,
+                filetypes=[("Archivos PDF", "*.pdf")]
+            )
+            if path:
+                try:
+                    rqp.export_poster_pdf(poster_img, path)
+                    status_lbl.configure(text="¡PDF guardado con éxito! 📄", text_color="#22c55e")
+                    messagebox.showinfo("PDF Guardado", f"El cartel fue guardado en:\n{path}")
+                except Exception as err:
+                    messagebox.showerror("Error", f"No se pudo guardar el PDF:\n{err}")
+
+        act_box = ctk.CTkFrame(opts_f, fg_color="transparent")
+        act_box.pack(fill="x", padx=15, pady=(10, 15), side="bottom")
+
+        btn_print = ctk.CTkButton(act_box, text="🖨️ Imprimir Cartel Ahora", font=("Roboto", 13, "bold"),
+                                  fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", height=42,
+                                  command=do_print)
+        btn_print.pack(fill="x", pady=4)
+
+        sec_box = ctk.CTkFrame(act_box, fg_color="transparent")
+        sec_box.pack(fill="x", pady=4)
+
+        ctk.CTkButton(sec_box, text="📄 Guardar como PDF", font=UI_FONT_SMALL, width=175,
+                      fg_color="#334155", hover_color="#475569", command=do_save_pdf).pack(side="left", padx=(0, 6), expand=True, fill="x")
+
+        ctk.CTkButton(sec_box, text="Cerrar", font=UI_FONT_SMALL, width=90,
+                      fg_color="#1e293b", hover_color="#334155", command=pwin.destroy).pack(side="left", expand=True, fill="x")
+
     def open_qr_checkin_window(self):
         import qrcode
         from PIL import Image, ImageTk
@@ -858,6 +997,9 @@ class TournamentUI(ctk.CTkFrame):
 
         display_url = base_url.replace("https://", "").replace("http://", "") + f"/unirse/{room['room_code']}"
         ctk.CTkLabel(left_f, text=display_url, font=("Roboto", 10), text_color="#38bdf8").pack(pady=(4, 10))
+
+        ctk.CTkButton(left_f, text="🖨️ Imprimir QR para Pared", font=("Roboto", 12, "bold"), fg_color="#0284c7", hover_color="#0369a1", text_color="#ffffff", height=36,
+                      command=lambda: self.open_print_poster_dialog(room['room_code'], url, title, fmt)).pack(fill="x", padx=15, pady=(0, 8))
 
         ctk.CTkButton(left_f, text="🌐 Abrir Sala en Navegador", font=UI_FONT_SMALL, fg_color="#334155", hover_color="#475569",
                       command=lambda: webbrowser.open(url)).pack(fill="x", padx=15, pady=(0, 15))
