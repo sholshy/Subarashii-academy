@@ -148,6 +148,10 @@ class AcademyEngine:
             timestamp = datetime.now().isoformat()
             
         self.ensure_schema(cursor)
+        if match_id is not None:
+            cursor.execute("SELECT id FROM academy_rating_history WHERE match_id = ?", (match_id,))
+            if cursor.fetchone():
+                return
         p1_prof = self.get_or_create_global_profile(cursor, p1_id)
         p2_prof = self.get_or_create_global_profile(cursor, p2_id)
         
@@ -424,13 +428,30 @@ class AcademyEngine:
         matches = cursor.fetchall()
         
         for m in matches:
-            res = m['result_text']
-            if 'BYE' in res or 'Drop' in res: continue
+            res = (m['result_text'] or '').strip()
+            if 'BYE' in res or 'Drop' in res or 'Pendiente' in res or 'DOUBLE_LOSS' in res:
+                continue
             
-            if res == 'P1_WIN': p1_score = 1.0
-            elif res == 'P2_WIN': p1_score = 0.0
-            elif res == 'DRAW': p1_score = 0.5
-            else: continue
+            p1_score = None
+            if res == 'P1_WIN':
+                p1_score = 1.0
+            elif res == 'P2_WIN':
+                p1_score = 0.0
+            elif res in ('DRAW', 'EMPATE'):
+                p1_score = 0.5
+            elif '-' in res:
+                parts = res.split('-')
+                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                    s1, s2 = int(parts[0]), int(parts[1])
+                    if s1 > s2:
+                        p1_score = 1.0
+                    elif s2 > s1:
+                        p1_score = 0.0
+                    elif s1 == s2 and (s1 > 0 or s2 > 0):
+                        p1_score = 0.5
+            
+            if p1_score is None:
+                continue
             
             self.process_match(cursor, m['id'], m['p1_id'], m['p2_id'], p1_score, timestamp=t_date)
 
@@ -451,6 +472,13 @@ class AcademyEngine:
             player_id = lp_row['player_id']
             prof = self.get_or_create_global_profile(cursor, player_id)
             
+            cursor.execute("""
+                SELECT id FROM academy_xp_log 
+                WHERE academy_profile_id = ? AND source = 'TOURNAMENT' AND ref_id = ?
+            """, (prof['id'], tournament_id))
+            if cursor.fetchone():
+                continue
+
             xp_gain = 25
             pos = r['placement_points']
             if pos == 1: xp_gain += 150

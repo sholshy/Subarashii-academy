@@ -18,6 +18,8 @@ class TestRankingExplainer(unittest.TestCase):
         init_db()
         self.conn = get_connection()
         self.cur = self.conn.cursor()
+        self.cur.execute("DELETE FROM academy_profiles")
+        self.cur.execute("DELETE FROM players")
         self.cur.execute("INSERT INTO stores (name) VALUES ('S')")
         store = self.cur.lastrowid
         self.cur.execute("INSERT INTO players (name, slug) VALUES ('Ana', 'ana')")

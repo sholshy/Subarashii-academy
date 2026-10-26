@@ -17,8 +17,8 @@ def run_preseason():
     # Obtener todos los torneos cronológicamente (soportando DD-MM-YY y YYYY-MM-DD)
     cursor.execute("""
         SELECT id, date, format_name FROM tournaments
-        WHERE id IN (SELECT DISTINCT tournament_id FROM tournament_matches WHERE result_text IN ('P1_WIN', 'P2_WIN', 'DRAW'))
-          AND id NOT IN (SELECT DISTINCT tournament_id FROM tournament_matches WHERE result_text = 'Pendiente')
+        WHERE id NOT IN (SELECT DISTINCT tournament_id FROM tournament_matches WHERE result_text = 'Pendiente')
+          AND id IN (SELECT DISTINCT tournament_id FROM tournament_matches WHERE result_text NOT IN ('Pendiente', 'BYE'))
         ORDER BY
             CASE WHEN substr(date, 3, 1) = '-' AND substr(date, 6, 1) = '-'
                  THEN '20' || substr(date, 7, 2) || '-' || substr(date, 4, 2) || '-' || substr(date, 1, 2)
@@ -54,13 +54,25 @@ def run_preseason():
                     continue
 
                 # Parse result
+                p1_score = None
                 if res == 'P1_WIN':
                     p1_score = 1.0
                 elif res == 'P2_WIN':
                     p1_score = 0.0
-                elif res == 'DRAW':
+                elif res in ('DRAW', 'EMPATE'):
                     p1_score = 0.5
-                else:
+                elif '-' in res:
+                    parts = res.split('-')
+                    if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                        s1, s2 = int(parts[0]), int(parts[1])
+                        if s1 > s2:
+                            p1_score = 1.0
+                        elif s2 > s1:
+                            p1_score = 0.0
+                        elif s1 == s2 and (s1 > 0 or s2 > 0):
+                            p1_score = 0.5
+
+                if p1_score is None:
                     continue
                     
                 # Verificar idempotencia a nivel de torneo para ambos jugadores

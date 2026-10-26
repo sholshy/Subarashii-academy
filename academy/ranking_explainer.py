@@ -1,3 +1,31 @@
+
+def format_duel_date(raw_date):
+    if not raw_date:
+        return "-"
+    raw = str(raw_date).strip()
+    if len(raw) >= 10 and raw[4] == '-' and raw[7] == '-':
+        return f"{raw[8:10]}/{raw[5:7]}/{raw[:4]}"
+    parts = raw.split('-')
+    if len(parts) == 3:
+        if len(parts[0]) == 2 and len(parts[2]) == 2:
+            return f"{parts[0]}/{parts[1]}/20{parts[2]}"
+        elif len(parts[0]) == 4:
+            return f"{parts[2][:2]}/{parts[1]}/{parts[0]}"
+    return raw.replace('-', '/')
+
+def format_short_date(raw_date):
+    if not raw_date:
+        return "-"
+    raw = str(raw_date).strip()
+    if len(raw) >= 10 and raw[4] == '-' and raw[7] == '-':
+        return f"{raw[8:10]}/{raw[5:7]}"
+    parts = raw.split('-')
+    if len(parts) == 3:
+        if len(parts[0]) == 2:
+            return f"{parts[0]}/{parts[1]}"
+        elif len(parts[0]) == 4:
+            return f"{parts[2][:2]}/{parts[1]}"
+    return raw[:5].replace('-', '/')
 """
 Explicación del ranking de un jugador de la Academy.
 
@@ -68,7 +96,9 @@ def explain_player(cursor, player_id, format_name='GLOBAL', max_duels=None):
         else:
             res_txt = 'Victoria' if res == 1 else 'Derrota' if res == 0 else 'Empate'
         duels.append({
-            'date': h['timestamp'],
+            'date': format_duel_date(h['timestamp']),
+            'short_date': format_short_date(h['timestamp']),
+            'raw_date': h['timestamp'],
             'opponent': h['opponent_name'],
             'opponent_rating': h['opponent_rating'],
             'result': res_txt,

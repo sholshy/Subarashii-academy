@@ -182,12 +182,9 @@
                         {% set is_loss = (d.result == 'Derrota') %}
                         {% set res_class = 'win' if is_win else 'loss' if is_loss else 'draw' %}
                         <tr>
-                            <td class="td-date">
-                                {% if d.date and d.date|length >= 10 %}
-                                    {{ d.date[8:10] }}/{{ d.date[5:7] }}
-                                {% else %}
-                                    —
-                                {% endif %}
+                            <td class="td-date" title="{{ d.date }}">
+                                <span class="res-short">{{ d.short_date or d.date }}</span>
+                                <span class="col-desktop">{{ d.date }}</span>
                             </td>
                             <td class="td-opp">
                                 <span class="opp-name">{{ d.opponent or '—' }}</span>
