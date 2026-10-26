@@ -322,6 +322,16 @@
 </div>
 
 <script>
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 let currentMode = 'academy';
 let searchTimeout = null;
 
@@ -373,14 +383,19 @@ function onSearchInput(val) {
                 }
                 let html = '';
                 data.forEach(p => {
-                    const dormClass = p.dorm.toLowerCase().replace(/\s+/g, '-');
+                    const dormClass = (p.dorm || '').toLowerCase().replace(/\s+/g, '-');
+                    const safeName = escapeHTML(p.name || '');
+                    const safeNick = escapeHTML(p.nickname || '');
+                    const safeKid = escapeHTML(p.konami_id || '');
+                    const safeDorm = escapeHTML(p.dorm || '');
+                    const escapedForClick = (p.name || '').replace(/'/g, "\\'");
                     html += `
-                        <div class="search-item" onclick="selectPlayer('${p.name.replace(/'/g, "\\'")}', '${p.dorm}', '${p.konami_id || ''}')">
+                        <div class="search-item" onclick="selectPlayer('${escapedForClick}', '${(p.dorm || '').replace(/'/g, "\\'")}', '${(p.konami_id || '').replace(/'/g, "\\'")}')">
                             <div>
-                                <div class="s-name">${p.name}${p.nickname ? ` <span style="color:#38bdf8; font-weight:700; font-size:0.85rem;">"${p.nickname}"</span>` : ''}</div>
-                                <div class="s-meta">${p.konami_id ? 'K-ID: ' + p.konami_id + ' • ' : ''}ELO: ${p.rating}</div>
+                                <div class="s-name">${safeName}${p.nickname ? ` <span style="color:#38bdf8; font-weight:700; font-size:0.85rem;">"${safeNick}"</span>` : ''}</div>
+                                <div class="s-meta">${p.konami_id ? 'K-ID: ' + safeKid + ' • ' : ''}ELO: ${p.rating}</div>
                             </div>
-                            <span class="s-dorm dorm-${dormClass}">${p.dorm}</span>
+                            <span class="s-dorm dorm-${dormClass}">${safeDorm}</span>
                         </div>
                     `;
                 });

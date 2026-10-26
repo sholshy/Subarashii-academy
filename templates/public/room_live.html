@@ -1312,6 +1312,17 @@
 
 <script>
 const roomCode = "{{ room.room_code }}";
+
+// Helper universal de sanitización anti-XSS
+function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 let savedUserData = null;
 let currentRoundNum = 0;
 let currentMyMatch = null;
@@ -1614,7 +1625,7 @@ function renderMyMatch(data) {
             <div class="lobby-waiting-banner">
                 <div class="lobby-pulse-dot"></div>
                 <div>
-                    <h3 style="margin: 0; color: #fff; font-size: 1.15rem;">¡Hola, ${savedUserData.name}! Estás dentro de la sala</h3>
+                    <h3 style="margin: 0; color: #fff; font-size: 1.15rem;">¡Hola, ${escapeHTML(savedUserData.name)}! Estás dentro de la sala</h3>
                     <p style="margin: 4px 0 0; color: #94a3b8; font-size: 0.85rem;">
                         Esperando que el organizador cierre inscripciones e inicie la <strong>Ronda 1</strong>. En cuanto se empareje, verás tu mesa asignada aquí.
                     </p>
@@ -1832,6 +1843,7 @@ function handleReportResult(myScore, oppScore) {
         return;
     }
 
+    const playerToken = (savedUserData && (savedUserData.session_token || savedUserData.token)) || localStorage.getItem('duel_player_token') || '';
     fetch(`/api/room/${roomCode}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1839,6 +1851,7 @@ function handleReportResult(myScore, oppScore) {
             round_num: currentRoundNum,
             table_num: currentMyMatch.table,
             reporter_name: savedUserData.name,
+            session_token: playerToken,
             score_p1: s1,
             score_p2: s2
         })
@@ -1861,13 +1874,15 @@ function handleConfirmReport() {
     if (!currentMyMatch) return;
     if (!confirm("¿Confirmas que este es el resultado correcto de la mesa?")) return;
 
+    const playerToken = (savedUserData && (savedUserData.session_token || savedUserData.token)) || localStorage.getItem('duel_player_token') || '';
     fetch(`/api/room/${roomCode}/confirm_report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             round_num: currentRoundNum,
             table_num: currentMyMatch.table,
-            confirmer_name: savedUserData.name
+            confirmer_name: savedUserData.name,
+            session_token: playerToken
         })
     })
     .then(r => r.json())
@@ -1885,13 +1900,15 @@ function handleDisputeReport() {
     if (!currentMyMatch) return;
     if (!confirm("¿Deseas disputar este resultado y solicitar la presencia del juez en tu mesa?")) return;
 
+    const playerToken = (savedUserData && (savedUserData.session_token || savedUserData.token)) || localStorage.getItem('duel_player_token') || '';
     fetch(`/api/room/${roomCode}/dispute_report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             round_num: currentRoundNum,
             table_num: currentMyMatch.table,
-            disputer_name: savedUserData.name
+            disputer_name: savedUserData.name,
+            session_token: playerToken
         })
     })
     .then(r => r.json())
@@ -2025,14 +2042,22 @@ function renderTradePosts() {
         const isOwner = (t.session_token && t.session_token === myToken) || (t.player_name && t.player_name.toLowerCase() === myName);
         const cardImg = t.card_image_url || 'https://images.ygoprodeck.com/images/cards/back_high.jpg';
 
+        const safeCardName = escapeHTML(t.card_name);
+        const safeNotes = escapeHTML(t.notes);
+        const safePlayerName = escapeHTML(t.player_name);
+        const safeRarity = escapeHTML(t.rarity);
+        const safeLanguage = escapeHTML(t.language);
+        const safeEdition = escapeHTML(t.edition);
+        const safePostType = escapeHTML(t.post_type);
+
         html += `
             <div class="trade-card">
-                <img src="${cardImg}" class="trade-card-thumb" alt="${t.card_name}" onclick="window.open('${cardImg}', '_blank')">
+                <img src="${cardImg}" class="trade-card-thumb" alt="${safeCardName}" onclick="window.open('${cardImg}', '_blank')">
                 <div class="trade-card-body">
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
                             <span class="trade-badge-type ${badgeClass}">
-                                ${badgeIcon} ${t.post_type}
+                                ${badgeIcon} ${safePostType}
                             </span>
                             ${isOwner ? `
                                 <button onclick="deleteTradePost(${t.id})" style="background: none; border: none; color: #ef4444; font-size: 0.8rem; cursor: pointer; padding: 0;" title="Eliminar publicación">
@@ -2041,23 +2066,23 @@ function renderTradePosts() {
                             ` : ''}
                         </div>
                         <h4 style="margin: 6px 0 4px; color: #fff; font-size: 0.95rem; font-family: 'Orbitron'; line-height: 1.2;">
-                            ${t.card_name}
+                            ${safeCardName}
                         </h4>
                         <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;">
-                            ${t.rarity ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${t.rarity}</span>` : ''}
-                            ${t.language && t.language !== 'Cualquiera' ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${t.language}</span>` : ''}
-                            ${t.edition && t.edition !== 'Cualquiera' ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${t.edition}</span>` : ''}
+                            ${safeRarity ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${safeRarity}</span>` : ''}
+                            ${safeLanguage && safeLanguage !== 'Cualquiera' ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${safeLanguage}</span>` : ''}
+                            ${safeEdition && safeEdition !== 'Cualquiera' ? `<span class="badge" style="background: rgba(255,255,255,0.08); font-size: 0.68rem; color: #cbd5e1;">${safeEdition}</span>` : ''}
                         </div>
-                        ${t.notes ? `
+                        ${safeNotes ? `
                             <p style="margin: 0; color: #94a3b8; font-size: 0.78rem; font-style: italic; background: rgba(0,0,0,0.25); padding: 5px 8px; border-radius: 4px;">
-                                "${t.notes}"
+                                "${safeNotes}"
                             </p>
                         ` : ''}
                     </div>
 
                     <div style="margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.75rem; color: #38bdf8; font-weight: 700;">
-                            👤 ${t.player_name}
+                            👤 ${safePlayerName}
                         </span>
                         <span style="font-size: 0.68rem; color: #64748b;">
                             ${formatTradeTime(t.created_at)}
@@ -2329,14 +2354,16 @@ function renderStandings(standings, formatName, roomStatus) {
             oomwVal = parseFloat(oomwVal).toFixed(3);
         }
 
+                const safeSName = escapeHTML(s.name || '');
+        const safeNote = escapeHTML(s.note || '');
         rowsHtml += `
-            <tr class="poster-row ${rankClass}" onclick="openTiebreakerModal(${s.rank})" style="cursor: pointer;" title="Toca para ver los rivales y desempate de ${s.name}">
+            <tr class="poster-row ${rankClass}" onclick="openTiebreakerModal(${s.rank})" style="cursor: pointer;" title="Toca para ver los rivales y desempate de ${safeSName}">
                 <td style="width: 55px;"><div class="poster-rk">#${s.rank}</div></td>
-                <td><div class="poster-name">${(s.name || '').toUpperCase()}</div></td>
+                <td><div class="poster-name">${safeSName.toUpperCase()}</div></td>
                 <td class="poster-pts">${s.points}</td>
                 <td class="poster-metric">${omwVal}</td>
                 <td class="poster-metric">${oomwVal}</td>
-                <td class="poster-note">${s.note || ''}</td>
+                <td class="poster-note">${safeNote}</td>
             </tr>
         `;
     });
@@ -2407,7 +2434,7 @@ function openTiebreakerModal(rank) {
                 <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 0.82rem;">
                     <div>
                         <span style="color: #94a3b8; font-weight: 700; margin-right: 6px;">Ronda ${i+1}</span>
-                        <strong style="color: #f8fafc;">${o.name}</strong>
+                        <strong style="color: #f8fafc;">${escapeHTML(o.name)}</strong>
                     </div>
                     <div style="text-align: right;">
                         <span style="color: #38bdf8; font-weight: 700;">${o.points} pts</span>
@@ -2438,18 +2465,22 @@ function renderPlayersList(players) {
 
     let html = '';
     players.forEach(p => {
-        const dormClass = (p.dorm || 'estudiante-de-intercambio').toLowerCase().replace(/\\s+/g, '-');
-                const nickDisplay = (p.nickname && p.nickname.trim().toLowerCase() !== (p.player_name || '').trim().toLowerCase()) 
-            ? ` <span style="color: #38bdf8; font-weight: normal; font-size: 0.85rem;">"${p.nickname}"</span>` 
+        const dormClass = (p.dorm || 'estudiante-de-intercambio').toLowerCase().replace(/\s+/g, '-');
+        const safePName = escapeHTML(p.player_name || '');
+        const safeNick = escapeHTML(p.nickname || '');
+        const safeKId = escapeHTML(p.konami_id || '');
+        const safeDorm = escapeHTML(p.dorm || 'Estudiante de Intercambio');
+        const nickDisplay = (p.nickname && p.nickname.trim().toLowerCase() !== (p.player_name || '').trim().toLowerCase()) 
+            ? ` <span style="color: #38bdf8; font-weight: normal; font-size: 0.85rem;">"${safeNick}"</span>` 
             : '';
-html += `
+        html += `
             <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <strong style="color: #fff; display: block; font-size: 0.95rem;">${p.player_name}${nickDisplay}</strong>
-                    <small style="color: #94a3b8; font-size: 0.75rem;">${p.konami_id ? 'K-ID: ' + p.konami_id : 'Duelista Oficial'}</small>
+                    <strong style="color: #fff; display: block; font-size: 0.95rem;">${safePName}${nickDisplay}</strong>
+                    <small style="color: #94a3b8; font-size: 0.75rem;">${safeKId ? 'K-ID: ' + safeKId : 'Duelista Oficial'}</small>
                 </div>
                 <span class="badge dorm-${dormClass}" style="font-size: 0.7rem; font-weight: 800;">
-                    ${p.dorm}
+                    ${safeDorm}
                 </span>
             </div>
         `;

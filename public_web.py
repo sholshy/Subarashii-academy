@@ -5,10 +5,50 @@ from functools import wraps
 from flask import Flask, render_template, abort, request, jsonify, redirect, url_for, session, render_template_string
 
 app = Flask(__name__, template_folder="templates/public", static_folder="static")
-app.secret_key = os.environ.get("SECRET_KEY", "subarashii_academy_secret_key_change_in_production_2026")
+
+IS_PRODUCTION = bool(os.environ.get("RENDER") or os.environ.get("DYNO") or os.environ.get("FLASK_ENV") == "production")
+
+# Claves y secretos de configuración segura
+if IS_PRODUCTION and "SECRET_KEY" not in os.environ:
+    import secrets
+    print("[SEGURIDAD] SECRET_KEY no configurada en producción. Generando clave criptográfica efímera...")
+    app.secret_key = secrets.token_hex(32)
+else:
+    app.secret_key = os.environ.get("SECRET_KEY", "subarashii_academy_dev_secret_local_only_2026")
 
 ORGANIZER_API_KEY = os.environ.get("ORGANIZER_API_KEY", "subarashii_secret_organizer_key_2026")
 ORGANIZER_ADMIN_PASSWORD = os.environ.get("ORGANIZER_ADMIN_PASSWORD", "subarashii2026")
+
+# Configuración defensiva de cookies de sesión
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=IS_PRODUCTION,
+    PERMANENT_SESSION_LIFETIME=86400
+)
+
+# Inyección de cabeceras de seguridad HTTP en todas las respuestas
+@app.after_request
+def apply_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+# Rate limiter simple en memoria para autenticación administrativa
+import time
+from collections import defaultdict
+_login_failures = defaultdict(list)
+
+def _is_login_rate_limited(ip_addr, max_attempts=5, window_sec=300):
+    now = time.time()
+    valid_attempts = [t for t in _login_failures[ip_addr] if now - t < window_sec]
+    _login_failures[ip_addr] = valid_attempts
+    return len(valid_attempts) >= max_attempts
+
+def _record_login_failure(ip_addr):
+    _login_failures[ip_addr].append(time.time())
 
 try:
     from database import init_db
@@ -654,6 +694,7 @@ def api_room_report_match(room_code):
     reporter_name = data.get('reporter_name', '').strip()
     score_p1 = data.get('score_p1', 0)
     score_p2 = data.get('score_p2', 0)
+    session_token = data.get('session_token', '').strip()
     
     ok, res = trm.submit_match_report(
         room_code=room_code,
@@ -661,7 +702,8 @@ def api_room_report_match(room_code):
         table_num=table_num,
         reporter_name=reporter_name,
         score_p1=score_p1,
-        score_p2=score_p2
+        score_p2=score_p2,
+        session_token=session_token
     )
     if ok:
         return jsonify({"success": True, "data": res})
@@ -676,12 +718,16 @@ def api_room_confirm_match(room_code):
     round_num = data.get('round_num')
     table_num = data.get('table_num')
     confirmer_name = data.get('confirmer_name', '').strip()
+    session_token = data.get('session_token', '').strip()
+    is_admin = session.get("is_organizer_admin", False)
     
     ok, res = trm.confirm_match_report(
         room_code=room_code,
         round_num=round_num,
         table_num=table_num,
-        confirmer_name=confirmer_name
+        confirmer_name=confirmer_name,
+        session_token=session_token,
+        is_admin=is_admin
     )
     if ok:
         return jsonify({"success": True, "message": res})
@@ -696,12 +742,16 @@ def api_room_dispute_match(room_code):
     round_num = data.get('round_num')
     table_num = data.get('table_num')
     disputer_name = data.get('disputer_name', '').strip()
+    session_token = data.get('session_token', '').strip()
+    is_admin = session.get("is_organizer_admin", False)
     
     ok, res = trm.dispute_match_report(
         room_code=room_code,
         round_num=round_num,
         table_num=table_num,
-        disputer_name=disputer_name
+        disputer_name=disputer_name,
+        session_token=session_token,
+        is_admin=is_admin
     )
     if ok:
         return jsonify({"success": True, "message": res})
@@ -766,15 +816,24 @@ def api_organizer_sync():
         snapshot_type = data.get("type", "full_snapshot")
         
         if snapshot_type == "full_snapshot" and "snapshot" in data:
+            from werkzeug.utils import secure_filename
             snapshot_content = data["snapshot"]
-            filename = data.get("filename", f"snapshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
-            snapshot_path = os.path.join(mock_api_dir, filename)
+            raw_filename = data.get("filename", "")
+            base_filename = os.path.basename(raw_filename).strip() if raw_filename else ""
+            clean_filename = secure_filename(base_filename)
+            if not clean_filename or not clean_filename.endswith(".json"):
+                clean_filename = f"snapshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+            snapshot_path = os.path.abspath(os.path.join(mock_api_dir, clean_filename))
+            if not snapshot_path.startswith(os.path.abspath(mock_api_dir)):
+                return jsonify({"success": False, "error": "Ruta de archivo no permitida (Path Traversal prevenido)."}), 400
+
             with open(snapshot_path, "w", encoding="utf-8") as f:
                 json.dump(snapshot_content, f, indent=2, ensure_ascii=False)
 
             manifest_path = os.path.join(mock_api_dir, "manifest.json")
             manifest = {
-                "latest_snapshot": filename,
+                "latest_snapshot": clean_filename,
                 "updated_at": datetime.now().isoformat()
             }
             with open(manifest_path, "w", encoding="utf-8") as f:
@@ -788,8 +847,8 @@ def api_organizer_sync():
 
             return jsonify({
                 "success": True,
-                "message": f"Snapshot {filename} sincronizado y publicado con éxito.",
-                "latest_snapshot": filename
+                "message": f"Snapshot {clean_filename} sincronizado y publicado con éxito.",
+                "latest_snapshot": clean_filename
             })
             
         elif snapshot_type == "room_sync":
@@ -867,12 +926,20 @@ def api_organizer_events(room_code):
 
 @app.route('/organizer/login', methods=['GET', 'POST'])
 def organizer_login():
+    import hmac
+    ip_addr = request.remote_addr or "unknown"
+
     if request.method == 'POST':
+        if _is_login_rate_limited(ip_addr):
+            return render_template_string(ORGANIZER_LOGIN_HTML, error="Demasiados intentos fallidos. Por seguridad, espera 5 minutos antes de reintentar."), 429
+
         password = request.form.get("password", "")
-        if password == ORGANIZER_ADMIN_PASSWORD:
+        if hmac.compare_digest(password, ORGANIZER_ADMIN_PASSWORD):
             session["is_organizer_admin"] = True
+            _login_failures.pop(ip_addr, None)
             return redirect(url_for('organizer_panel'))
         else:
+            _record_login_failure(ip_addr)
             return render_template_string(ORGANIZER_LOGIN_HTML, error="Contraseña de administrador incorrecta.")
     return render_template_string(ORGANIZER_LOGIN_HTML, error=None)
 
@@ -994,6 +1061,7 @@ ORGANIZER_PANEL_HTML = """
 """
 
 if __name__ == '__main__':
-    print("Iniciando servidor web local de Duelorapido.cl (Subarashii Academy)...")
-    app.run(port=8000, debug=True)
+    print("Iniciando servidor web de Duelorapido.cl (Subarashii Academy)...")
+    debug_mode = os.environ.get("FLASK_DEBUG", "0").lower() in ("1", "true")
+    app.run(port=8000, debug=debug_mode)
 

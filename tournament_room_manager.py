@@ -456,14 +456,9 @@ class TournamentRoomManager:
         """, (room['id'], clean_name))
         existing_name = cursor.fetchone()
         if existing_name:
-            # Reutilizar sesión para ese mismo jugador
-            return True, {
-                "message": "Registro recuperado.",
-                "session_token": existing_name['session_token'],
-                "player_name": existing_name['player_name'],
-                "dorm": existing_name['dorm'],
-                "room_code": room['room_code']
-            }
+            # SEGURIDAD DEFENSIVA: Jamás exponer o devolver el session_token de un jugador ya registrado.
+            # Solo se permite reconexión si el cliente ya envió el session_token correcto (comprobado en paso 1).
+            return False, f"El jugador '{clean_name}' ya se encuentra inscrito en este torneo desde otro dispositivo. Si eres tú, continúa desde el navegador donde te inscribiste o solicita asistencia al organizador/juez."
 
         # 3. Resolución unificada de jugador por Konami ID, nombre real o alias/nickname
         from database import resolve_player, link_player_alias
@@ -885,7 +880,7 @@ class TournamentRoomManager:
     # =========================================================================
     # FASE 2: AUTO-REPORTE DE RESULTADOS Y CONFIRMACIÓN MUTUA
     # =========================================================================
-    def submit_match_report(self, room_code, round_num, table_num, reporter_name, score_p1, score_p2):
+    def submit_match_report(self, room_code, round_num, table_num, reporter_name, score_p1, score_p2, session_token=None):
         room = self.get_room_by_code(room_code)
         if not room:
             return False, "Sala no existe."
@@ -909,10 +904,28 @@ class TournamentRoomManager:
 
         p1_name = current_match['p1']
         p2_name = current_match['p2']
-        now_str = get_utc_now_iso()
+        p1_clean = (p1_name or '').strip().lower()
+        p2_clean = (p2_name or '').strip().lower()
 
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
+
+        # VALIDACIÓN DE AUTORIZACIÓN: Validar session_token y asignación a la mesa
+        if session_token:
+            cursor.execute("SELECT player_name FROM room_checkins WHERE room_id = ? AND session_token = ?", (room['id'], session_token.strip()))
+            chk = cursor.fetchone()
+            if not chk:
+                return False, "Sesión de jugador no válida o expirada en esta sala."
+            chk_name = chk['player_name'].strip()
+            if chk_name.lower() not in (p1_clean, p2_clean):
+                return False, "Solo los duelistas asignados a esta mesa pueden reportar el resultado."
+            reporter_name = chk_name
+        else:
+            rep_clean = (reporter_name or '').strip().lower()
+            if not rep_clean or rep_clean not in (p1_clean, p2_clean):
+                return False, "No estás autorizado para reportar resultados en esta mesa."
+
+        now_str = get_utc_now_iso()
 
         cursor.execute("""
             INSERT INTO room_match_reports (
@@ -960,7 +973,7 @@ class TournamentRoomManager:
             "report": rep_dict
         }
 
-    def confirm_match_report(self, room_code, round_num, table_num, confirmer_name):
+    def confirm_match_report(self, room_code, round_num, table_num, confirmer_name, session_token=None, is_admin=False):
         room = self.get_room_by_code(room_code)
         if not room:
             return False, "Sala no existe."
@@ -976,6 +989,33 @@ class TournamentRoomManager:
         report = cursor.fetchone()
         if not report:
             return False, "No hay reporte pendiente para esta mesa."
+
+        # VALIDACIÓN DE AUTORIZACIÓN:
+        if not is_admin:
+            if not session_token and not confirmer_name:
+                return False, "Se requiere identificación para confirmar el resultado."
+
+            rep_by = (report['reported_by'] or '').strip().lower()
+            p1_clean = (report['p1_name'] or '').strip().lower()
+            p2_clean = (report['p2_name'] or '').strip().lower()
+
+            verified_player = None
+            if session_token:
+                cursor.execute("SELECT player_name FROM room_checkins WHERE room_id = ? AND session_token = ?", (room['id'], session_token.strip()))
+                chk = cursor.fetchone()
+                if not chk:
+                    return False, "Sesión no válida o no registrada en esta sala."
+                verified_player = chk['player_name'].strip()
+            elif confirmer_name:
+                verified_player = confirmer_name.strip()
+
+            v_lower = verified_player.lower() if verified_player else ""
+            if v_lower not in (p1_clean, p2_clean):
+                return False, "Solo los duelistas de esta mesa pueden confirmar el resultado."
+
+            # PREVENIR AUTO-CONFIRMACIÓN: El confirmador debe ser el rival, no quien reportó
+            if rep_by and v_lower == rep_by:
+                return False, "No puedes auto-confirmar tu propio reporte. Tu oponente debe validarlo desde su dispositivo."
 
         cursor.execute("""
             UPDATE room_match_reports
@@ -1009,7 +1049,7 @@ class TournamentRoomManager:
 
         return True, "Resultado confirmado oficialmente."
 
-    def dispute_match_report(self, room_code, round_num, table_num, disputer_name):
+    def dispute_match_report(self, room_code, round_num, table_num, disputer_name, session_token=None, is_admin=False):
         room = self.get_room_by_code(room_code)
         if not room:
             return False, "Sala no existe."
@@ -1017,6 +1057,28 @@ class TournamentRoomManager:
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
         now_str = get_utc_now_iso()
+
+        cursor.execute("""
+            SELECT * FROM room_match_reports
+            WHERE room_id = ? AND round_num = ? AND table_num = ?
+        """, (room['id'], int(round_num), int(table_num)))
+        report = cursor.fetchone()
+
+        if not is_admin and report:
+            p1_clean = (report['p1_name'] or '').strip().lower()
+            p2_clean = (report['p2_name'] or '').strip().lower()
+            verified_player = None
+            if session_token:
+                cursor.execute("SELECT player_name FROM room_checkins WHERE room_id = ? AND session_token = ?", (room['id'], session_token.strip()))
+                chk = cursor.fetchone()
+                if chk:
+                    verified_player = chk['player_name'].strip()
+            elif disputer_name:
+                verified_player = disputer_name.strip()
+
+            v_lower = verified_player.lower() if verified_player else ""
+            if v_lower and v_lower not in (p1_clean, p2_clean):
+                return False, "Solo los duelistas de esta mesa pueden registrar una disputa."
 
         cursor.execute("""
             UPDATE room_match_reports

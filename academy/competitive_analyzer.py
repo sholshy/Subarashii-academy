@@ -98,14 +98,20 @@ class CompetitiveAnalyzer:
         win_rate = (wins / total_matches * 100) if total_matches > 0 else 0
         
         # Championships & Finals (using placement_points: 10 = Winner, 5 = Runner-up)
+        champs_params = [player_id]
+        fmt_clause = ""
+        if self.format_name:
+            fmt_clause = "AND t.format_name = ?"
+            champs_params.append(self.format_name)
+
         cursor.execute(f"""
             SELECT SUM(CASE WHEN r.placement_points = 10 THEN 1 ELSE 0 END) as championships,
                    SUM(CASE WHEN r.placement_points = 5 THEN 1 ELSE 0 END) as runner_ups
             FROM tournament_results r
             JOIN tournaments t ON r.tournament_id = t.id
             JOIN league_profiles lp ON r.league_profile_id = lp.id
-            WHERE lp.player_id = ? {f"AND t.format_name = '{self.format_name}'" if self.format_name else ""}
-        """, (player_id,))
+            WHERE lp.player_id = ? {fmt_clause}
+        """, tuple(champs_params))
         champs_row = cursor.fetchone()
         championships = champs_row['championships'] or 0
         finals = championships + (champs_row['runner_ups'] or 0)
