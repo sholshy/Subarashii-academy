@@ -83,15 +83,37 @@ def migrate_history(db_path=None, specific_file=None):
             if not konami_id:
                 konami_id = None
             
-            # Find existing player
-            cursor.execute("SELECT id FROM players WHERE LOWER(REPLACE(name, ' ', '')) = ?", (norm_name.replace(' ', ''),))
-            existing_player = cursor.fetchone()
+            # Find existing player robustly (by konami_id first, then by normalized name)
+            existing_player = None
+            if konami_id:
+                cursor.execute("SELECT id, name FROM players WHERE konami_id = ?", (konami_id,))
+                existing_player = cursor.fetchone()
             
+            if not existing_player:
+                cursor.execute("SELECT id, name FROM players")
+                for db_p in cursor.fetchall():
+                    if normalize_player_name(db_p['name']) == norm_name:
+                        existing_player = db_p
+                        break
+
             if existing_player:
                 p_id = existing_player['id']
             else:
-                cursor.execute("INSERT INTO players (name, konami_id) VALUES (?, ?)", (raw_name, konami_id))
-                p_id = cursor.lastrowid
+                try:
+                    cursor.execute("INSERT INTO players (name, konami_id) VALUES (?, ?)", (raw_name, konami_id))
+                    p_id = cursor.lastrowid
+                except sqlite3.IntegrityError:
+                    if konami_id:
+                        cursor.execute("SELECT id FROM players WHERE konami_id = ?", (konami_id,))
+                        r_k = cursor.fetchone()
+                        if r_k:
+                            p_id = r_k['id']
+                        else:
+                            cursor.execute("INSERT INTO players (name, konami_id) VALUES (?, NULL)", (raw_name,))
+                            p_id = cursor.lastrowid
+                    else:
+                        cursor.execute("INSERT INTO players (name, konami_id) VALUES (?, NULL)", (raw_name,))
+                        p_id = cursor.lastrowid
                 
             player_id_map[idx] = p_id
             
