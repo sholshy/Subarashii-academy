@@ -651,6 +651,14 @@ class TournamentRoomManager:
             )
             for idx, p in enumerate(sorted_players, 1):
                 p_lower = p.name.strip().lower()
+                opps_data = []
+                for o in getattr(p, 'opponents', []):
+                    mw_val = max(getattr(o, 'mw_percent', 0.3333), 0.3333) * 100
+                    opps_data.append({
+                        "name": o.name,
+                        "points": o.points,
+                        "mw": f"{mw_val:.1f}%"
+                    })
                 standings.append({
                     "rank": idx,
                     "name": p.name,
@@ -658,8 +666,10 @@ class TournamentRoomManager:
                     "dorm": dorm_map.get(p_lower, "Estudiante de Intercambio"),
                     "points": p.points,
                     "matches_played": p.matches_played,
-                    "omw": f"{getattr(p, '_omw', 0.3333) * 100:.1f}%",
-                    "had_bye": getattr(p, 'had_bye', False)
+                    "omw": f"{getattr(p, '_omw', 0.3333) * 100:.2f}%",
+                    "oomw": f"{getattr(p, '_oomw', 0.3333) * 100:.2f}%",
+                    "had_bye": getattr(p, 'had_bye', False),
+                    "opponents": opps_data
                 })
         except Exception as e:
             print("[RoomManager] Error calculando standings:", e)

@@ -1207,6 +1207,35 @@
 </div>
 
 <!-- MODAL DE DOBLE CONFIRMACIÓN DE DROP (RETIRO) -->
+
+<!-- MODAL PARA EXPLICACIÓN DE DESEMPATES KONAMI -->
+<div id="tiebreakerModal" class="modal-overlay" onclick="closeTiebreakerModal()">
+    <div class="modal-content-card" style="max-width: 500px; border-color: #38bdf8;" onclick="event.stopPropagation()">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
+            <div>
+                <span class="badge" style="background: #0369a1; color: #e0f2fe; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">Reglamento Oficial Konami (KDE)</span>
+                <h3 id="tbModalTitle" style="font-family: 'Orbitron'; color: #38bdf8; margin: 6px 0 2px; font-size: 1.15rem;">DESGLOSE DE DESEMPATE</h3>
+                <small id="tbModalSubtitle" style="color: #94a3b8; font-size: 0.8rem;">Dificultad de Camino (Opponent Match Win %)</small>
+            </div>
+            <button type="button" onclick="closeTiebreakerModal()" style="background: none; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; line-height: 1;">&times;</button>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid #334155; border-radius: 10px; padding: 10px 12px; margin-bottom: 1rem; font-size: 0.8rem; line-height: 1.45;">
+            <p style="margin: 0; color: #e2e8f0;">
+                <strong>¿Cómo se desempata?</strong> Según las reglas oficiales de Konami, a igualdad de puntos desempata la <strong>Dificultad de Camino (OMW%)</strong>: el promedio de victorias de los rivales que enfrentaste durante el torneo. Quien enfrentó a rivales con mejor puntaje queda arriba.
+            </p>
+        </div>
+
+        <div id="tbModalContent">
+            <!-- Cargado dinámicamente -->
+        </div>
+
+        <button type="button" onclick="closeTiebreakerModal()" class="btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.65rem; font-size: 0.85rem;">
+            Cerrar Desglose
+        </button>
+    </div>
+</div>
+
 <div id="dropTournamentModal" class="modal-overlay" onclick="closeDropModal()">
     <div class="modal-content-card" style="max-width: 480px; border-color: #ef4444;" onclick="event.stopPropagation()">
         
@@ -2264,6 +2293,7 @@ function renderPairings(matches) {
 }
 
 function renderStandings(standings, formatName, roomStatus) {
+    window._currentStandings = standings;
     const container = document.getElementById('standingsContainer');
     if (!container) return;
     if (!standings || standings.length === 0) {
@@ -2300,7 +2330,7 @@ function renderStandings(standings, formatName, roomStatus) {
         }
 
         rowsHtml += `
-            <tr class="poster-row ${rankClass}">
+            <tr class="poster-row ${rankClass}" onclick="openTiebreakerModal(${s.rank})" style="cursor: pointer;" title="Toca para ver los rivales y desempate de ${s.name}">
                 <td style="width: 55px;"><div class="poster-rk">#${s.rank}</div></td>
                 <td><div class="poster-name">${(s.name || '').toUpperCase()}</div></td>
                 <td class="poster-pts">${s.points}</td>
@@ -2344,6 +2374,59 @@ function renderStandings(standings, formatName, roomStatus) {
             </div>
         </div>
     `;
+}
+
+
+function openTiebreakerModal(rank) {
+    if (!window._currentStandings) return;
+    const s = window._currentStandings.find(x => x.rank === rank);
+    if (!s) return;
+
+    document.getElementById('tbModalTitle').innerText = `#${s.rank} ${(s.name || '').toUpperCase()}`;
+    document.getElementById('tbModalSubtitle').innerText = `${s.points} Puntos | OMW: ${s.omw || 'N/A'} | 2do Nivel: ${s.oomw || 'N/A'}`;
+
+    const container = document.getElementById('tbModalContent');
+    if (!s.opponents || s.opponents.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 1.5rem; background: #0f172a; border-radius: 8px;">
+                <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">Desglose de rivales no disponible en este snapshot.</p>
+                <small style="color: #64748b;">OMW%: ${s.omw || '33.3%'}</small>
+            </div>
+        `;
+    } else {
+        const totalOppPts = s.opponents.reduce((acc, o) => acc + (parseInt(o.points) || 0), 0);
+        let oppsHtml = `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #0284c7; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; font-size: 0.8rem; font-weight: 700; color: #fff;">
+                <span>Suma de puntos de sus 5 rivales:</span>
+                <span style="font-size: 1rem;">${totalOppPts} pts</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px; max-height: 250px; overflow-y: auto;">
+        `;
+        s.opponents.forEach((o, i) => {
+            oppsHtml += `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font-size: 0.82rem;">
+                    <div>
+                        <span style="color: #94a3b8; font-weight: 700; margin-right: 6px;">Ronda ${i+1}</span>
+                        <strong style="color: #f8fafc;">${o.name}</strong>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="color: #38bdf8; font-weight: 700;">${o.points} pts</span>
+                        <small style="color: #64748b; margin-left: 6px;">(${o.mw || ''})</small>
+                    </div>
+                </div>
+            `;
+        });
+        oppsHtml += `</div>`;
+        container.innerHTML = oppsHtml;
+    }
+
+    const modal = document.getElementById('tiebreakerModal');
+    if (modal) modal.classList.add('active');
+}
+
+function closeTiebreakerModal() {
+    const modal = document.getElementById('tiebreakerModal');
+    if (modal) modal.classList.remove('active');
 }
 
 function renderPlayersList(players) {

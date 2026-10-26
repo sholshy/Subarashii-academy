@@ -2200,6 +2200,7 @@ class TournamentUI(ctk.CTkFrame):
         
         ctk.CTkButton(final_actions_frame, text="☁️ PUBLICAR EN LA WEB Y RANKING", command=lambda: self.save_and_publish_tournament(notify=True), font=UI_FONT_SMALL, width=220, fg_color="#8b5cf6", hover_color="#7c3aed").pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="CREAR POST DEL CAMPEÓN", command=self.open_champion_deck_post, font=UI_FONT_SMALL, width=150).pack(side="left", padx=5, pady=5)
+        ctk.CTkButton(final_actions_frame, text="🔍 EXPLICAR DESEMPATES (OMW%)", command=self.show_tiebreaker_explanation_dialog, font=UI_FONT_SMALL, width=210, fg_color="#0284c7", hover_color="#0369a1").pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="EXPORTAR STANDING PNG", command=self.export_standings_image, font=UI_FONT_SMALL, width=150).pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="EXPORTAR A INSTAGRAM", command=self.export_to_instagram, font=UI_FONT_SMALL, width=170, fg_color="#d946ef", hover_color="#c026d3").pack(side="left", padx=5, pady=5)
         ctk.CTkButton(final_actions_frame, text="COMPARTIR STANDING WHATSAPP", command=self.share_standings_whatsapp, font=UI_FONT_SMALL, width=190).pack(side="left", padx=5, pady=5)
@@ -2230,6 +2231,87 @@ class TournamentUI(ctk.CTkFrame):
             tree.insert("", "end", values=(rank, p.name, p.points, f"{getattr(p, '_omw', 0):.4f}", f"{getattr(p, '_oomw', 0):.4f}", self.friendly_tiebreaker_note(notes.get(p, ""))))
 
         buf.pack(fill="both", expand=True)
+
+    
+    def show_tiebreaker_explanation_dialog(self):
+        """Muestra una ventana visual y pedagógica explicando los desempates según Konami."""
+        standings = self.manager.get_standings()
+        if not standings:
+            return
+
+        top = ctk.CTkToplevel(self)
+        top.title("Explicación Oficial de Desempates (Reglamento Konami)")
+        top.geometry("780x620")
+        top.attributes('-topmost', True)
+
+        header = ctk.CTkFrame(top, fg_color="#0f172a", corner_radius=8)
+        header.pack(fill="x", padx=15, pady=10, ipady=5)
+
+        ctk.CTkLabel(header, text="CRITERIO OFICIAL DE DESEMPATE KONAMI (OMW%)", font=("Orbitron", 15), text_color="#38bdf8").pack(pady=(6, 2))
+        ctk.CTkLabel(header, text="A igual puntaje, el desempate lo define la Dificultad del Camino (Fuerza de Oponentes).\nQuien enfrentó a rivales con mejor rendimiento y más victorias queda arriba.",
+                     font=UI_FONT_SMALL, text_color="#94a3b8", wraplength=720).pack(pady=(0, 6))
+
+        scroll = ctk.CTkScrollableFrame(top, fg_color="transparent")
+        scroll.pack(fill="both", expand=True, padx=15, pady=5)
+
+        # Agrupar por puntos
+        point_groups = {}
+        for p in standings:
+            point_groups.setdefault(p.points, []).append(p)
+
+        whatsapp_text_lines = ["*🏆 EXPLICACIÓN OFICIAL DE DESEMPATES - TORNEO YU-GI-OH!*",
+                               "_(Basado en el Reglamento Oficial KDE Tournament Policy - Sección IX: Tie-breakers)_\n",
+                               "Cuando dos o más jugadores terminan con el mismo puntaje, el desempate NO es por suerte ni azar, sino por *Dificultad de Camino (OMW%)*:",
+                               "Quien tuvo que enfrentar a rivales que acumularon más victorias durante el torneo recibe la ventaja.\n"]
+
+        for pts in sorted(point_groups.keys(), reverse=True):
+            group = point_groups[pts]
+            if len(group) <= 1:
+                continue
+
+            grp_frame = ctk.CTkFrame(scroll, fg_color="#1e293b", corner_radius=8, border_width=1, border_color="#334155")
+            grp_frame.pack(fill="x", pady=8, padx=5, ipady=6)
+
+            ctk.CTkLabel(grp_frame, text=f"⚡ EMPATE EN {pts} PUNTOS ({len(group)} Duelistas)", font=("Orbitron", 13), text_color="#f59e0b").pack(anchor="w", padx=12, pady=(6, 4))
+            
+            whatsapp_text_lines.append(f"*--- EMPATE EN {pts} PUNTOS ---*")
+
+            for rank_idx, p in enumerate(group, 1):
+                opps = getattr(p, 'opponents', [])
+                total_opp_pts = sum(getattr(o, 'points', 0) for o in opps)
+                omw_pct = getattr(p, '_omw', 0.3333) * 100
+                oomw_pct = getattr(p, '_oomw', 0.3333) * 100
+
+                row_f = ctk.CTkFrame(grp_frame, fg_color="#0f172a", corner_radius=6)
+                row_f.pack(fill="x", padx=10, pady=4, ipady=4)
+
+                top_row = ctk.CTkFrame(row_f, fg_color="transparent")
+                top_row.pack(fill="x", padx=8, pady=(4, 2))
+
+                rank_in_standings = standings.index(p) + 1
+                ctk.CTkLabel(top_row, text=f"#{rank_in_standings} {p.name}", font=("Roboto", 13, "bold"), text_color="#f8fafc").pack(side="left")
+                ctk.CTkLabel(top_row, text=f"OMW%: {omw_pct:.2f}%  |  Puntos de sus 5 rivales: {total_opp_pts} pts", font=UI_FONT_SMALL, text_color="#38bdf8").pack(side="right")
+
+                opp_names = [f"{o.name} ({o.points}pts)" for o in opps]
+                ctk.CTkLabel(row_f, text="Rivales enfrentados: " + ", ".join(opp_names), font=UI_FONT_SMALL, text_color="#94a3b8", wraplength=700).pack(anchor="w", padx=8, pady=(0, 4))
+
+                whatsapp_text_lines.append(f"• *#{rank_in_standings} {p.name}* -> OMW: {omw_pct:.2f}% (Rivales sumaron {total_opp_pts} pts)")
+                whatsapp_text_lines.append(f"   Rivales: {', '.join(opp_names)}")
+
+            whatsapp_text_lines.append("")
+
+        bottom_bar = ctk.CTkFrame(top, fg_color="transparent")
+        bottom_bar.pack(fill="x", padx=15, pady=10)
+
+        def copy_to_clipboard():
+            text_to_copy = "\n".join(whatsapp_text_lines)
+            self.clipboard_clear()
+            self.clipboard_append(text_to_copy)
+            import custom_alerts as messagebox
+            messagebox.showinfo("Copiado", "¡Explicación detallada copiada al portapapeles! Lista para pegar en el grupo de WhatsApp.")
+
+        ctk.CTkButton(bottom_bar, text="📋 Copiar Explicación para WhatsApp", command=copy_to_clipboard, font=UI_FONT_SMALL, fg_color="#22c55e", hover_color="#16a34a", text_color="#0f172a").pack(side="left", padx=5)
+        ctk.CTkButton(bottom_bar, text="Cerrar", command=top.destroy, font=UI_FONT_SMALL, fg_color="#334155", hover_color="#475569").pack(side="right", padx=5)
 
     def export_to_instagram(self):
         standings = self.manager.get_standings()
