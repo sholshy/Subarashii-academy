@@ -367,7 +367,7 @@ class TournamentUI(ctk.CTkFrame):
 
                 # Añadir al torneo en curso si aún no está en la lista de inscritos
                 if p_name.lower() not in existing_names:
-                    new_p = Player(name=p_name, konami_id=p_kid, phone='', email='', paid=True)
+                    new_p = Player(name=p_name, konami_id=p_kid, phone='', email='', paid=False)
                     self.manager.players.append(new_p)
                     existing_names.add(p_name.lower())
                     added_to_tournament += 1
@@ -1413,41 +1413,50 @@ class TournamentUI(ctk.CTkFrame):
         if not selection:
             messagebox.showwarning("Atención", "Selecciona un jugador de la lista.")
             return
-        index = selection[0]
-        player = self.manager.players[index]
+        player = getattr(self, 'enrolled_listbox_map', {}).get(selection[0])
+        if not player:
+            return
         player.paid = not getattr(player, "paid", False)
         if getattr(player, "paid", False) and getattr(player, "invited", False):
             player.invited = False
         self.autosave_tournament()
         self.update_player_list()
-        self.player_listbox.selection_set(index)
-        self.player_listbox.activate(index)
+        for list_idx, pl in getattr(self, 'enrolled_listbox_map', {}).items():
+            if pl == player:
+                self.player_listbox.selection_set(list_idx)
+                self.player_listbox.activate(list_idx)
+                break
 
     def toggle_enrolled_invited(self):
         selection = self.player_listbox.curselection()
         if not selection:
             messagebox.showwarning("Atención", "Selecciona un jugador de la lista.")
             return
-        index = selection[0]
-        player = self.manager.players[index]
+        player = getattr(self, 'enrolled_listbox_map', {}).get(selection[0])
+        if not player:
+            return
         player.invited = not getattr(player, "invited", False)
         if getattr(player, "invited", False) and getattr(player, "paid", False):
             player.paid = False
         self.autosave_tournament()
         self.update_player_list()
-        self.player_listbox.selection_set(index)
-        self.player_listbox.activate(index)
+        for list_idx, pl in getattr(self, 'enrolled_listbox_map', {}).items():
+            if pl == player:
+                self.player_listbox.selection_set(list_idx)
+                self.player_listbox.activate(list_idx)
+                break
 
     def remove_enrolled_player(self):
         selection = self.player_listbox.curselection()
         if not selection:
             messagebox.showwarning("Atención", "Selecciona un jugador de la lista de inscritos para eliminarlo.")
             return
-            
-        index = selection[0]
-        player = self.manager.players[index]
+        player = getattr(self, 'enrolled_listbox_map', {}).get(selection[0])
+        if not player:
+            return
         if messagebox.askyesno("Confirmar", f"¿Eliminar a {player.name} de los inscritos?"):
-            self.manager.players.pop(index)
+            if player in self.manager.players:
+                self.manager.players.remove(player)
             self.autosave_tournament()
             self.update_player_list()
 
@@ -1476,8 +1485,9 @@ class TournamentUI(ctk.CTkFrame):
         selection = self.player_listbox.curselection()
         if not selection:
             return
-        index = selection[0]
-        player = self.manager.players[index]
+        player = getattr(self, 'enrolled_listbox_map', {}).get(selection[0])
+        if not player:
+            return
         
         self.name_entry.delete(0, tk.END)
         self.name_entry.insert(0, player.name)
@@ -1710,18 +1720,64 @@ class TournamentUI(ctk.CTkFrame):
     def update_player_list(self):
         yv = self.player_listbox.yview()
         selection = self.player_listbox.curselection()
+        selected_player = getattr(self, 'enrolled_listbox_map', {}).get(selection[0]) if selection else None
+
         self.player_listbox.delete(0, tk.END)
-        for p in self.manager.players:
-            paid_str = "Sí" if getattr(p, "paid", False) else "No"
-            inv_str = "Sí" if getattr(p, "invited", False) else "No"
-            self.player_listbox.insert(tk.END, f"{p.name} (ID: {p.konami_id}) - Pagó: {paid_str} | Inv: {inv_str}")
+        self.enrolled_listbox_map = {}
+
+        # Clasificar jugadores en 3 categorías:
+        # 1. Invitados
+        # 2. Ya Pagaron
+        # 3. Pendientes de Pago
+        invited = [p for p in self.manager.players if getattr(p, "invited", False)]
+        paid = [p for p in self.manager.players if getattr(p, "paid", False) and not getattr(p, "invited", False)]
+        unpaid = [p for p in self.manager.players if not getattr(p, "paid", False) and not getattr(p, "invited", False)]
+
+        # Ordenar alfabéticamente dentro de cada grupo
+        invited.sort(key=lambda p: p.name.lower())
+        paid.sort(key=lambda p: p.name.lower())
+        unpaid.sort(key=lambda p: p.name.lower())
+
+        categories = [
+            ("★ INVITADOS", invited, "#f59e0b", "#fde047"),
+            ("✔ YA PAGARON", paid, "#22c55e", "#86efac"),
+            ("⏳ PENDIENTES DE PAGO", unpaid, "#ef4444", "#fca5a5"),
+        ]
+
+        idx = 0
+        for cat_title, group, header_color, text_color in categories:
+            # Cabecera de grupo
+            self.player_listbox.insert(tk.END, f"─── {cat_title} ({len(group)}) ───")
+            self.player_listbox.itemconfigure(idx, fg=header_color)
+            self.enrolled_listbox_map[idx] = None
+            idx += 1
+
+            if not group:
+                self.player_listbox.insert(tk.END, "    (Ninguno)")
+                self.player_listbox.itemconfigure(idx, fg="#64748b")
+                self.enrolled_listbox_map[idx] = None
+                idx += 1
+            else:
+                for p in group:
+                    kid_str = f" (ID: {p.konami_id})" if getattr(p, "konami_id", None) else ""
+                    self.player_listbox.insert(tk.END, f"    • {p.name}{kid_str}")
+                    self.player_listbox.itemconfigure(idx, fg=text_color)
+                    self.enrolled_listbox_map[idx] = p
+                    idx += 1
+
         if hasattr(self, 'player_count_label'):
-            self.player_count_label.configure(text=f"Inscritos: {len(self.manager.players)}")
+            self.player_count_label.configure(
+                text=f"Inscritos: {len(self.manager.players)}  (✔ {len(paid)} pagados | ★ {len(invited)} inv. | ⏳ {len(unpaid)} pend.)"
+            )
         self.player_listbox.yview_moveto(yv[0])
-        if selection:
-            self.player_listbox.selection_set(selection[0])
-            self.player_listbox.activate(selection[0])
-            
+
+        if selected_player:
+            for list_idx, pl in self.enrolled_listbox_map.items():
+                if pl == selected_player:
+                    self.player_listbox.selection_set(list_idx)
+                    self.player_listbox.activate(list_idx)
+                    break
+
     def sort_players_list(self, choice):
         if choice == "Por Nombre":
             self.manager.players.sort(key=lambda p: p.name.lower())
@@ -1751,8 +1807,17 @@ class TournamentUI(ctk.CTkFrame):
                 from custom_alerts import _create_custom_dialog
                 names = "\n".join([f"- {p.name}" for p in unpaid])
                 msg = f"Hay {len(unpaid)} jugadores que no han pagado ni están invitados:\n{names}\n\n¿Qué deseas hacer?"
-                res = _create_custom_dialog("Atención de Pagos", msg, [("Cancelar", "CANCEL", "Small.TButton"), ("Hacer Invitados", "INVITE", "Small.TButton")], "!", "#eab308")
-                if res == "INVITE":
+                res = _create_custom_dialog("Atención de Pagos", msg, [
+                    ("Cancelar", "CANCEL", "Small.TButton"),
+                    ("Marcar Pagados", "PAID", "Small.TButton"),
+                    ("Hacer Invitados", "INVITE", "Small.TButton")
+                ], "!", "#eab308")
+                if res == "PAID":
+                    for p in unpaid:
+                        p.paid = True
+                    self.autosave_tournament()
+                    self.update_player_list()
+                elif res == "INVITE":
                     for p in unpaid:
                         p.invited = True
                     self.autosave_tournament()
