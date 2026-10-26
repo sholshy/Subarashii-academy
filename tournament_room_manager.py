@@ -94,12 +94,22 @@ def migrate_rooms_schema(cursor):
             deck_archetype TEXT,
             payment_status TEXT DEFAULT 'PENDING',
             status TEXT DEFAULT 'CONFIRMED',
+            nickname TEXT,
             checked_in_at TEXT,
             FOREIGN KEY(room_id) REFERENCES tournament_rooms(id) ON DELETE CASCADE,
             FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE SET NULL,
             UNIQUE(room_id, session_token)
         )
     ''')
+
+    try:
+        cursor.execute("ALTER TABLE room_checkins ADD COLUMN nickname TEXT")
+    except Exception:
+        pass
+    try:
+        cursor.execute("ALTER TABLE players ADD COLUMN nickname TEXT")
+    except Exception:
+        pass
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS room_trade_posts (
@@ -410,7 +420,7 @@ class TournamentRoomManager:
         if hasattr(cursor, 'connection') and cursor.connection:
             cursor.connection.commit()
 
-    def register_player(self, room_code, player_name, konami_id="", deck_archetype="", session_token=None):
+    def register_player(self, room_code, player_name, konami_id="", deck_archetype="", session_token=None, nickname=""):
         """
         Registra a un jugador en la sala mediante su teléfono celular.
         """
@@ -455,46 +465,45 @@ class TournamentRoomManager:
                 "room_code": room['room_code']
             }
 
-        # 3. Intentar vincular con perfil oficial de la academia para heredar Casa (Dorm)
-        player_id = None
-        dorm = "Estudiante de Intercambio"
+        # 3. Resolución unificada de jugador por Konami ID, nombre real o alias/nickname
+        from database import resolve_player, link_player_alias
+        clean_nick = nickname.strip() if nickname else ""
         kid = konami_id.strip() if konami_id else None
 
-        try:
-            cursor.execute("""
-                SELECT p.id, p.konami_id, a.dorm 
-                FROM players p
-                LEFT JOIN academy_profiles a ON a.player_id = p.id AND a.format_name = 'GLOBAL'
-                WHERE LOWER(p.name) = LOWER(?) OR (p.konami_id IS NOT NULL AND p.konami_id = ?)
-                LIMIT 1
-            """, (clean_name, kid or "---"))
-            p_row = cursor.fetchone()
-            if p_row:
-                player_id = p_row['id']
-                if p_row['dorm']:
-                    dorm = p_row['dorm']
-                if not kid and p_row['konami_id']:
-                    kid = p_row['konami_id']
-        except Exception:
-            pass
+        resolved = resolve_player(cursor, name_or_alias=clean_name, konami_id=kid)
+        if not resolved and clean_nick:
+            resolved = resolve_player(cursor, name_or_alias=clean_nick, konami_id=kid)
 
-        if not player_id:
+        player_id = None
+        dorm = "Estudiante de Intercambio"
+
+        if resolved:
+            player_id = resolved['id']
+            clean_name = resolved['name']
+            if not clean_nick and resolved.get('nickname'):
+                clean_nick = resolved['nickname']
+            if not kid and resolved.get('konami_id'):
+                kid = resolved['konami_id']
+            if clean_nick:
+                link_player_alias(cursor, player_id, clean_nick, is_nickname=True)
             try:
-                base_dir = os.path.dirname(os.path.abspath(__file__))
-                manifest_path = os.path.join(base_dir, "mock_server", "public_api", "manifest.json")
-                if os.path.exists(manifest_path):
-                    with open(manifest_path, 'r', encoding='utf-8') as f:
-                        m = json.load(f)
-                    snap_name = m.get("latest_snapshot")
-                    if snap_name:
-                        with open(os.path.join(base_dir, "mock_server", "public_api", snap_name), 'r', encoding='utf-8') as f:
-                            snap_data = json.load(f)
-                        for p in snap_data.get("leaderboard", []):
-                            if p.get("name", "").strip().lower() == clean_name.lower():
-                                player_id = p.get("player_id")
-                                if p.get("dorm"):
-                                    dorm = p.get("dorm")
-                                break
+                cursor.execute("SELECT dorm FROM academy_profiles WHERE player_id = ? AND format_name = 'GLOBAL'", (player_id,))
+                d_row = cursor.fetchone()
+                if d_row and d_row['dorm']:
+                    dorm = d_row['dorm']
+            except Exception:
+                pass
+        else:
+            try:
+                from utils import normalize_player_name
+                slug = normalize_player_name(clean_name)
+                cursor.execute(
+                    "INSERT INTO players (name, nickname, konami_id, slug) VALUES (?, ?, ?, ?)",
+                    (clean_name, clean_nick or None, kid, slug)
+                )
+                player_id = cursor.lastrowid
+                if clean_nick:
+                    link_player_alias(cursor, player_id, clean_nick, is_nickname=True)
             except Exception:
                 pass
 
@@ -502,18 +511,17 @@ class TournamentRoomManager:
         try:
             cursor.execute("""
                 INSERT INTO room_checkins (
-                    room_id, session_token, player_id, player_name, konami_id,
+                    room_id, session_token, player_id, player_name, nickname, konami_id,
                     dorm, deck_archetype, payment_status, status, checked_in_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
-            """, (room['id'], token, player_id, clean_name, kid, dorm, deck_archetype.strip(), now_str))
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
+            """, (room['id'], token, player_id, clean_name, clean_nick or None, kid, dorm, deck_archetype.strip(), now_str))
         except Exception as insert_err:
-            # Si falla la restricción de integridad referencial o similar, intentar con player_id=None
             cursor.execute("""
                 INSERT INTO room_checkins (
-                    room_id, session_token, player_id, player_name, konami_id,
+                    room_id, session_token, player_id, player_name, nickname, konami_id,
                     dorm, deck_archetype, payment_status, status, checked_in_at
-                ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
-            """, (room['id'], token, clean_name, kid, dorm, deck_archetype.strip(), now_str))
+                ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, 'PENDING', 'CONFIRMED', ?)
+            """, (room['id'], token, clean_name, clean_nick or None, kid, dorm, deck_archetype.strip(), now_str))
 
         if hasattr(cursor, 'connection') and cursor.connection:
             cursor.connection.commit()
@@ -552,16 +560,19 @@ class TournamentRoomManager:
         try:
             q = f"%{q_clean}%"
             cursor.execute("""
-                SELECT p.id, p.name, p.konami_id, 
+                SELECT p.id, p.name, p.nickname, p.konami_id, 
                        COALESCE(a.dorm, 'Estudiante de Intercambio') as dorm,
                        COALESCE(a.current_rating, 1000) as rating,
                        COALESCE(a.level, 1) as level
                 FROM players p
                 LEFT JOIN academy_profiles a ON a.player_id = p.id AND a.format_name = 'GLOBAL'
-                WHERE LOWER(p.name) LIKE ? OR (p.konami_id IS NOT NULL AND LOWER(p.konami_id) LIKE ?)
+                WHERE LOWER(p.name) LIKE ? 
+                   OR (p.nickname IS NOT NULL AND LOWER(p.nickname) LIKE ?)
+                   OR p.id IN (SELECT player_id FROM player_aliases WHERE LOWER(alias) LIKE ?)
+                   OR (p.konami_id IS NOT NULL AND LOWER(p.konami_id) LIKE ?)
                 ORDER BY a.current_rating DESC
                 LIMIT 8
-            """, (q, q))
+            """, (q, q, q, q))
             results = [dict(r) for r in cursor.fetchall()]
         except Exception:
             results = []

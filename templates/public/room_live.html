@@ -1026,7 +1026,7 @@
             {% for p in players %}
             <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <strong style="color: #fff; display: block; font-size: 0.95rem;">{{ p.player_name }}</strong>
+                    <strong style="color: #fff; display: block; font-size: 0.95rem;">{{ p.player_name }}{% if p.nickname and p.nickname.lower() != p.player_name.lower() %} <span style="color: #38bdf8; font-weight: normal; font-size: 0.85rem;">"{{ p.nickname }}"</span>{% endif %}</strong>
                     <small style="color: #94a3b8; font-size: 0.75rem;">{{ ('K-ID: ' + p.konami_id) if p.konami_id else 'Duelista Oficial' }}</small>
                 </div>
                 <span class="badge dorm-{{ p.dorm.lower().replace(' ', '-') }}" style="font-size: 0.7rem; font-weight: 800;">
@@ -2356,10 +2356,13 @@ function renderPlayersList(players) {
     let html = '';
     players.forEach(p => {
         const dormClass = (p.dorm || 'estudiante-de-intercambio').toLowerCase().replace(/\\s+/g, '-');
-        html += `
+                const nickDisplay = (p.nickname && p.nickname.trim().toLowerCase() !== (p.player_name || '').trim().toLowerCase()) 
+            ? ` <span style="color: #38bdf8; font-weight: normal; font-size: 0.85rem;">"${p.nickname}"</span>` 
+            : '';
+html += `
             <div style="background: var(--bg-card); border: 1px solid #334155; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <strong style="color: #fff; display: block; font-size: 0.95rem;">${p.player_name}</strong>
+                    <strong style="color: #fff; display: block; font-size: 0.95rem;">${p.player_name}${nickDisplay}</strong>
                     <small style="color: #94a3b8; font-size: 0.75rem;">${p.konami_id ? 'K-ID: ' + p.konami_id : 'Duelista Oficial'}</small>
                 </div>
                 <span class="badge dorm-${dormClass}" style="font-size: 0.7rem; font-weight: 800;">

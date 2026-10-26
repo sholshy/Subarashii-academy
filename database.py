@@ -392,11 +392,116 @@ def migrate_calendar_and_leagues_schema(cursor):
         )
     ''')
 
-def merge_players_db(primary_id: int, secondary_ids: list):
+    try:
+        cursor.execute("ALTER TABLE players ADD COLUMN nickname TEXT")
+    except Exception:
+        pass
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS player_aliases (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id INTEGER NOT NULL,
+            alias TEXT NOT NULL UNIQUE,
+            created_at TEXT,
+            FOREIGN KEY(player_id) REFERENCES players(id) ON DELETE CASCADE
+        )
+    ''')
+
+def resolve_player(cursor, name_or_alias: str = None, konami_id: str = None):
     """
-    Safely merges secondary players into a primary player.
-    Migrates tournament matches, league profiles, and academy profiles.
-    Finally, deletes the secondary players.
+    Resuelve de forma unificada y canónica un jugador a partir de su Konami ID,
+    nombre real, apodo/nickname, slug o alias registrado.
+    Evita la duplicación garantizando que 'Tio Zombie' -> 'Maximiliano Candia',
+    'Kame' -> 'Esteban Ocompley', etc.
+    """
+    from utils import normalize_player_name
+
+    # 1. Búsqueda directa por Konami ID
+    if konami_id:
+        kid = str(konami_id).strip()
+        if kid:
+            cursor.execute("SELECT * FROM players WHERE konami_id = ?", (kid,))
+            row = cursor.fetchone()
+            if row:
+                return dict(row)
+
+    if not name_or_alias:
+        return None
+
+    raw = str(name_or_alias).strip()
+    if not raw:
+        return None
+    norm = normalize_player_name(raw)
+
+    # 2. Búsqueda en tabla de alias unificados
+    try:
+        cursor.execute("""
+            SELECT p.* FROM players p
+            JOIN player_aliases pa ON pa.player_id = p.id
+            WHERE LOWER(pa.alias) = LOWER(?) OR LOWER(REPLACE(pa.alias, ' ', '')) = ?
+            LIMIT 1
+        """, (raw, norm.replace(' ', '')))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+    except Exception:
+        pass
+
+    # 3. Búsqueda por Apodo / Nickname directo
+    try:
+        cursor.execute("SELECT * FROM players WHERE LOWER(nickname) = LOWER(?)", (raw,))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+    except Exception:
+        pass
+
+    # 4. Búsqueda por Slug
+    try:
+        cursor.execute("SELECT * FROM players WHERE LOWER(slug) = LOWER(?) OR LOWER(slug) = LOWER(?)", (raw, norm))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+    except Exception:
+        pass
+
+    # 5. Búsqueda por coincidencia de nombre normalizado (independiente de tildes/espacios)
+    try:
+        cursor.execute("SELECT * FROM players")
+        for p in cursor.fetchall():
+            if normalize_player_name(p['name']) == norm:
+                return dict(p)
+            if p['nickname'] and normalize_player_name(p['nickname']) == norm:
+                return dict(p)
+    except Exception:
+        pass
+
+    return None
+
+def link_player_alias(cursor, player_id: int, alias: str, is_nickname: bool = False):
+    """Registra un alias o apodo para un jugador."""
+    if not alias or len(alias.strip()) < 2:
+        return
+    clean_alias = alias.strip()
+    try:
+        cursor.execute("""
+            INSERT INTO player_aliases (player_id, alias, created_at)
+            VALUES (?, ?, datetime('now'))
+            ON CONFLICT(alias) DO UPDATE SET player_id = excluded.player_id
+        """, (player_id, clean_alias))
+    except Exception:
+        pass
+    if is_nickname:
+        try:
+            cursor.execute("UPDATE players SET nickname = ? WHERE id = ? AND (nickname IS NULL OR nickname = '')", (clean_alias, player_id))
+        except Exception:
+            pass
+
+def merge_players_db(primary_id: int, secondary_ids: list, nickname: str = None):
+    """
+    Fusiona limpiamente jugadores duplicados en un único jugador canónico.
+    Migra partidas, check-ins, perfiles de liga y academia, transfiere konami_id / teléfono / email,
+    establece el nickname si corresponde y registra todos los nombres previos como alias.
     """
     if not secondary_ids or primary_id in secondary_ids:
         return
@@ -405,18 +510,49 @@ def merge_players_db(primary_id: int, secondary_ids: list):
     cursor = conn.cursor()
     
     try:
-        # 1. Update tournament_matches
+        cursor.execute("SELECT * FROM players WHERE id = ?", (primary_id,))
+        prim_row = cursor.fetchone()
+        if not prim_row:
+            return
+        prim = dict(prim_row)
+        
+        best_kid = prim.get('konami_id')
+        best_phone = prim.get('phone')
+        best_email = prim.get('email')
+        best_nick = prim.get('nickname') or nickname
+
+        aliases_to_add = set()
+        if prim.get('name'): aliases_to_add.add(prim['name'].strip())
+        if prim.get('slug'): aliases_to_add.add(prim['slug'].strip())
+        if best_nick: aliases_to_add.add(best_nick.strip())
+
         for sid in secondary_ids:
+            cursor.execute("SELECT * FROM players WHERE id = ?", (sid,))
+            s_row = cursor.fetchone()
+            if not s_row: continue
+            sec = dict(s_row)
+            if not best_kid and sec.get('konami_id'): best_kid = sec['konami_id']
+            if not best_phone and sec.get('phone'): best_phone = sec['phone']
+            if not best_email and sec.get('email'): best_email = sec['email']
+            if not best_nick and sec.get('nickname'): best_nick = sec['nickname']
+            if sec.get('name'): aliases_to_add.add(sec['name'].strip())
+            if sec.get('slug'): aliases_to_add.add(sec['slug'].strip())
+
+            # 1. Update tournament_matches
             cursor.execute("UPDATE tournament_matches SET p1_id = ? WHERE p1_id = ?", (primary_id, sid))
             cursor.execute("UPDATE tournament_matches SET p2_id = ? WHERE p2_id = ?", (primary_id, sid))
             
-        # 2. Merge league_profiles
-        # First, find all league profiles of the primary player
-        cursor.execute("SELECT id, store_id, format_name FROM league_profiles WHERE player_id = ?", (primary_id,))
-        primary_profiles = cursor.fetchall()
-        primary_lookup = {(r['store_id'], r['format_name']): r['id'] for r in primary_profiles}
-        
-        for sid in secondary_ids:
+            # 2. Update room_checkins
+            try:
+                cursor.execute("UPDATE room_checkins SET player_id = ? WHERE player_id = ?", (primary_id, sid))
+            except Exception:
+                pass
+
+            # 3. Merge league_profiles
+            cursor.execute("SELECT id, store_id, format_name FROM league_profiles WHERE player_id = ?", (primary_id,))
+            primary_profiles = cursor.fetchall()
+            primary_lookup = {(r['store_id'], r['format_name']): r['id'] for r in primary_profiles}
+            
             cursor.execute("SELECT id, store_id, format_name FROM league_profiles WHERE player_id = ?", (sid,))
             secondary_profiles = cursor.fetchall()
             
@@ -426,10 +562,7 @@ def merge_players_db(primary_id: int, secondary_ids: list):
                 sec_prof_id = sec_prof['id']
                 
                 if (store_id, format_name) in primary_lookup:
-                    # Primary already has a profile here, reassign tournament_results
                     prim_prof_id = primary_lookup[(store_id, format_name)]
-                    
-                    # Update tournament_results. Avoid UNIQUE constraint by checking if primary already played that tournament
                     cursor.execute("SELECT tournament_id FROM tournament_results WHERE league_profile_id = ?", (prim_prof_id,))
                     existing_tids = [r['tournament_id'] for r in cursor.fetchall()]
                     
@@ -439,25 +572,20 @@ def merge_players_db(primary_id: int, secondary_ids: list):
                     for s_res in sec_results:
                         t_id = s_res['tournament_id']
                         if t_id in existing_tids:
-                            # Both players somehow played the same tournament? Highly unusual, maybe drop the secondary record
-                            # or sum the points? For safety, we just delete the secondary record to prevent constraint error.
                             cursor.execute("DELETE FROM tournament_results WHERE id = ?", (s_res['id'],))
                         else:
                             cursor.execute("UPDATE tournament_results SET league_profile_id = ? WHERE id = ?", (prim_prof_id, s_res['id']))
                     
-                    # Delete the now-empty secondary profile
                     cursor.execute("DELETE FROM league_profiles WHERE id = ?", (sec_prof_id,))
                 else:
-                    # Primary doesn't have a profile, just assign the secondary profile to primary
                     cursor.execute("UPDATE league_profiles SET player_id = ? WHERE id = ?", (primary_id, sec_prof_id))
-                    primary_lookup[(store_id, format_name)] = sec_prof_id # Add to lookup for subsequent secondary ids
-                    
-        # 3. Merge academy_profiles (Similar logic)
-        cursor.execute("SELECT id, store_id, format_name FROM academy_profiles WHERE player_id = ?", (primary_id,))
-        prim_acad_profiles = cursor.fetchall()
-        acad_lookup = {(r['store_id'], r['format_name']): r['id'] for r in prim_acad_profiles}
-        
-        for sid in secondary_ids:
+                    primary_lookup[(store_id, format_name)] = sec_prof_id
+                        
+            # 4. Merge academy_profiles
+            cursor.execute("SELECT id, store_id, format_name FROM academy_profiles WHERE player_id = ?", (primary_id,))
+            prim_acad_profiles = cursor.fetchall()
+            acad_lookup = {(r['store_id'], r['format_name']): r['id'] for r in prim_acad_profiles}
+            
             cursor.execute("SELECT id, store_id, format_name FROM academy_profiles WHERE player_id = ?", (sid,))
             sec_acad_profiles = cursor.fetchall()
             
@@ -468,27 +596,84 @@ def merge_players_db(primary_id: int, secondary_ids: list):
                 
                 if (store_id, format_name) in acad_lookup:
                     prim_acad_id = acad_lookup[(store_id, format_name)]
-                    # Move history and achievements
                     cursor.execute("UPDATE academy_rating_history SET academy_profile_id = ? WHERE academy_profile_id = ?", (prim_acad_id, sec_acad_id))
-                    # For achievements, ignore duplicates
                     cursor.execute("UPDATE OR IGNORE academy_achievements SET academy_profile_id = ? WHERE academy_profile_id = ?", (prim_acad_id, sec_acad_id))
                     cursor.execute("DELETE FROM academy_achievements WHERE academy_profile_id = ?", (sec_acad_id,))
-                    
                     cursor.execute("DELETE FROM academy_profiles WHERE id = ?", (sec_acad_id,))
                 else:
                     cursor.execute("UPDATE academy_profiles SET player_id = ? WHERE id = ?", (primary_id, sec_acad_id))
                     acad_lookup[(store_id, format_name)] = sec_acad_id
-                    
-        # 4. Finally, delete the secondary players
-        for sid in secondary_ids:
+                        
+            # 5. Delete the secondary player
             cursor.execute("DELETE FROM players WHERE id = ?", (sid,))
             
+        # Update primary player data
+        cursor.execute("""
+            UPDATE players 
+            SET konami_id = ?, phone = ?, email = ?, nickname = ?
+            WHERE id = ?
+        """, (best_kid, best_phone, best_email, best_nick, primary_id))
+
+        # Add aliases
+        for a in aliases_to_add:
+            if not a or len(a.strip()) < 2: continue
+            try:
+                cursor.execute("""
+                    INSERT INTO player_aliases (player_id, alias, created_at)
+                    VALUES (?, ?, datetime('now'))
+                    ON CONFLICT(alias) DO UPDATE SET player_id = excluded.player_id
+                """, (primary_id, a.strip()))
+            except Exception:
+                pass
+
         conn.commit()
     except Exception as e:
         conn.rollback()
         raise e
     finally:
         conn.close()
+
+def auto_deduplicate_all_players():
+    """
+    Detecta automáticamente duplicados de nombres o apodos conocidos y los fusiona
+    en el perfil principal de forma limpia e irreversiblemente segura.
+    """
+    from utils import normalize_player_name
+    conn = get_connection()
+    conn.row_factory = __import__('sqlite3').Row
+    cur = conn.cursor()
+
+    # 1. Fusiones de apodos conocidos explícitos
+    known_merges = [
+        ("Maximiliano Candia", "Tío Zombie"),
+        ("Esteban Ocompley", "Kame")
+    ]
+    for real_name, nick in known_merges:
+        real_p = resolve_player(cur, real_name)
+        nick_p = resolve_player(cur, nick)
+        if real_p and nick_p and real_p['id'] != nick_p['id']:
+            merge_players_db(real_p['id'], [nick_p['id']], nickname=nick)
+
+    # 2. Fusiones por coincidencia de nombre normalizado
+    cur.execute("SELECT id, name, konami_id, slug FROM players ORDER BY id ASC")
+    all_players = [dict(r) for r in cur.fetchall()]
+
+    from collections import defaultdict
+    grouped = defaultdict(list)
+    for p in all_players:
+        norm = normalize_player_name(p['name'])
+        grouped[norm].append(p)
+
+    merged_count = 0
+    for norm, p_list in grouped.items():
+        if len(p_list) > 1:
+            prim_id = min(p['id'] for p in p_list)
+            sec_ids = [p['id'] for p in p_list if p['id'] != prim_id]
+            merge_players_db(prim_id, sec_ids)
+            merged_count += len(sec_ids)
+
+    conn.close()
+    return merged_count
 
 if __name__ == "__main__":
     init_db()

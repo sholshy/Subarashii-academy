@@ -476,6 +476,7 @@ def api_room_join(room_code):
         data = request.get_json() or {}
         
         player_name = data.get('player_name', '').strip()
+        nickname = data.get('nickname', '').strip()
         konami_id = data.get('konami_id', '').strip()
         deck = data.get('deck', '').strip()
         session_token = data.get('session_token', '').strip()
@@ -515,6 +516,7 @@ def api_room_join(room_code):
         ok, res = trm.register_player(
             room_code=room_code,
             player_name=player_name,
+            nickname=nickname,
             konami_id=konami_id,
             deck_archetype=deck,
             session_token=session_token

@@ -60,11 +60,12 @@ class TournamentUI(ctk.CTkFrame):
         self.conn = get_connection()
         self.cursor = self.conn.cursor()
         self.players_db = {}
-        self.cursor.execute("SELECT id, konami_id, name, phone, email FROM players")
+        self.cursor.execute("SELECT id, konami_id, name, nickname, phone, email FROM players")
         for row in self.cursor.fetchall():
             db_id = row['id']
             self.players_db[db_id] = {
                 "name": row['name'], 
+                "nickname": row['nickname'] or "",
                 "konami_id": row['konami_id'] or "", 
                 "phone": row['phone'] or "", 
                 "email": row['email'] or ""
@@ -79,7 +80,8 @@ class TournamentUI(ctk.CTkFrame):
             sorted_items = sorted(self.players_db.items(), key=lambda x: x[1]['name'].lower())
             for db_id, data in sorted_items:
                 k_text = data['konami_id'] if data['konami_id'] else "Sin ID"
-                self.db_listbox.insert(tk.END, f"{data['name']} ({k_text}) [{db_id}]")
+                nick_str = f" \"{data['nickname']}\"" if data.get('nickname') else ""
+                self.db_listbox.insert(tk.END, f"{data['name']}{nick_str} ({k_text}) [{db_id}]")
 
             if keep_position:
                 self.db_listbox.yview_moveto(top_fraction)
@@ -311,6 +313,7 @@ class TournamentUI(ctk.CTkFrame):
                             trm.register_player(
                                 room_code=room_code,
                                 player_name=cp.get("player_name", ""),
+                                nickname=cp.get("nickname", "") or "",
                                 konami_id=cp.get("konami_id", "") or "",
                                 deck_archetype=cp.get("deck_archetype", "") or "",
                                 session_token=cp.get("session_token", "") or ""
@@ -338,21 +341,27 @@ class TournamentUI(ctk.CTkFrame):
                     continue
                 p_kid = (p.get('konami_id') or '').strip()
 
-                # Guardar o asegurar que exista en la base de datos local SQLite players
+                p_nick = (p.get('nickname') or '').strip()
                 slug = normalize_player_name(p_name)
                 try:
-                    if p_kid:
-                        self.cursor.execute("SELECT id, name FROM players WHERE konami_id=?", (p_kid,))
-                    else:
-                        self.cursor.execute("SELECT id, name FROM players WHERE slug=?", (slug,))
-                    row = self.cursor.fetchone()
-                    if not row:
+                    from database import resolve_player, link_player_alias
+                    resolved = resolve_player(self.cursor, name_or_alias=p_name, konami_id=p_kid)
+                    if not resolved and p_nick:
+                        resolved = resolve_player(self.cursor, name_or_alias=p_nick, konami_id=p_kid)
+                    if not resolved:
                         self.cursor.execute(
-                            "INSERT INTO players (konami_id, name, slug) VALUES (?, ?, ?)",
-                            (p_kid or None, p_name, slug)
+                            "INSERT INTO players (konami_id, name, nickname, slug) VALUES (?, ?, ?, ?)",
+                            (p_kid or None, p_name, p_nick or None, slug)
                         )
+                        new_id = self.cursor.lastrowid
+                        if p_nick:
+                            link_player_alias(self.cursor, new_id, p_nick, is_nickname=True)
                         self.conn.commit()
                         db_updated = True
+                    else:
+                        if p_nick:
+                            link_player_alias(self.cursor, resolved['id'], p_nick, is_nickname=True)
+                            self.conn.commit()
                 except Exception as ex_sql:
                     print(f"[TournamentUI] Error persisting room player to DB: {ex_sql}")
 
@@ -1299,6 +1308,7 @@ class TournamentUI(ctk.CTkFrame):
         db_btns.pack(fill="x", pady=10)
         ctk.CTkButton(db_btns, text="Editar", command=self.edit_db_player, font=UI_FONT_SMALL, width=100).pack(side="left", expand=True, padx=2)
         ctk.CTkButton(db_btns, text="Fusionar", command=self.merge_db_players, font=UI_FONT_SMALL, width=100, fg_color="#f59e0b", hover_color="#d97706").pack(side="left", expand=True, padx=2)
+        ctk.CTkButton(db_btns, text="Normalizar", command=self.deduplicate_db_players, font=UI_FONT_SMALL, width=100, fg_color="#8b5cf6", hover_color="#7c3aed").pack(side="left", expand=True, padx=2)
         ctk.CTkButton(db_btns, text="Eliminar", command=self.delete_db_player, font=UI_FONT_SMALL, width=100, fg_color="#ef4444", hover_color="#b91c1c").pack(side="left", expand=True, padx=2)
         
         list_frame = ctk.CTkFrame(split_container, fg_color="#0f172a")
@@ -1552,6 +1562,16 @@ class TournamentUI(ctk.CTkFrame):
                 self.load_db()
                 self.refresh_db_listbox()
                     
+    def deduplicate_db_players(self):
+        from database import auto_deduplicate_all_players
+        count = auto_deduplicate_all_players()
+        self.load_db()
+        self.refresh_db_listbox()
+        if count > 0:
+            messagebox.showinfo("Normalización", f"Se normalizaron y fusionaron {count} registros duplicados en la base de datos.")
+        else:
+            messagebox.showinfo("Normalización", "No se encontraron duelistas duplicados en la base de datos.")
+
     def edit_db_player(self):
         selection = self.db_listbox.curselection()
         if not selection: return
@@ -1563,45 +1583,54 @@ class TournamentUI(ctk.CTkFrame):
             
             top = ctk.CTkToplevel(self)
             top.title("Editar Jugador")
-            top.geometry("350x450")
+            top.geometry("350x520")
             top.attributes('-topmost', True)
             top.grab_set()
             
-            ctk.CTkLabel(top, text="Nombre:", text_color="#60a5fa").pack(pady=(10, 2))
+            ctk.CTkLabel(top, text="Nombre Oficial:", text_color="#60a5fa").pack(pady=(8, 2))
             name_entry = ctk.CTkEntry(top, font=UI_FONT, width=250)
             name_entry.insert(0, data.get("name", ""))
-            name_entry.pack(pady=5)
+            name_entry.pack(pady=4)
+
+            ctk.CTkLabel(top, text="Apodo / Nickname (opcional):", text_color="#60a5fa").pack(pady=(6, 2))
+            nick_entry = ctk.CTkEntry(top, font=UI_FONT, width=250)
+            nick_entry.insert(0, data.get("nickname", "") or "")
+            nick_entry.pack(pady=4)
             
-            ctk.CTkLabel(top, text="Konami ID:", text_color="#60a5fa").pack(pady=(10, 2))
+            ctk.CTkLabel(top, text="Konami ID:", text_color="#60a5fa").pack(pady=(6, 2))
             id_entry = ctk.CTkEntry(top, font=UI_FONT, width=250)
-            id_entry.insert(0, data.get("konami_id", ""))
-            id_entry.pack(pady=5)
+            id_entry.insert(0, data.get("konami_id", "") or "")
+            id_entry.pack(pady=4)
             
-            ctk.CTkLabel(top, text="Teléfono:", text_color="#60a5fa").pack(pady=(10, 2))
+            ctk.CTkLabel(top, text="Teléfono:", text_color="#60a5fa").pack(pady=(6, 2))
             phone_entry = ctk.CTkEntry(top, font=UI_FONT, width=250)
-            phone_entry.insert(0, data.get("phone", ""))
-            phone_entry.pack(pady=5)
+            phone_entry.insert(0, data.get("phone", "") or "")
+            phone_entry.pack(pady=4)
             
-            ctk.CTkLabel(top, text="Correo Electrónico:", text_color="#60a5fa").pack(pady=(10, 2))
+            ctk.CTkLabel(top, text="Correo Electrónico:", text_color="#60a5fa").pack(pady=(6, 2))
             email_entry = ctk.CTkEntry(top, font=UI_FONT, width=250)
-            email_entry.insert(0, data.get("email", ""))
-            email_entry.pack(pady=5)
+            email_entry.insert(0, data.get("email", "") or "")
+            email_entry.pack(pady=4)
             
             def save_edit():
+                from database import link_player_alias
                 new_n = name_entry.get().strip()
+                new_nick = nick_entry.get().strip() or None
                 new_id = id_entry.get().strip() or None
                 new_p = phone_entry.get().strip()
                 new_e = email_entry.get().strip()
                 if new_n:
                     try:
-                        self.cursor.execute("UPDATE players SET name=?, konami_id=?, phone=?, email=? WHERE id=?", (new_n, new_id, new_p, new_e, db_id))
+                        self.cursor.execute("UPDATE players SET name=?, nickname=?, konami_id=?, phone=?, email=? WHERE id=?", (new_n, new_nick, new_id, new_p, new_e, db_id))
+                        if new_nick:
+                            link_player_alias(self.cursor, db_id, new_nick, is_nickname=True)
                         self.conn.commit()
                         self.load_db()
                         self.refresh_db_listbox()
                         top.destroy()
                     except Exception as e:
                         messagebox.showerror("Error", f"No se pudo guardar: {e}")
-            ctk.CTkButton(top, text="Guardar", command=save_edit, font=UI_FONT_SMALL).pack(pady=20)
+            ctk.CTkButton(top, text="Guardar", command=save_edit, font=UI_FONT_SMALL).pack(pady=15)
 
     def add_player(self):
         name = self.name_entry.get().strip()
@@ -1635,26 +1664,27 @@ class TournamentUI(ctk.CTkFrame):
                 return
                 
         from utils import normalize_player_name
+        from database import resolve_player, link_player_alias
         slug = normalize_player_name(name)
         
-        if k_id:
-            self.cursor.execute("SELECT id, name FROM players WHERE konami_id=?", (k_id,))
-        else:
-            self.cursor.execute("SELECT id, name FROM players WHERE slug=?", (slug,))
-            
-        row = self.cursor.fetchone()
+        resolved = resolve_player(self.cursor, name_or_alias=name, konami_id=k_id)
         
-        if row:
-            db_id = row['id']
-            stored_name = row['name']
+        if resolved:
+            db_id = resolved['id']
+            stored_name = resolved['name']
+            stored_nick = resolved.get('nickname') or ''
             if name.lower() != stored_name.lower():
-                if messagebox.askyesno("Actualizar Base de Datos", f"El jugador existe registrado como '{stored_name}'. ¿Deseas actualizar el nombre a '{name}'?"):
-                    self.cursor.execute("UPDATE players SET name=?, slug=?, phone=?, email=? WHERE id=?", (name, slug, phone, email, db_id))
+                if stored_nick and name.lower() == stored_nick.lower():
+                    name = stored_name
+                elif messagebox.askyesno("Actualizar Base de Datos", f"El jugador está registrado como '{stored_name}'. ¿Deseas actualizar el nombre oficial a '{name}'?\n(Si es un apodo, pulsa 'No' para asociarlo)"): 
+                    self.cursor.execute("UPDATE players SET name=?, slug=?, phone=COALESCE(NULLIF(?, ''), phone), email=COALESCE(NULLIF(?, ''), email) WHERE id=?", (name, slug, phone, email, db_id))
                     self.conn.commit()
                 else:
+                    link_player_alias(self.cursor, db_id, name)
+                    self.conn.commit()
                     name = stored_name
             else:
-                self.cursor.execute("UPDATE players SET phone=?, email=? WHERE id=?", (phone, email, db_id))
+                self.cursor.execute("UPDATE players SET phone=COALESCE(NULLIF(?, ''), phone), email=COALESCE(NULLIF(?, ''), email) WHERE id=?", (phone, email, db_id))
                 self.conn.commit()
         else:
             try:
