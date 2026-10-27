@@ -5,6 +5,8 @@
       "name": "Primera Sangre",
       "description": "Juega tu primer match oficial en Subarashii.",
       "xp_reward": 50,
+      "icon": "⚔️",
+      "rarity": "Común",
       "retroactive": true,
       "condition_type": "STAT_CHECK",
       "condition_config": {"stat": "matches_played", "operator": ">=", "value": 1}
@@ -14,6 +16,8 @@
       "name": "Duelista de Intercambio",
       "description": "Gradúate jugando tus primeros 10 matches oficiales.",
       "xp_reward": 100,
+      "icon": "🎓",
+      "rarity": "Común",
       "retroactive": true,
       "condition_type": "STAT_CHECK",
       "condition_config": {"stat": "matches_played", "operator": ">=", "value": 10}
@@ -21,17 +25,98 @@
     {
       "id": "ACH_FIRST_WIN",
       "name": "Sabor a Victoria",
-      "description": "Gana tu primer match oficial.",
+      "description": "Gana tu primer match oficial en la Academia.",
       "xp_reward": 50,
+      "icon": "✨",
+      "rarity": "Común",
       "retroactive": true,
       "condition_type": "STAT_CHECK",
       "condition_config": {"stat": "wins", "operator": ">=", "value": 1}
+    },
+    {
+      "id": "ACH_BEAT_LEADER_OBELISK",
+      "name": "Caída del Obelisco",
+      "description": "Vence al líder de la casa azul y Gran Campeón de la Temporada 1 (Alvaro Rojas).",
+      "xp_reward": 150,
+      "icon": "🔷",
+      "rarity": "Épico",
+      "retroactive": true,
+      "condition_type": "DEFEAT_PLAYER",
+      "condition_config": {"target_player_id": 23, "target_player_name": "Alvaro Rojas"}
+    },
+    {
+      "id": "ACH_BEAT_LEADER_RA",
+      "name": "Eclipse de Ra",
+      "description": "Vence al líder de la casa amarilla y 3er lugar de la Temporada 1 (Johan Loza).",
+      "xp_reward": 150,
+      "icon": "🟡",
+      "rarity": "Épico",
+      "retroactive": true,
+      "condition_type": "DEFEAT_PLAYER",
+      "condition_config": {"target_player_id": 15, "target_player_name": "Johan Loza"}
+    },
+    {
+      "id": "ACH_BEAT_LEADER_SLIFER",
+      "name": "Furia de Slifer",
+      "description": "Vence al líder de la casa roja de la Temporada 1 (Alan Acevedo).",
+      "xp_reward": 150,
+      "icon": "🔴",
+      "rarity": "Épico",
+      "retroactive": true,
+      "condition_type": "DEFEAT_PLAYER",
+      "condition_config": {"target_player_id": 20, "target_player_name": "Alan Acevedo"}
+    },
+    {
+      "id": "ACH_TRIAD_CONQUEROR",
+      "name": "Dominio de las Tres Casas",
+      "description": "Vence en duelos oficiales a duelistas de cada una de las tres casas (Slifer Red, Ra Yellow y Obelisk Blue).",
+      "xp_reward": 200,
+      "icon": "🔱",
+      "rarity": "Legendario",
+      "retroactive": true,
+      "condition_type": "DEFEAT_ALL_HOUSES",
+      "condition_config": {"houses": ["Slifer Red", "Ra Yellow", "Obelisk Blue"]}
+    },
+    {
+      "id": "ACH_PODIUM_SLAYER",
+      "name": "Cazador de Leyendas",
+      "description": "Vence a cualquiera de los duelistas que consiguieron podio en la Temporada 1 (Alvaro Rojas, Genaro Spoerer o Johan Loza).",
+      "xp_reward": 150,
+      "icon": "🗡️",
+      "rarity": "Épico",
+      "retroactive": true,
+      "condition_type": "DEFEAT_ANY_PLAYER",
+      "condition_config": {"target_player_ids": [23, 19, 15]}
+    },
+    {
+      "id": "ACH_SEASON_1_VETERAN",
+      "name": "Veterano de la Primera Era",
+      "description": "Haber competido activamente en la histórica Temporada 1 de Subarashii Duel Academy.",
+      "xp_reward": 100,
+      "icon": "🎖️",
+      "rarity": "Raro",
+      "retroactive": true,
+      "condition_type": "SEASON_PARTICIPATION",
+      "condition_config": {"season_id": "SEASON_1"}
+    },
+    {
+      "id": "ACH_GIANT_KILLER",
+      "name": "Derriba Titanes",
+      "description": "Gana un duelo oficial contra un oponente de alto rango con 1100 o más de ELO.",
+      "xp_reward": 125,
+      "icon": "💥",
+      "rarity": "Raro",
+      "retroactive": true,
+      "condition_type": "DEFEAT_HIGH_RATING",
+      "condition_config": {"min_rating": 1100}
     },
     {
       "id": "ACH_KING_SLAYER",
       "name": "Matarreyes",
       "description": "Derrota al jugador Top 1 del ranking oficial.",
       "xp_reward": 150,
+      "icon": "👑",
+      "rarity": "Épico",
       "retroactive": false,
       "condition_type": "EVENT_CHECK",
       "condition_config": {"event": "BEAT_RANK_1"}
@@ -41,18 +126,33 @@
       "name": "Campeón de la Academia",
       "description": "Gana el 1er Lugar en un torneo oficial.",
       "xp_reward": 200,
+      "icon": "🏆",
+      "rarity": "Legendario",
       "retroactive": true,
       "condition_type": "EVENT_CHECK",
       "condition_config": {"event": "TOURNAMENT_PLACEMENT", "value": 1}
+    },
+    {
+      "id": "ACH_RA_DISCIPLE",
+      "name": "Sabiduría Solar",
+      "description": "Alcanza el dormitorio Ra Yellow (1050+ ELO y graduado).",
+      "xp_reward": 150,
+      "icon": "☀️",
+      "rarity": "Raro",
+      "retroactive": true,
+      "condition_type": "DORMITORY_REACHED",
+      "condition_config": {"dorm": "Ra Yellow", "min_rating": 1050}
     },
     {
       "id": "ACH_OBELISK",
       "name": "Élite Azul",
       "description": "Alcanza el codiciado dormitorio Obelisk Blue (1120+ ELO y graduado).",
       "xp_reward": 200,
+      "icon": "🔷",
+      "rarity": "Legendario",
       "retroactive": true,
-      "condition_type": "STAT_CHECK",
-      "condition_config": {"stat": "current_rating", "operator": ">=", "value": 1120, "requires_graduation": true}
+      "condition_type": "DORMITORY_REACHED",
+      "condition_config": {"dorm": "Obelisk Blue", "min_rating": 1120}
     }
   ]
 }

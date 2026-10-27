@@ -216,12 +216,12 @@ class AcademyEngine:
                         timestamp=timestamp)
 
             # Evaluate match-level achievements
-            self.evaluate_match_achievements(cursor, prof['id'], is_win, prof['current_rating'], new_r)
+            self.evaluate_match_achievements(cursor, prof['id'], is_win, prof['current_rating'], new_r, opp_id=opp_id, opp_rating=opp_r)
 
             # Evaluate match-level missions
             self.evaluate_match_missions(cursor, prof['id'], is_win)
 
-    def evaluate_match_achievements(self, cursor, profile_id, is_win, old_rating, new_rating):
+    def evaluate_match_achievements(self, cursor, profile_id, is_win, old_rating, new_rating, opp_id=None, opp_rating=None):
         import json
         cat_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "achievements", "catalog.json")
         if not os.path.exists(cat_path): return
@@ -233,7 +233,7 @@ class AcademyEngine:
         unlocked = set(r['achievement_id'] for r in cursor.fetchall())
         
         # Get profile stats
-        cursor.execute("SELECT matches_played, wins, current_rating FROM academy_profiles WHERE id=?", (profile_id,))
+        cursor.execute("SELECT matches_played, wins, current_rating, highest_rating FROM academy_profiles WHERE id=?", (profile_id,))
         p_row = cursor.fetchone()
         if not p_row: return
         
@@ -241,31 +241,181 @@ class AcademyEngine:
             aid = ach["id"]
             if aid in unlocked: continue
             
-            # Simple condition evaluator
             ctype = ach.get("condition_type")
             cfg = ach.get("condition_config", {})
-            
             unlocked_now = False
+
             if ctype == "STAT_CHECK":
                 stat = cfg.get("stat")
                 val = cfg.get("value")
                 op = cfg.get("operator")
-                
                 actual = p_row[stat] if stat in p_row.keys() else 0
-                if stat == "wins" and is_win:
-                    actual += 1 # we might not have updated 'wins' explicitly in DB yet, actually we don't track global wins in academy_profiles yet!
-                    # Wait, we need to track wins if we want to use them.
-                    pass
-                
                 if op == ">=" and actual >= val: 
                     unlocked_now = True
-                    
                 if unlocked_now and cfg.get("requires_graduation"):
-                    if ("matches_played" in p_row.keys() and p_row["matches_played"] < 10):
+                    if p_row["matches_played"] < 10:
                         unlocked_now = False
-                
+
+            elif ctype == "DEFEAT_PLAYER" and is_win:
+                if opp_id is not None and opp_id == cfg.get("target_player_id"):
+                    unlocked_now = True
+
+            elif ctype == "DEFEAT_ANY_PLAYER" and is_win:
+                target_ids = cfg.get("target_player_ids", [])
+                if opp_id is not None and opp_id in target_ids:
+                    unlocked_now = True
+
+            elif ctype == "DEFEAT_HIGH_RATING" and is_win:
+                min_r = cfg.get("min_rating", 1100)
+                if opp_rating is not None and opp_rating >= min_r:
+                    unlocked_now = True
+
+            elif ctype == "DEFEAT_ALL_HOUSES" and is_win:
+                cursor.execute("""
+                    SELECT DISTINCT asp.final_dorm
+                    FROM academy_rating_history arh
+                    JOIN academy_profiles ap_opp ON ap_opp.player_id = arh.opponent_id AND ap_opp.format_name = 'GLOBAL'
+                    JOIN academy_season_players asp ON asp.academy_profile_id = ap_opp.id AND asp.season_id = 'SEASON_1'
+                    WHERE arh.academy_profile_id = ? AND arh.result = 1.0
+                """, (profile_id,))
+                dorms_beaten = {r['final_dorm'] for r in cursor.fetchall()}
+                if 'Slifer Red' in dorms_beaten and 'Ra Yellow' in dorms_beaten and 'Obelisk Blue' in dorms_beaten:
+                    unlocked_now = True
+
+            elif ctype == "SEASON_PARTICIPATION":
+                s_id = cfg.get("season_id", "SEASON_1")
+                cursor.execute("SELECT id FROM academy_season_players WHERE academy_profile_id = ? AND season_id = ?", (profile_id, s_id))
+                if cursor.fetchone():
+                    unlocked_now = True
+
+            elif ctype == "DORMITORY_REACHED":
+                target_r = cfg.get("min_rating", 1050)
+                cursor.execute("SELECT final_rating FROM academy_season_players WHERE academy_profile_id = ?", (profile_id,))
+                s1_p = cursor.fetchone()
+                s1_rating = s1_p['final_rating'] if s1_p else 0
+                if (p_row['highest_rating'] >= target_r and p_row['matches_played'] >= 10) or s1_rating >= target_r:
+                    unlocked_now = True
+
             if unlocked_now:
                 self.unlock_achievement(cursor, profile_id, aid, ach["xp_reward"])
+                unlocked.add(aid)
+
+    def evaluate_all_retroactive_achievements(self, cursor):
+        """
+        Evalúa y otorga todos los logros retroactivos para duelistas activos
+        según su historial de matches y desempeño en la Temporada 1.
+        """
+        import json
+        cat_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "achievements", "catalog.json")
+        if not os.path.exists(cat_path): return []
+        
+        with open(cat_path, 'r', encoding='utf-8') as f:
+            catalog = json.load(f).get("achievements", [])
+
+        cursor.execute("SELECT ap.id, ap.player_id, ap.xp, ap.highest_rating, p.name FROM academy_profiles ap JOIN players p ON p.id = ap.player_id WHERE ap.format_name = 'GLOBAL'")
+        profiles = cursor.fetchall()
+        
+        awarded_list = []
+        for p in profiles:
+            prof_id = p['id']
+            player_id = p['player_id']
+            p_name = p['name']
+
+            cursor.execute("SELECT achievement_id FROM academy_achievements WHERE academy_profile_id = ?", (prof_id,))
+            unlocked = set(r['achievement_id'] for r in cursor.fetchall())
+
+            # Partidas ganadas en historial
+            cursor.execute("""
+                SELECT tm.id,
+                       CASE WHEN tm.p1_id = ? THEN tm.p2_id ELSE tm.p1_id END as opp_id
+                FROM tournament_matches tm
+                WHERE (tm.p1_id = ? AND tm.result_text = 'P1_WIN')
+                   OR (tm.p2_id = ? AND tm.result_text = 'P2_WIN')
+            """, (player_id, player_id, player_id))
+            wins = cursor.fetchall()
+            beaten_opp_ids = {w['opp_id'] for w in wins}
+
+            dorms_beaten = set()
+            if beaten_opp_ids:
+                placeholders = ",".join("?" * len(beaten_opp_ids))
+                cursor.execute(f"""
+                    SELECT DISTINCT asp.final_dorm
+                    FROM academy_season_players asp
+                    JOIN academy_profiles ap ON ap.id = asp.academy_profile_id
+                    WHERE ap.player_id IN ({placeholders}) AND asp.season_id = 'SEASON_1'
+                """, list(beaten_opp_ids))
+                dorms_beaten = {r['final_dorm'] for r in cursor.fetchall()}
+
+            cursor.execute("SELECT * FROM academy_season_players WHERE academy_profile_id = ? AND season_id = 'SEASON_1'", (prof_id,))
+            s1_row = cursor.fetchone()
+
+            for ach in catalog:
+                aid = ach['id']
+                if aid in unlocked:
+                    continue
+                if not ach.get("retroactive", True):
+                    continue
+
+                ctype = ach.get("condition_type")
+                cfg = ach.get("condition_config", {})
+                should_unlock = False
+
+                if ctype == "SEASON_PARTICIPATION":
+                    if s1_row is not None:
+                        should_unlock = True
+
+                elif ctype == "DEFEAT_PLAYER":
+                    target = cfg.get("target_player_id")
+                    if target in beaten_opp_ids:
+                        should_unlock = True
+
+                elif ctype == "DEFEAT_ANY_PLAYER":
+                    targets = set(cfg.get("target_player_ids", []))
+                    if targets.intersection(beaten_opp_ids):
+                        should_unlock = True
+
+                elif ctype == "DEFEAT_ALL_HOUSES":
+                    if 'Slifer Red' in dorms_beaten and 'Ra Yellow' in dorms_beaten and 'Obelisk Blue' in dorms_beaten:
+                        should_unlock = True
+
+                elif ctype == "DORMITORY_REACHED":
+                    min_r = cfg.get("min_rating", 1050)
+                    if s1_row and (s1_row['final_rating'] or 0) >= min_r and (s1_row['matches_played'] or 0) >= 10:
+                        should_unlock = True
+
+                elif ctype == "DEFEAT_HIGH_RATING":
+                    if beaten_opp_ids:
+                        placeholders = ",".join("?" * len(beaten_opp_ids))
+                        cursor.execute(f"""
+                            SELECT COUNT(*) as c FROM academy_season_players asp
+                            JOIN academy_profiles ap ON ap.id = asp.academy_profile_id
+                            WHERE ap.player_id IN ({placeholders}) AND asp.final_rating >= 1100
+                        """, list(beaten_opp_ids))
+                        if cursor.fetchone()['c'] > 0:
+                            should_unlock = True
+
+                elif ctype == "STAT_CHECK":
+                    stat = cfg.get("stat")
+                    val = cfg.get("value")
+                    # En T1 archivada
+                    if s1_row and stat in s1_row.keys() and (s1_row[stat] or 0) >= val:
+                        should_unlock = True
+
+                elif ctype == "EVENT_CHECK" and cfg.get("event") == "TOURNAMENT_PLACEMENT":
+                    cursor.execute("""
+                        SELECT COUNT(*) as c FROM tournament_results tr
+                        JOIN league_profiles lp ON lp.id = tr.league_profile_id
+                        WHERE lp.player_id = ? AND tr.placement_points = 10
+                    """, (player_id,))
+                    if cursor.fetchone()['c'] > 0:
+                        should_unlock = True
+
+                if should_unlock:
+                    self.unlock_achievement(cursor, prof_id, aid, ach["xp_reward"])
+                    unlocked.add(aid)
+                    awarded_list.append({"player": p_name, "achievement": ach["name"], "id": aid, "xp": ach["xp_reward"]})
+
+        return awarded_list
 
     def unlock_achievement(self, cursor, profile_id, achievement_id, xp_reward):
         timestamp = datetime.now().isoformat()
