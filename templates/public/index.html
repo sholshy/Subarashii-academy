@@ -62,7 +62,18 @@
             </div>
         </a>
         {% else %}
-        <p class="placeholder-text">Aún no hay suficientes duelistas rankeados para formar el Top 3.</p>
+        <div style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.98)); border: 1px solid #f59e0b; border-radius: 12px; padding: 2rem 1.5rem; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <div style="font-size: 2.8rem; margin-bottom: 0.5rem;">👑</div>
+            <h3 style="font-family: 'Orbitron'; color: #facc15; font-size: 1.25rem; margin: 0 0 0.5rem;">¡LA TEMPORADA 2 HA COMENZADO EN LIMPIO!</h3>
+            <p style="color: #cbd5e1; max-width: 580px; margin: 0 auto 1.2rem; font-size: 0.9rem; line-height: 1.5;">
+                Las clasificaciones oficiales están abiertas. Cada duelista debe disputar al menos <strong>10 partidas</strong> en los torneos oficiales para reclamar su puesto en el podio.
+            </p>
+            {% if hall_of_fame and hall_of_fame|length > 0 %}
+            <a href="/hall-of-fame" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-weight: 900; font-size: 0.85rem; padding: 10px 22px; border-radius: 8px; text-decoration: none; display: inline-block;">
+                🏆 Ver Campeones de la Temporada 1 en el Salón de la Fama ➜
+            </a>
+            {% endif %}
+        </div>
         {% endfor %}
     </div>
 </section>

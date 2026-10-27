@@ -305,6 +305,15 @@ def migrate_academy_schema(cursor):
         _add_column_if_missing(cursor, "academy_seasons", col, ddl)
 
     for col, ddl in [
+        ("losses", "INTEGER DEFAULT 0"),
+        ("rank", "INTEGER DEFAULT 0"),
+        ("xp", "INTEGER DEFAULT 0"),
+        ("level", "INTEGER DEFAULT 1"),
+        ("win_rate", "REAL DEFAULT 0.0"),
+    ]:
+        _add_column_if_missing(cursor, "academy_season_players", col, ddl)
+
+    for col, ddl in [
         ("opponent_id", "INTEGER"),
         ("opponent_rating", "INTEGER"),
         ("expected_score", "REAL"),

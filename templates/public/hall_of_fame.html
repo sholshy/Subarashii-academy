@@ -1,14 +1,243 @@
 {% extends "base.html" %}
 {% block title %}Hall of Fame - Duelorapido.cl{% endblock %}
 {% block content %}
-<div class="page-header">
-    <h1>HALL OF FAME</h1>
-    <p class="subtitle">El muro de las leyendas de Subarashii Duel Academy</p>
+<div class="page-header" style="text-align: center; margin-bottom: 2rem;">
+    <div style="font-size: 3.5rem; margin-bottom: 0.5rem; filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.4));">👑</div>
+    <h1 style="font-family: 'Orbitron'; font-size: 2.2rem; letter-spacing: 2px; color: #fbbf24; margin: 0;">HALL OF FAME</h1>
+    <p class="subtitle" style="color: #94a3b8; font-size: 1rem; margin-top: 0.4rem;">
+        El Muro de las Leyendas y Campeones Inmortales de Subarashii Duel Academy
+    </p>
 </div>
 
-<div style="text-align: center; padding: 4rem; background: var(--bg-card); border-radius: 12px; margin-top: 2rem;">
-    <div style="font-size: 5rem; margin-bottom: 1rem;">👑</div>
-    <h3>EL SALÓN ESTÁ ESPERANDO</h3>
-    <p style="color: var(--text-muted); max-width: 500px; margin: 1rem auto;">Al finalizar la <strong>Temporada 1 - El Despertar</strong>, los campeones y jugadores más destacados serán inmortalizados en esta sección.</p>
+{% if hall_of_fame and hall_of_fame|length > 0 %}
+    {% for s in hall_of_fame %}
+    <div class="hof-season-container" style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.85)); border: 2px solid #f59e0b; border-radius: 16px; padding: 2rem; margin-bottom: 3rem; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+        
+        <!-- ENCABEZADO DE TEMPORADA -->
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(245, 158, 11, 0.3); padding-bottom: 1.2rem; margin-bottom: 2rem; gap: 1rem;">
+            <div>
+                <span style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; text-transform: uppercase;">
+                    Temporada Finalizada • {{ s.days_elapsed }} Días
+                </span>
+                <h2 style="font-family: 'Orbitron'; font-size: 1.8rem; color: #fff; margin: 0.5rem 0 0.2rem;">
+                    {{ s.name }}
+                </h2>
+                <p style="color: #94a3b8; font-size: 0.85rem; margin: 0;">
+                    Etapa competitiva disputada entre el <strong>{{ s.start_date }}</strong> y el <strong>{{ s.end_date }}</strong>
+                </p>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid #334155; padding: 8px 14px; border-radius: 8px; text-align: center;">
+                    <span style="display: block; color: #94a3b8; font-size: 0.7rem; font-weight: 700;">TORNEOS</span>
+                    <strong style="color: #38bdf8; font-size: 1.2rem; font-family: 'Orbitron';">{{ s.tournaments_count }}</strong>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid #334155; padding: 8px 14px; border-radius: 8px; text-align: center;">
+                    <span style="display: block; color: #94a3b8; font-size: 0.7rem; font-weight: 700;">DUELOS</span>
+                    <strong style="color: #4ade80; font-size: 1.2rem; font-family: 'Orbitron';">{{ s.total_matches }}</strong>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid #334155; padding: 8px 14px; border-radius: 8px; text-align: center;">
+                    <span style="display: block; color: #94a3b8; font-size: 0.7rem; font-weight: 700;">DUELISTAS</span>
+                    <strong style="color: #facc15; font-size: 1.2rem; font-family: 'Orbitron';">{{ s.players_count }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- PODIO SUPREMO -->
+        <div style="margin-bottom: 2.5rem;">
+            <h3 style="font-family: 'Orbitron'; font-size: 1.25rem; color: #facc15; text-align: center; margin-bottom: 1.5rem; letter-spacing: 1px;">
+                🏆 EL PODIO DE LOS CAMPEONES
+            </h3>
+            
+            <div class="cards-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                {% for p in s.podium %}
+                {% set border_glow = '#f59e0b' if p.rank == 1 else ('#94a3b8' if p.rank == 2 else '#d97706') %}
+                {% set badge_icon = '🥇' if p.rank == 1 else ('🥈' if p.rank == 2 else '🥉') %}
+                <a href="/torneo/{{ p.slug }}" class="player-card dorm-{{ (p.dorm or 'slifer').lower().replace(' ', '-') }}" style="border-width: 2px; border-color: {{ border_glow }}; box-shadow: 0 4px 25px rgba(0,0,0,0.4); text-decoration: none; position: relative;">
+                    <div style="position: absolute; top: 10px; right: 10px; font-size: 1.8rem; z-index: 2;">
+                        {{ badge_icon }}
+                    </div>
+                    <div class="card-god-crest-wrap">
+                        <img src="{% if 'slifer' in (p.dorm or '').lower() %}/static/public/img/dorms/slifer_god.jpg{% elif 'ra' in (p.dorm or '').lower() %}/static/public/img/dorms/ra_god.jpg{% elif 'obelisk' in (p.dorm or '').lower() %}/static/public/img/dorms/obelisk_god.jpg{% else %}/static/public/img/dorms/academy_crest.jpg{% endif %}" alt="{{ p.dorm }}" class="card-god-crest-img">
+                    </div>
+                    <div class="card-header">
+                        <span class="rank-badge" style="background: {{ border_glow }}; color: #0f172a; font-weight: 900;">
+                            #{{ p.rank }}
+                        </span>
+                        <h3 style="font-size: 1.15rem;">{{ p.name }}</h3>
+                    </div>
+                    <div class="card-dorm-banner">
+                        <span class="card-house-pill" style="font-size: 0.7rem; font-weight: 800;">{{ p.dorm }}</span>
+                    </div>
+                    <div class="card-body" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 8px;">
+                        <div class="stat"><span class="label">ELO FINAL</span><span class="value" style="color: #fbbf24; font-weight: 900; font-size: 1.1rem;">{{ p.rating }}</span></div>
+                        <div class="stat"><span class="label">RÉCORD W-L</span><span class="value">{{ p.wins }}V - {{ p.losses }}D ({{ p.win_rate }}%)</span></div>
+                        <div class="stat"><span class="label">TÍTULO</span><span class="value" style="color: #38bdf8; font-size: 0.8rem;">{{ p.title }}</span></div>
+                        <div class="stat"><span class="label">EXP</span><span class="value">LVL {{ p.level }} ({{ p.xp }} XP)</span></div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- LÍDERES DE DORMITORIO & MENCIONES DE HONOR -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+            <!-- Campeones por Dormitorio -->
+            <div style="background: rgba(0,0,0,0.35); border: 1px solid #334155; border-radius: 12px; padding: 1.25rem;">
+                <h4 style="font-family: 'Orbitron'; font-size: 0.95rem; color: #38bdf8; margin: 0 0 1rem; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 0.5rem;">
+                    🏛️ LÍDERES DE DORMITORIO
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% if s.dorm_champions.obelisk %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30, 58, 138, 0.25); border: 1px solid #2563eb; padding: 8px 12px; border-radius: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #93c5fd; font-weight: 800; text-transform: uppercase;">🔵 Obelisk Blue</span>
+                            <strong style="display: block; color: #fff; font-size: 0.9rem;">{{ s.dorm_champions.obelisk.name }}</strong>
+                        </div>
+                        <span style="font-family: 'Orbitron'; font-weight: 800; color: #60a5fa; font-size: 0.95rem;">{{ s.dorm_champions.obelisk.final_rating }} ELO</span>
+                    </div>
+                    {% endif %}
+
+                    {% if s.dorm_champions.ra %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(161, 98, 7, 0.25); border: 1px solid #ca8a04; padding: 8px 12px; border-radius: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #fde047; font-weight: 800; text-transform: uppercase;">🟡 Ra Yellow</span>
+                            <strong style="display: block; color: #fff; font-size: 0.9rem;">{{ s.dorm_champions.ra.name }}</strong>
+                        </div>
+                        <span style="font-family: 'Orbitron'; font-weight: 800; color: #facc15; font-size: 0.95rem;">{{ s.dorm_champions.ra.final_rating }} ELO</span>
+                    </div>
+                    {% endif %}
+
+                    {% if s.dorm_champions.slifer %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(153, 27, 27, 0.25); border: 1px solid #dc2626; padding: 8px 12px; border-radius: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #fca5a5; font-weight: 800; text-transform: uppercase;">🔴 Slifer Red</span>
+                            <strong style="display: block; color: #fff; font-size: 0.9rem;">{{ s.dorm_champions.slifer.name }}</strong>
+                        </div>
+                        <span style="font-family: 'Orbitron'; font-weight: 800; color: #f87171; font-size: 0.95rem;">{{ s.dorm_champions.slifer.final_rating }} ELO</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Menciones Especiales -->
+            <div style="background: rgba(0,0,0,0.35); border: 1px solid #334155; border-radius: 12px; padding: 1.25rem;">
+                <h4 style="font-family: 'Orbitron'; font-size: 0.95rem; color: #fbbf24; margin: 0 0 1rem; border-bottom: 1px solid rgba(251, 191, 36, 0.2); padding-bottom: 0.5rem;">
+                    🌟 RÉCORDS & MENCIONES DE HONOR
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    {% if s.awards.best_win_rate %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 8px 12px; border-radius: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">🎯 Mejor Win Rate Oficial</span>
+                            <strong style="display: block; color: #fff; font-size: 0.9rem;">{{ s.awards.best_win_rate.name }}</strong>
+                        </div>
+                        <span style="font-family: 'Orbitron'; font-weight: 800; color: #4ade80; font-size: 0.95rem;">{{ s.awards.best_win_rate.win_rate }}% WR</span>
+                    </div>
+                    {% endif %}
+
+                    {% if s.awards.most_matches %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 8px 12px; border-radius: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">⚔️ Gladiador de la Academia</span>
+                            <strong style="display: block; color: #fff; font-size: 0.9rem;">{{ s.awards.most_matches.name }}</strong>
+                        </div>
+                        <span style="font-family: 'Orbitron'; font-weight: 800; color: #38bdf8; font-size: 0.95rem;">{{ s.awards.most_matches.matches_played }} Matches</span>
+                    </div>
+                    {% endif %}
+
+                    {% if s.awards.most_wins %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; padding: 8px 12px; border-radius: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 700;">👑 Mayor Cantidad de Victorias</span>
+                            <strong style="display: block; color: #fff; font-size: 0.9rem;">{{ s.awards.most_wins.name }}</strong>
+                        </div>
+                        <span style="font-family: 'Orbitron'; font-weight: 800; color: #fbbf24; font-size: 0.95rem;">{{ s.awards.most_wins.wins }} Victorias</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- CUADRO DE HONOR OFICIAL (TABLA DE CLASIFICACIÓN FINAL) -->
+        <div>
+            <h3 style="font-family: 'Orbitron'; font-size: 1.15rem; color: #cbd5e1; margin-bottom: 1rem; border-bottom: 1px solid #334155; padding-bottom: 0.5rem;">
+                📜 CUADRO DE HONOR OFICIAL — CLASIFICACIÓN FINAL
+            </h3>
+            
+            <div class="table-container">
+                <table class="ranking-table" style="font-size: 0.88rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Rk</th>
+                            <th>Duelista</th>
+                            <th>Dormitorio</th>
+                            <th>ELO Final</th>
+                            <th>W - L</th>
+                            <th>Win Rate</th>
+                            <th>Nivel / XP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in s.honor_roll if p.matches_played >= 10 %}
+                        <tr onclick="window.location='/torneo/{{ p.slug }}'" style="cursor: pointer;" class="dorm-row-{{ (p.final_dorm or 'slifer').lower().replace(' ', '-') }}">
+                            <td class="rank-col" style="font-weight: 900; color: {% if p.rank == 1 %}#facc15{% elif p.rank == 2 %}#38bdf8{% elif p.rank == 3 %}#fb923c{% else %}#94a3b8{% endif %};">
+                                #{{ p.rank }}
+                            </td>
+                            <td class="name-col">
+                                <strong>{{ p.name }}</strong>
+                            </td>
+                            <td>
+                                <span class="dorm-badge dorm-{{ (p.final_dorm or 'slifer').lower().replace(' ', '-') }}">
+                                    <img src="{% if 'slifer' in (p.final_dorm or '').lower() %}/static/public/img/dorms/slifer_god.jpg{% elif 'ra' in (p.final_dorm or '').lower() %}/static/public/img/dorms/ra_god.jpg{% elif 'obelisk' in (p.final_dorm or '').lower() %}/static/public/img/dorms/obelisk_god.jpg{% else %}/static/public/img/dorms/academy_crest.jpg{% endif %}" alt="{{ p.final_dorm }}" class="dorm-badge-mini-god">
+                                    {{ p.final_dorm }}
+                                </span>
+                            </td>
+                            <td class="elo-col" style="font-weight: 800; color: #fff;">
+                                {{ p.final_rating }}
+                            </td>
+                            <td>{{ p.wins }} - {{ p.losses }}</td>
+                            <td>
+                                <span style="color: {% if p.win_rate >= 60 %}#4ade80{% elif p.win_rate >= 45 %}#facc15{% else %}#f87171{% endif %}; font-weight: 700;">
+                                    {{ p.win_rate }}%
+                                </span>
+                            </td>
+                            <td>LVL {{ p.level }} <span class="xp-sub">({{ p.xp }} XP)</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    {% endfor %}
+{% else %}
+    <div style="text-align: center; padding: 4rem; background: var(--bg-card); border-radius: 12px; margin-top: 2rem;">
+        <div style="font-size: 5rem; margin-bottom: 1rem;">👑</div>
+        <h3 style="font-family: 'Orbitron'; font-size: 1.3rem; color: #38bdf8;">EL SALÓN ESTÁ ESPERANDO</h3>
+        <p style="color: var(--text-muted); max-width: 500px; margin: 1rem auto; line-height: 1.5;">
+            Los campeones y leyendas más destacadas de la Academia serán inmortalizados en esta sección al finalizar cada temporada competitiva.
+        </p>
+    </div>
+{% endif %}
+
+<!-- BANNER DE LA NUEVA TEMPORADA ACTIVA -->
+<div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.95)); border: 1px solid #38bdf8; border-radius: 14px; padding: 2rem; text-align: center; margin-top: 2rem; box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);">
+    <span style="font-size: 2.2rem; display: block; margin-bottom: 0.5rem;">⚡</span>
+    <h3 style="font-family: 'Orbitron'; color: #38bdf8; font-size: 1.3rem; margin: 0 0 0.5rem;">
+        {% if active_season %}{{ active_season.name }} EN CURSO{% else %}NUEVA TEMPORADA EN CURSO{% endif %}
+    </h3>
+    <p style="color: #cbd5e1; max-width: 600px; margin: 0 auto 1.5rem; font-size: 0.9rem; line-height: 1.5;">
+        El contador ha comenzado en limpio. Todos los duelistas inician desde la línea de partida. Disputa al menos <strong>10 partidas oficiales</strong> en los torneos activos para clasificar al podio de la temporada.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <a href="/ranking" class="btn btn-primary" style="font-weight: 800; font-size: 0.85rem; padding: 10px 20px;">
+            📊 Ver Ranking en Vivo
+        </a>
+        <a href="/unirse" class="btn" style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38bdf8; color: #38bdf8; font-weight: 800; font-size: 0.85rem; padding: 10px 20px; border-radius: 8px; text-decoration: none;">
+            📱 Sala de Torneo en Vivo
+        </a>
+    </div>
 </div>
 {% endblock %}

@@ -187,28 +187,61 @@ class SeasonManager:
         if hasattr(cursor, 'connection') and cursor.connection:
             cursor.connection.commit()
 
-    def close_season(self, cursor, end_date=None, auto_start_next=True):
+    def close_season(self, cursor, end_date=None, auto_start_next=True, reset_profiles=True):
         """
         Cierra formalmente la temporada actual:
-        1. Guarda el estado final de todos los duelistas en academy_season_players.
+        1. Guarda el estado y ranking final de todos los duelistas en academy_season_players.
         2. Marca academy_seasons como 'CLOSED'.
-        3. Abre la siguiente temporada si auto_start_next es True.
+        3. Abre la siguiente temporada (Temporada 2) si auto_start_next es True.
+        4. Si reset_profiles es True, inicializa las métricas activas de la academia en limpio.
         """
+        migrate_academy_schema(cursor)
         active = self.get_or_create_active_season(cursor)
         actual_end_date = end_date or datetime.now().strftime("%Y-%m-%d")
 
-        # Snapshot de duelistas
+        # Snapshot ordenado y detallado de duelistas
         cursor.execute("""
-            SELECT id, current_rating, dorm, matches_played, wins
+            SELECT id, current_rating, dorm, matches_played, wins, losses, level, xp
             FROM academy_profiles
             WHERE format_name = 'GLOBAL'
         """)
-        profiles = cursor.fetchall()
-        for p in profiles:
+        profiles = [dict(r) for r in cursor.fetchall()]
+
+        # Clasificación oficial: oficiales (>= 10 matches) primero, luego provisionales
+        officials = [p for p in profiles if (p.get('matches_played') or 0) >= 10]
+        provisionals = [p for p in profiles if (p.get('matches_played') or 0) < 10]
+
+        officials.sort(key=lambda x: (x.get('current_rating') or 1000, x.get('xp') or 0), reverse=True)
+        provisionals.sort(key=lambda x: (x.get('current_rating') or 1000, x.get('xp') or 0), reverse=True)
+
+        ranked_all = []
+        rank_idx = 1
+        for p in officials:
+            p['final_rank'] = rank_idx
+            ranked_all.append(p)
+            rank_idx += 1
+
+        for p in provisionals:
+            p['final_rank'] = rank_idx
+            ranked_all.append(p)
+            rank_idx += 1
+
+        cursor.execute("DELETE FROM academy_season_players WHERE season_id = ?", (active['id'],))
+
+        for p in ranked_all:
+            mp = p.get('matches_played') or 0
+            w = p.get('wins') or 0
+            l = p.get('losses') or 0
+            wr = round((w / mp * 100), 1) if mp > 0 else 0.0
             cursor.execute("""
-                INSERT INTO academy_season_players (season_id, academy_profile_id, final_rating, final_dorm, matches_played, wins)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (active['id'], p['id'], p['current_rating'], p['dorm'], p['matches_played'], p['wins']))
+                INSERT INTO academy_season_players (
+                    season_id, academy_profile_id, final_rating, final_dorm,
+                    matches_played, wins, losses, level, xp, rank, win_rate
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                active['id'], p['id'], p['current_rating'], p['dorm'],
+                mp, w, l, p.get('level', 1), p.get('xp', 0), p['final_rank'], wr
+            ))
 
         # Contar torneos de la temporada
         cursor.execute("""
@@ -221,7 +254,7 @@ class SeasonManager:
             UPDATE academy_seasons
             SET status = 'CLOSED', end_date = ?, tournaments_count = ?, players_count = ?
             WHERE id = ?
-        """, (actual_end_date, t_cnt, len(profiles), active['id']))
+        """, (actual_end_date, t_cnt, len(ranked_all), active['id']))
 
         new_season = None
         if auto_start_next:
@@ -234,6 +267,23 @@ class SeasonManager:
             """, (new_id, new_num, new_name, actual_end_date))
             cursor.execute("SELECT * FROM academy_seasons WHERE id = ?", (new_id,))
             new_season = dict(cursor.fetchone())
+
+        # Iniciar temporada en limpio para la tabla activa de la Academia
+        if reset_profiles:
+            cursor.execute("""
+                UPDATE academy_profiles
+                SET matches_played = 0,
+                    wins = 0,
+                    losses = 0,
+                    previous_rank = 0,
+                    current_rating = 1000,
+                    highest_rating = 1000,
+                    dorm = 'Estudiante de Intercambio',
+                    glicko_mu = 1500.0,
+                    glicko_phi = 350.0,
+                    glicko_sigma = 0.06
+                WHERE format_name = 'GLOBAL'
+            """)
 
         if hasattr(cursor, 'connection') and cursor.connection:
             cursor.connection.commit()

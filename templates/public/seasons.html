@@ -46,6 +46,7 @@
                     <th>Torneos</th>
                     <th>Duelistas</th>
                     <th>Estado</th>
+                    <th>Salón de la Fama</th>
                 </tr>
             </thead>
             <tbody>
@@ -57,6 +58,11 @@
                     <td>{{ row.tournaments_count }}</td>
                     <td>{{ row.players_count }}</td>
                     <td><span style="color: #94a3b8;">CERRADA</span></td>
+                    <td>
+                        <a href="/hall-of-fame" class="btn" style="padding: 4px 10px; font-size: 0.75rem; background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; text-decoration: none; border-radius: 4px; font-weight: 700;">
+                            👑 Ver Podio & Leyendas ➜
+                        </a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

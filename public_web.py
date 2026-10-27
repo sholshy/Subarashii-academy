@@ -207,11 +207,15 @@ def index():
             "participants": participants
         }
 
+    active_season = data.get("seasons_data", {}).get("active_metrics", {}).get("season")
+    hall_of_fame = data.get("hall_of_fame", [])
     return render_template('index.html', 
                            top_players=top_players, 
                            stats=stats,
                            latest_achievements=latest_achievements,
                            latest_tournament=latest_tournament,
+                           active_season=active_season,
+                           hall_of_fame=hall_of_fame,
                            generated_at=data.get("generated_at"))
 
 @app.route('/ranking')
@@ -235,7 +239,9 @@ def ranking():
     for i, p in enumerate(provisional, 1):
         p["prov_rank"] = f"P{i}"
         
-    return render_template('ranking.html', official=official, provisional=provisional)
+    active_season = data.get("seasons_data", {}).get("active_metrics", {}).get("season")
+    hall_of_fame = data.get("hall_of_fame", [])
+    return render_template('ranking.html', official=official, provisional=provisional, active_season=active_season, hall_of_fame=hall_of_fame)
 @app.route('/torneo/<slug>')
 @app.route('/perfil/<slug>')
 @app.route('/jugador/<slug>')
@@ -394,7 +400,10 @@ def calendar_view():
 
 @app.route('/hall-of-fame')
 def hall_of_fame():
-    return render_template('hall_of_fame.html')
+    data = get_snapshot_data() or {}
+    hall_of_fame_data = data.get("hall_of_fame", [])
+    active_season = data.get("seasons_data", {}).get("active_metrics", {}).get("season")
+    return render_template('hall_of_fame.html', hall_of_fame=hall_of_fame_data, active_season=active_season)
 
 # =========================================================================
 # SALAS DE TORNEO INTERACTIVAS (CHECK-IN QR, LOBBY Y PAREOS EN VIVO)

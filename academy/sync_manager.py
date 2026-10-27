@@ -63,6 +63,99 @@ class SyncManager:
         seen.add(slug)
         return slug
 
+    def get_hall_of_fame_data(self, cursor):
+        """
+        Construye el muro oficial del Salón de la Fama a partir de las temporadas cerradas.
+        """
+        cursor.execute("""
+            SELECT * FROM academy_seasons 
+            WHERE status = 'CLOSED' 
+            ORDER BY number ASC
+        """)
+        closed_seasons = [dict(r) for r in cursor.fetchall()]
+        if not closed_seasons:
+            return []
+
+        from academy.season_manager import _parse_custom_date
+        hall_of_fame = []
+        for s in closed_seasons:
+            s_id = s['id']
+            cursor.execute("""
+                SELECT asp.*, p.name, p.slug, p.konami_id
+                FROM academy_season_players asp
+                JOIN academy_profiles ap ON ap.id = asp.academy_profile_id
+                JOIN players p ON p.id = ap.player_id
+                WHERE asp.season_id = ?
+                ORDER BY asp.rank ASC
+            """, (s_id,))
+            players_rows = [dict(r) for r in cursor.fetchall()]
+
+            # Oficiales clasificados (matches_played >= 10)
+            officials = [p for p in players_rows if (p.get('matches_played') or 0) >= 10]
+            if not officials:
+                officials = players_rows
+
+            podium = []
+            for idx, p in enumerate(officials[:3], 1):
+                title = "Gran Campeón de la Academia" if idx == 1 else ("Subcampeón de la Academia" if idx == 2 else "Tercer Puesto")
+                podium.append({
+                    "rank": idx,
+                    "name": p['name'],
+                    "slug": p['slug'],
+                    "rating": p['final_rating'],
+                    "dorm": p['final_dorm'],
+                    "matches_played": p['matches_played'],
+                    "wins": p['wins'],
+                    "losses": p['losses'],
+                    "win_rate": p['win_rate'],
+                    "level": p['level'],
+                    "xp": p['xp'],
+                    "title": title
+                })
+
+            obelisk_lead = next((p for p in officials if 'obelisk' in (p.get('final_dorm') or '').lower()), None)
+            ra_lead = next((p for p in officials if 'ra' in (p.get('final_dorm') or '').lower()), None)
+            slifer_lead = next((p for p in officials if 'slifer' in (p.get('final_dorm') or '').lower()), None)
+
+            best_wr = max(officials, key=lambda x: (x.get('win_rate', 0), x.get('matches_played', 0))) if officials else None
+            most_matches = max(officials, key=lambda x: x.get('matches_played', 0)) if officials else None
+            most_wins = max(officials, key=lambda x: x.get('wins', 0)) if officials else None
+
+            d_start = _parse_custom_date(s.get('start_date'))
+            d_end = _parse_custom_date(s.get('end_date'))
+            days_span = (d_end - d_start).days if (d_start and d_end) else 120
+
+            t_cnt = s.get('tournaments_count') or 12
+            cursor.execute("SELECT COUNT(*) as c FROM tournament_matches WHERE result_text IN ('P1_WIN', 'P2_WIN', 'DRAW')")
+            m_cnt = cursor.fetchone()['c']
+
+            hall_of_fame.append({
+                "season_id": s_id,
+                "number": s.get('number', 1),
+                "name": s.get('name') or f"Temporada {s.get('number', 1)}",
+                "start_date": s.get('start_date'),
+                "end_date": s.get('end_date'),
+                "days_elapsed": days_span,
+                "tournaments_count": t_cnt,
+                "total_matches": m_cnt,
+                "players_count": len(players_rows),
+                "officials_count": len(officials),
+                "podium": podium,
+                "dorm_champions": {
+                    "obelisk": obelisk_lead,
+                    "ra": ra_lead,
+                    "slifer": slifer_lead
+                },
+                "awards": {
+                    "best_win_rate": best_wr,
+                    "most_matches": most_matches,
+                    "most_wins": most_wins
+                },
+                "honor_roll": players_rows
+            })
+
+        return hall_of_fame
+
     def generate_snapshot_and_manifest(self, cursor):
         """
         Extracts data from the DB, creates a JSON snapshot, and updates manifest to PENDING.
@@ -253,7 +346,8 @@ class SyncManager:
             "tournaments_map": all_tournaments,
             "explanations_map": explanations,
             "seasons_data": seasons_data,
-            "calendar": calendar_events
+            "calendar": calendar_events,
+            "hall_of_fame": self.get_hall_of_fame_data(cursor)
         }
 
         # 4. Save Snapshot File
