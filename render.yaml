@@ -27,19 +27,27 @@ services:
       - key: ACADEMY_BASE_URL
         value: "https://subarashii-academy.onrender.com/"
 
-  # Servicio 2: Subarashii Duel Academy (Flask)
+  # Servicio 2: Subarashii Duel Academy (Flask + Smart Showcase Unificado)
   - type: web
     name: subarashii-academy
     runtime: python
     plan: free
     region: ohio
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python smart_showcase/manage.py collectstatic --noinput
     startCommand: gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: SECRET_KEY
         generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: subarashii2026
+      - key: ADMIN_EMAIL
+        value: admin@subarashii.cl
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost,127.0.0.1,subarashii.cl,*.subarashii.cl"
       - key: ORGANIZER_API_KEY
         value: subarashii_secret_organizer_key_2026
       - key: ORGANIZER_ADMIN_PASSWORD
