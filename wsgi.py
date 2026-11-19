@@ -20,12 +20,13 @@ try:
     from django.core.management import call_command
     from django.core.wsgi import get_wsgi_application
     
-    # Auto-migración e inicialización de admin
+    # Auto-migración e inicialización de admin y vitrina base
     try:
         call_command('migrate', interactive=False)
         call_command('init_admin')
+        call_command('init_showcase')
     except Exception as _mig_err:
-        print(f"[WSGI Startup] Migration/admin notice: {_mig_err}")
+        print(f"[WSGI Startup] Migration/admin/showcase notice: {_mig_err}")
 
     django_app = get_wsgi_application()
     print("[WSGI] Django Smart Showcase inicializado correctamente.")

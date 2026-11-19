@@ -1,10 +1,31 @@
 import math
+import re
 from typing import Optional, Tuple, List
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.db import transaction
 from django.utils import timezone
 from apps.catalog.models import CardPrint
 from apps.pricing.models import PricingRuleConfig, PriceQuote
+
+def parse_decimal_input(value, default=Decimal('0.00')) -> Decimal:
+    """Convierte de forma segura strings con comas, puntos o símbolos a Decimal."""
+    if value is None:
+        return Decimal(str(default))
+    s = str(value).strip()
+    s = re.sub(r'[\$\s%A-Za-z]', '', s)
+    if not s:
+        return Decimal(str(default))
+    if '.' in s and ',' in s:
+        if s.rfind(',') > s.rfind('.'):
+            s = s.replace('.', '').replace(',', '.')
+        else:
+            s = s.replace(',', '')
+    elif ',' in s:
+        s = s.replace(',', '.')
+    try:
+        return Decimal(s)
+    except (InvalidOperation, ValueError):
+        return Decimal(str(default))
 
 class PricingService:
     @classmethod

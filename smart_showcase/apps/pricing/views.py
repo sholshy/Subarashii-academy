@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from apps.catalog.models import Card, CardPrint
 from apps.pricing.models import PricingRuleConfig, PriceQuote
-from apps.pricing.services import PricingService
+from apps.pricing.services import PricingService, parse_decimal_input
 from apps.pricing.exchange_service import ExchangeRateService
 from apps.pricing.card_price_service import CardPriceAPIService
 
@@ -27,14 +27,17 @@ def pricing_dashboard_view(request):
 
     if request.method == 'POST' and 'update_config' in request.POST:
         config.store_whatsapp_number = request.POST.get('store_whatsapp_number', '+56912345678').strip()
-        config.usd_to_clp_rate = Decimal(request.POST.get('usd_to_clp_rate', '950.00'))
-        config.commercial_margin_percent = Decimal(request.POST.get('commercial_margin_percent', '25.00'))
-        config.cash_discount_percent = Decimal(request.POST.get('cash_discount_percent', '5.00'))
-        config.card_processing_fee_percent = Decimal(request.POST.get('card_processing_fee_percent', '2.95'))
-        config.rounding_unit = int(request.POST.get('rounding_unit', '100'))
+        config.usd_to_clp_rate = parse_decimal_input(request.POST.get('usd_to_clp_rate'), default=Decimal('950.00'))
+        config.commercial_margin_percent = parse_decimal_input(request.POST.get('commercial_margin_percent'), default=Decimal('25.00'))
+        config.cash_discount_percent = parse_decimal_input(request.POST.get('cash_discount_percent'), default=Decimal('5.00'))
+        config.card_processing_fee_percent = parse_decimal_input(request.POST.get('card_processing_fee_percent'), default=Decimal('2.95'))
+        try:
+            config.rounding_unit = int(request.POST.get('rounding_unit', '100'))
+        except (ValueError, TypeError):
+            config.rounding_unit = 100
         config.save()
 
-        messages.success(request, "Configuración general de precios y WhatsApp actualizada.")
+        messages.success(request, "Configuración general de precios y WhatsApp guardada exitosamente.")
         return redirect('pricing_dashboard')
 
     if request.method == 'POST' and 'recalculate_quotes' in request.POST:
@@ -65,7 +68,7 @@ def pricing_quote_create_view(request, print_id):
                 messages.error(request, "Debes ingresar un valor en USD.")
                 return redirect('pricing_quote_create', print_id=card_print.id)
 
-            ref_usd = Decimal(usd_val)
+            ref_usd = parse_decimal_input(usd_val, default=Decimal('0.00'))
             quote = PricingService.save_quote(
                 card_print=card_print,
                 reference_price_usd=ref_usd,
@@ -73,8 +76,8 @@ def pricing_quote_create_view(request, print_id):
             )
             messages.success(request, f"Cotización generada: Efectivo ${quote.calculated_cash_price:,.0f} | Tarjeta ${quote.calculated_card_price:,.0f}")
         else:
-            cash = Decimal(request.POST.get('custom_cash_price', '0'))
-            card = Decimal(request.POST.get('custom_card_price', '0'))
+            cash = parse_decimal_input(request.POST.get('custom_cash_price'), default=Decimal('0'))
+            card = parse_decimal_input(request.POST.get('custom_card_price'), default=Decimal('0'))
             quote = PricingService.save_quote(
                 card_print=card_print,
                 source=PriceQuote.Source.MANUAL,

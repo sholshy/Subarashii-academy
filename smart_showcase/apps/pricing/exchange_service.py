@@ -9,12 +9,27 @@ class ExchangeRateService:
     """
     Servicio de actualización del tipo de cambio USD/CLP desde APIs financieras en tiempo real.
     Utiliza proveedores públicos gratuitos con conmutación por error (fallback):
-    1. open.er-api.com
-    2. api.exchangerate-api.com
-    3. mindicador.cl (Banco Central de Chile observado)
+    1. cl.dolarapi.com (Mercado cambiario chileno en tiempo real: venta/compra observada)
+    2. open.er-api.com (Interbancario global en tiempo real)
+    3. api.exchangerate-api.com
+    4. mindicador.cl (Banco Central de Chile observado)
     """
 
     HEADERS = {'User-Agent': 'SubarashiiSmartShowcase/1.0 (Store Management)'}
+
+    @classmethod
+    def fetch_from_dolarapi_cl(cls) -> Optional[Decimal]:
+        """Consulta cl.dolarapi.com para obtener el dólar en vivo del mercado chileno."""
+        try:
+            req = urllib.request.Request('https://cl.dolarapi.com/v1/cotizaciones/usd', headers=cls.HEADERS)
+            with urllib.request.urlopen(req, timeout=5) as res:
+                data = json.loads(res.read().decode('utf-8'))
+                val = data.get('venta') or data.get('compra')
+                if val:
+                    return Decimal(f"{float(val):.2f}")
+        except Exception as e:
+            print(f"[ExchangeRateService] Falló cl.dolarapi.com: {e}")
+        return None
 
     @classmethod
     def fetch_from_open_er(cls) -> Optional[Decimal]:
@@ -60,6 +75,10 @@ class ExchangeRateService:
     @classmethod
     def fetch_current_usd_to_clp(cls) -> Optional[Decimal]:
         """Obtiene la tasa USD a CLP consultando los proveedores en cascada."""
+        rate = cls.fetch_from_dolarapi_cl()
+        if rate:
+            return rate
+
         rate = cls.fetch_from_open_er()
         if rate:
             return rate

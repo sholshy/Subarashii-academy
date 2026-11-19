@@ -82,16 +82,24 @@ class TestPricingServices:
     def test_exchange_rate_service_fallback(self, monkeypatch, pricing_config):
         from apps.pricing.exchange_service import ExchangeRateService
 
-        # Mock APIs to return known rate
-        monkeypatch.setattr(ExchangeRateService, 'fetch_from_open_er', lambda: Decimal("985.50"))
+        # Mock primary API to return known rate
+        monkeypatch.setattr(ExchangeRateService, 'fetch_from_dolarapi_cl', lambda: Decimal("1016.40"))
 
         rate = ExchangeRateService.fetch_current_usd_to_clp()
-        assert rate == Decimal("985.50")
+        assert rate == Decimal("1016.40")
 
         updated_rate, recalc_count = ExchangeRateService.update_config_rate(auto_recalculate=False)
-        assert updated_rate == Decimal("985.50")
+        assert updated_rate == Decimal("1016.40")
         pricing_config.refresh_from_db()
-        assert pricing_config.usd_to_clp_rate == Decimal("985.50")
+        assert pricing_config.usd_to_clp_rate == Decimal("1016.40")
+
+    def test_parse_decimal_input_robustness(self):
+        from apps.pricing.services import parse_decimal_input
+        assert parse_decimal_input("993,47") == Decimal("993.47")
+        assert parse_decimal_input("1.014,50") == Decimal("1014.50")
+        assert parse_decimal_input("$ 1016.4 CLP") == Decimal("1016.4")
+        assert parse_decimal_input("25,0 %") == Decimal("25.0")
+        assert parse_decimal_input("", default=Decimal("100")) == Decimal("100")
 
     def test_card_price_api_service_extraction(self, sample_print):
         from apps.pricing.card_price_service import CardPriceAPIService
