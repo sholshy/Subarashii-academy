@@ -170,5 +170,10 @@ CELERY_TIMEZONE = TIME_ZONE
 SHOWCASE_BASE_URL = os.environ.get('SHOWCASE_BASE_URL', 'https://subarashii.cl/v/')
 ACADEMY_BASE_URL = os.environ.get('ACADEMY_BASE_URL', 'https://subarashii.cl/academy/')
 
+# Auth Redirects
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/showcases/'
+LOGOUT_REDIRECT_URL = '/showcases/'
+
 # Default Reservation Expiration (in minutes)
 RESERVATION_TIMEOUT_MINUTES = 15

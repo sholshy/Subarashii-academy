@@ -77,14 +77,16 @@
                                 <!-- Acciones Slot Ocupado -->
                                 <div class="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between gap-1">
                                     <a href="{{ cell.slot.get_public_url }}" target="_blank" class="text-[10px] font-semibold text-slate-300 hover:text-amber-400 underline">
-                                        Ver Web
+                                        Ver Web / QR
                                     </a>
+                                    {% if user.is_authenticated %}
                                     <form method="post" action="{% url 'slot_unassign' cell.slot.id %}" onsubmit="return confirm('¿Retirar carta de este espacio? Se devolverá a bodega.');">
                                         {% csrf_token %}
                                         <button type="submit" class="text-[10px] text-rose-400 hover:text-rose-300 font-bold bg-rose-500/10 hover:bg-rose-500/20 px-2 py-0.5 rounded transition-colors">
                                             Retirar
                                         </button>
                                     </form>
+                                    {% endif %}
                                 </div>
                             {% else %}
                                 <!-- Slot Vacío -->
@@ -93,11 +95,13 @@
                                     <span class="text-[11px] text-slate-500 block mt-1">Libre</span>
                                 </div>
 
+                                {% if user.is_authenticated %}
                                 <div class="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between">
                                     <button onclick="openAssignModal('{{ cell.slot.id }}', '{{ cell.slot.visible_code }}')" class="w-full py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1">
                                         <span>+</span> Asignar
                                     </button>
                                 </div>
+                                {% endif %}
                             {% endif %}
                         </div>
                     {% endfor %}

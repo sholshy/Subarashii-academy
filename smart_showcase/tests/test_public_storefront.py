@@ -97,3 +97,12 @@ class TestPublicStorefront:
         url = reverse('public_slot_detail', kwargs={'qr_token': slot.qr_token})
         response = client.get(url)
         assert response.status_code == 404
+
+    def test_showcase_list_accessible_publicly(self, client):
+        response = client.get(reverse('showcase_list'))
+        assert response.status_code == 200
+
+    def test_accounts_login_redirects_to_admin_login(self, client):
+        response = client.get('/accounts/login/?next=/showcases/')
+        assert response.status_code == 302
+        assert '/admin/login/' in response.url

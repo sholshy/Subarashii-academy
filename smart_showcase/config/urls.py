@@ -5,9 +5,11 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/login/', RedirectView.as_view(url='/admin/login/', permanent=False, query_string=True)),
     # Módulos principales
     path('catalog/', include('apps.catalog.urls')),
     path('inventory/', include('apps.inventory.urls')),

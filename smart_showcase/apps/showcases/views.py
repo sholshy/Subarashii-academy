@@ -7,9 +7,8 @@ from apps.showcases.models import Showcase, ShowcaseSlot, SlotAssignment
 from apps.showcases.services import ShowcaseService
 from apps.showcases.qr_generator import QRGeneratorService
 
-@login_required
 def showcase_list_view(request):
-    """Listado general de vitrinas con resumen de ocupación."""
+    """Listado general de vitrinas con resumen de ocupación (vista pública)."""
     showcases = Showcase.objects.prefetch_related('slots__assignments').all()
     
     showcase_data = []
@@ -60,9 +59,8 @@ def showcase_create_view(request):
 
     return render(request, 'showcases/create.html')
 
-@login_required
 def showcase_grid_view(request, showcase_id):
-    """Visualización interactiva de la cuadrícula física de la vitrina."""
+    """Visualización interactiva de la cuadrícula física de la vitrina (vista pública)."""
     showcase = get_object_or_404(Showcase, id=showcase_id)
     matrix = ShowcaseService.get_showcase_matrix(showcase)
     

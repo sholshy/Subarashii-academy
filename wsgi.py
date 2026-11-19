@@ -48,6 +48,7 @@ class UnifiedApp:
             '/showcases',
             '/pricing',
             '/v/',
+            '/accounts',
             '/static/admin',
             '/static/rest_framework',
         )
