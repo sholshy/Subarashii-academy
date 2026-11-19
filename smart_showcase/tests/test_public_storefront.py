@@ -52,6 +52,12 @@ class TestPublicStorefront:
             'card': card
         }
 
+    def test_public_showcase_index_redirects(self, client):
+        url = reverse('public_showcase_index')
+        response = client.get(url)
+        assert response.status_code == 302
+        assert response.url == reverse('showcase_list')
+
     def test_public_slot_detail_empty(self, client, setup_data):
         slot = setup_data['slot_empty']
         url = reverse('public_slot_detail', kwargs={'qr_token': slot.qr_token})

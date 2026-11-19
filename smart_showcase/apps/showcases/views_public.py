@@ -1,6 +1,10 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from apps.showcases.models import ShowcaseSlot
 from apps.pricing.models import PriceQuote, PricingRuleConfig
+
+def public_showcase_index_view(request):
+    """Si se accede a /v/ directamente sin token, redirige a la lista de vitrinas."""
+    return redirect('showcase_list')
 
 def public_slot_detail_view(request, qr_token):
     """
