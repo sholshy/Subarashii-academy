@@ -68,7 +68,7 @@ class ShowcaseSlot(models.Model):
         ordering = ['showcase', 'slot_number']
 
     def get_public_url(self) -> str:
-        base = getattr(settings, 'SHOWCASE_BASE_URL', 'https://subarashii.cl/v/').rstrip('/')
+        base = getattr(settings, 'SHOWCASE_BASE_URL', 'https://subarashii-academy.onrender.com/v/').rstrip('/')
         return f"{base}/{self.qr_token}"
 
     @property

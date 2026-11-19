@@ -48,6 +48,8 @@ services:
         value: admin@subarashii.cl
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1,subarashii.cl,*.subarashii.cl"
+      - key: SHOWCASE_BASE_URL
+        value: "https://subarashii-academy.onrender.com/v/"
       - key: ORGANIZER_API_KEY
         value: subarashii_secret_organizer_key_2026
       - key: ORGANIZER_ADMIN_PASSWORD

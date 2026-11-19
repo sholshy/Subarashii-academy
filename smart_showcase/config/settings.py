@@ -167,8 +167,11 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # Showcase QR & Academia integration settings
-SHOWCASE_BASE_URL = os.environ.get('SHOWCASE_BASE_URL', 'https://subarashii.cl/v/')
-ACADEMY_BASE_URL = os.environ.get('ACADEMY_BASE_URL', 'https://subarashii.cl/academy/')
+_render_external = os.environ.get('RENDER_EXTERNAL_URL', '').rstrip('/')
+_base_domain = _render_external if _render_external else 'https://subarashii-academy.onrender.com'
+
+SHOWCASE_BASE_URL = os.environ.get('SHOWCASE_BASE_URL', f"{_base_domain}/v/")
+ACADEMY_BASE_URL = os.environ.get('ACADEMY_BASE_URL', f"{_base_domain}/")
 
 # Auth Redirects
 LOGIN_URL = '/admin/login/'
