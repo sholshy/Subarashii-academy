@@ -1,0 +1,39 @@
+{% if remote_cards %}
+    <div class="space-y-2">
+        {% for rc in remote_cards %}
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3 hover:border-slate-700 transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-14 bg-slate-900 rounded overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-800">
+                        {% if rc.image_url %}
+                            <img src="{{ rc.image_url }}" alt="{{ rc.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                            <span class="text-xs">🃏</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-100 line-clamp-1">{{ rc.name }}</h4>
+                        <p class="text-[11px] text-slate-400 font-mono">{{ rc.card_type }} • {{ rc.card_sets|length }} sets</p>
+                    </div>
+                </div>
+
+                <div id="import-btn-{{ rc.ygoprodeck_id }}">
+                    <form 
+                        hx-post="{% url 'catalog_import_card' rc.ygoprodeck_id %}" 
+                        hx-target="#import-btn-{{ rc.ygoprodeck_id }}"
+                        hx-swap="outerHTML"
+                        method="post"
+                    >
+                        {% csrf_token %}
+                        <button type="submit" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                            <span>📥</span> Importar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% elif query and query|length >= 3 %}
+    <div class="p-4 text-center text-xs text-slate-500">
+        No se encontraron coincidencias en YGOPRODeck para "{{ query }}".
+    </div>
+{% endif %}

@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Vitrinas y Slots - Subarashii Smart Showcase{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+            <h1 class="text-3xl font-black text-slate-100 tracking-tight">Vitrinas Físicas y Códigos QR</h1>
+            <p class="text-sm text-slate-400 mt-1">Administra los espacios físicos de exhibición, asignaciones de cartas y códigos QR permanentes.</p>
+        </div>
+        <div>
+            <a href="{% url 'showcase_create' %}" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2">
+                <span>➕</span> Nueva Vitrina
+            </a>
+        </div>
+    </div>
+
+    <!-- Lista de Vitrinas -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for s in showcases %}
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between hover:border-slate-700 transition-all">
+                <div>
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <span class="font-mono text-xs font-black text-amber-400 uppercase tracking-wider">{{ s.showcase.code }}</span>
+                            <h2 class="text-xl font-bold text-slate-100 mt-0.5">{{ s.showcase.name }}</h2>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold {% if s.showcase.is_active %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% else %}bg-slate-800 text-slate-400{% endif %}">
+                            {% if s.showcase.is_active %}Activa{% else %}Inactiva{% endif %}
+                        </span>
+                    </div>
+
+                    <p class="text-xs text-slate-400 mb-4 line-clamp-2">
+                        {{ s.showcase.description|default:"Sin descripción registrada." }}
+                    </p>
+
+                    <!-- Estadísticas de Ocupación -->
+                    <div class="space-y-2 mb-4 bg-slate-950 p-4 rounded-xl border border-slate-800/80">
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-slate-400">Capacidad Total:</span>
+                            <span class="text-slate-200 font-bold">{{ s.total_slots }} espacios ({{ s.showcase.total_rows }}x{{ s.showcase.total_columns }})</span>
+                        </div>
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-emerald-400">Cartas Asignadas:</span>
+                            <span class="text-emerald-400 font-bold">{{ s.occupied_slots }}</span>
+                        </div>
+                        <div class="flex justify-between text-xs font-medium">
+                            <span class="text-slate-400">Espacios Libres:</span>
+                            <span class="text-slate-300 font-bold">{{ s.free_slots }}</span>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="w-full bg-slate-800 rounded-full h-2 mt-2 overflow-hidden">
+                            <div class="bg-gradient-to-r from-amber-500 to-amber-400 h-2 rounded-full" style="width: {{ s.occupancy_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="space-y-2 pt-2 border-t border-slate-800/80">
+                    <a href="{% url 'showcase_grid' s.showcase.id %}" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <span>🎯</span> Abrir Cuadrícula Visual
+                    </a>
+                    <a href="{% url 'download_showcase_sheet' s.showcase.id %}" class="w-full py-2 px-4 bg-slate-950 hover:bg-slate-900 text-amber-400 border border-amber-500/30 font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <span>📄</span> Descargar Lámina A4 con QRs
+                    </a>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-12 text-center text-slate-500">
+                <span class="text-4xl block mb-2">🪟</span>
+                <p class="text-base font-bold text-slate-300">No hay vitrinas registradas todavía.</p>
+                <p class="text-xs text-slate-500 mt-1">Crea tu primera vitrina para comenzar a generar los códigos QR permanentes.</p>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Motor de Precios y Cotizaciones - Subarashii{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+            <h1 class="text-3xl font-black text-slate-100 tracking-tight">Motor de Precios</h1>
+            <p class="text-sm text-slate-400 mt-1">Configuración del tipo de cambio, márgenes de ganancia, descuentos por efectivo y recargos de tarjeta.</p>
+        </div>
+    </div>
+
+    <!-- Panel de Reglas y Configuración -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Formulario de Configuración -->
+        <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+            <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                <span>⚙️</span> Reglas de Conversión
+            </h2>
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <input type="hidden" name="update_config" value="1">
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Dólar Observado (USD/CLP)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-xs text-slate-500">$</span>
+                        <input type="number" step="0.5" name="usd_to_clp_rate" value="{{ config.usd_to_clp_rate }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl pl-7 pr-4 py-2 text-sm text-slate-100 font-mono font-bold focus:border-amber-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Margen Comercial (%)</label>
+                    <div class="relative">
+                        <input type="number" step="0.1" name="commercial_margin_percent" value="{{ config.commercial_margin_percent }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 font-mono font-bold focus:border-amber-500 focus:outline-none">
+                        <span class="absolute right-3 top-2.5 text-xs text-slate-500">%</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Desc. Efectivo</label>
+                        <div class="relative">
+                            <input type="number" step="0.1" name="cash_discount_percent" value="{{ config.cash_discount_percent }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-emerald-400 font-mono font-bold focus:border-amber-500 focus:outline-none">
+                            <span class="absolute right-2.5 top-2 text-xs text-slate-500">%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Costo Tarjeta</label>
+                        <div class="relative">
+                            <input type="number" step="0.1" name="card_processing_fee_percent" value="{{ config.card_processing_fee_percent }}" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-cyan-400 font-mono font-bold focus:border-amber-500 focus:outline-none">
+                            <span class="absolute right-2.5 top-2 text-xs text-slate-500">%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Unidad de Redondeo (CLP)</label>
+                    <select name="rounding_unit" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus:outline-none font-mono">
+                        <option value="100" {% if config.rounding_unit == 100 %}selected{% endif %}>Redondear a centenas ($100)</option>
+                        <option value="500" {% if config.rounding_unit == 500 %}selected{% endif %}>Redondear a $500</option>
+                        <option value="1000" {% if config.rounding_unit == 1000 %}selected{% endif %}>Redondear a miles ($1.000)</option>
+                        <option value="1" {% if config.rounding_unit == 1 %}selected{% endif %}>Sin redondeo (pesos exactos)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all">
+                    Guardar Parámetros
+                </button>
+            </form>
+
+            <form method="post" class="pt-4 border-t border-slate-800">
+                {% csrf_token %}
+                <input type="hidden" name="recalculate_quotes" value="1">
+                <button type="submit" onclick="return confirm('¿Recalcular todas las cotizaciones vigentes con la tasa actual?');" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold rounded-xl transition-colors">
+                    🔄 Recalcular Todas las Cotizaciones
+                </button>
+            </form>
+        </div>
+
+        <!-- Tabla de Cotizaciones Vigentes -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-800">
+                    <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                        <span>🏷️</span> Cotizaciones Vigentes en Catálogo ({{ total_quotes_count }})
+                    </h2>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400">
+                                <th class="py-2.5">Carta / Expansión</th>
+                                <th class="py-2.5">Ref. USD</th>
+                                <th class="py-2.5">Precio Efectivo</th>
+                                <th class="py-2.5">Precio Tarjeta</th>
+                                <th class="py-2.5">Fuente</th>
+                                <th class="py-2.5 text-right">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/60">
+                            {% for q in quotes %}
+                                <tr class="hover:bg-slate-800/30">
+                                    <td class="py-2.5">
+                                        <span class="font-bold text-slate-100">{{ q.card_print.card.name }}</span>
+                                        <span class="block text-[11px] font-mono text-slate-400">{{ q.card_print.print_code }} ({{ q.card_print.rarity }})</span>
+                                    </td>
+                                    <td class="py-2.5 font-mono text-slate-300">
+                                        {% if q.reference_price_usd %}${{ q.reference_price_usd }} USD{% else %}-{% endif %}
+                                    </td>
+                                    <td class="py-2.5 font-mono font-bold text-emerald-400">
+                                        ${{ q.calculated_cash_price|floatformat:0 }}
+                                    </td>
+                                    <td class="py-2.5 font-mono font-bold text-cyan-400">
+                                        ${{ q.calculated_card_price|floatformat:0 }}
+                                    </td>
+                                    <td class="py-2.5">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300">
+                                            {{ q.get_source_display }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 text-right text-slate-500 font-mono">
+                                        {{ q.created_at|date:"d-m-Y" }}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6" class="py-8 text-center text-slate-500">
+                                        No hay cotizaciones registradas aún. Ingresa a una carta en el catálogo para cotizarla.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

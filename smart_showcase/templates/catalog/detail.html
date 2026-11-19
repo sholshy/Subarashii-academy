@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ card.name }} - Detalle de Catálogo{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'catalog_list' %}" class="text-sm text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5">
+            &larr; Volver al Catálogo
+        </a>
+        <a href="{% url 'catalog_list' %}" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold rounded-lg text-slate-300">
+            Buscar otra carta
+        </a>
+    </div>
+
+    <!-- Card Base Info -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-6">
+        <!-- Thumbnail -->
+        <div class="w-48 h-72 bg-slate-950 rounded-xl overflow-hidden border border-slate-700 flex-shrink-0 flex items-center justify-center shadow-lg">
+            {% with card.prints.all|first as first_print %}
+                {% if first_print and first_print.image_url %}
+                    <img src="{{ first_print.image_url }}" alt="{{ card.name }}" class="w-full h-full object-contain">
+                {% else %}
+                    <span class="text-5xl">🃏</span>
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Info Principal -->
+        <div class="flex-1 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-3xl font-black text-slate-100">{{ card.name }}</h1>
+                    {% if card.ygoprodeck_id %}
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-mono bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            YGOPRODeck #{{ card.ygoprodeck_id }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="flex flex-wrap gap-2 my-3">
+                    <span class="px-2.5 py-1 bg-slate-800 text-xs font-bold text-slate-300 rounded-md">
+                        {{ card.card_type }}
+                    </span>
+                    {% if card.race %}
+                        <span class="px-2.5 py-1 bg-slate-800 text-xs font-semibold text-slate-400 rounded-md">
+                            {{ card.race }}
+                        </span>
+                    {% endif %}
+                    {% if card.attribute %}
+                        <span class="px-2.5 py-1 bg-amber-500/20 text-xs font-bold text-amber-300 rounded-md">
+                            {{ card.attribute }}
+                        </span>
+                    {% endif %}
+                    {% if card.level %}
+                        <span class="px-2.5 py-1 bg-yellow-500/20 text-xs font-bold text-yellow-300 rounded-md">
+                            ⭐ Nivel {{ card.level }}
+                        </span>
+                    {% endif %}
+                    {% if card.atk is not None %}
+                        <span class="px-2.5 py-1 bg-rose-500/20 text-xs font-bold text-rose-300 rounded-md font-mono">
+                            ATK {{ card.atk }} / DEF {{ card.def_points|default:"0" }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800/80 text-sm text-slate-300 leading-relaxed font-sans mt-3">
+                    {{ card.description|linebreaksbr|default:"Sin descripción registrada." }}
+                </div>
+            </div>
+
+            <div class="text-xs text-slate-500 mt-4">
+                Registrado en catálogo: {{ card.created_at|date:"d-m-Y H:i" }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Impresiones Disponibles -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-xl font-bold text-slate-100 mb-4 flex items-center justify-between">
+            <span>Impresiones y Expansiones Registradas ({{ card.prints.count }})</span>
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for print in card.prints.all %}
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between hover:border-slate-700 transition-all">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-mono font-black text-amber-400 text-sm">{{ print.print_code }}</span>
+                            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 font-semibold text-slate-300">
+                                {{ print.rarity }}
+                            </span>
+                        </div>
+                        <h4 class="text-xs font-medium text-slate-200 line-clamp-1 mb-2">{{ print.set_name }}</h4>
+                        <div class="flex gap-2 text-[11px] text-slate-400 font-mono">
+                            <span>Edición: {{ print.get_edition_display }}</span>
+                            <span>•</span>
+                            <span>Idioma: {{ print.get_language_display }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-900 flex justify-between items-center gap-2">
+                        <a href="{% url 'pricing_quote_create' print.id %}" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-lg transition-colors">
+                            🏷️ Cotizar
+                        </a>
+                        <a href="{% url 'inventory_create' %}?print_id={{ print.id }}" class="px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-bold rounded-lg transition-colors flex items-center gap-1">
+                            <span>+</span> Ingresar Físico
+                        </a>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-sm text-slate-500 col-span-3">No hay impresiones registradas para esta carta.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

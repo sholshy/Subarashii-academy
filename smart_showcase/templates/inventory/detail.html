@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ item.sku }} - Historial y Trazabilidad{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{% url 'inventory_list' %}" class="text-sm text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1.5">
+            &larr; Volver al Inventario
+        </a>
+        <span class="text-xs font-mono text-slate-500">ID Base de Datos: #{{ item.id }}</span>
+    </div>
+
+    <!-- Ficha del Ejemplar Físico -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-6">
+        <div class="w-48 h-68 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex-shrink-0 flex items-center justify-center shadow-inner">
+            {% if item.print.image_url %}
+                <img src="{{ item.print.image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-contain">
+            {% else %}
+                <span class="text-5xl">🃏</span>
+            {% endif %}
+        </div>
+
+        <div class="flex-1 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <span class="font-mono text-sm font-black text-amber-400">{{ item.sku }}</span>
+                        <h1 class="text-2xl font-black text-slate-100 mt-0.5">{{ item.print.card.name }}</h1>
+                        <p class="text-xs font-mono text-slate-400 mt-1">
+                            {{ item.print.print_code }} • {{ item.print.set_name }} ({{ item.print.rarity }})
+                        </p>
+                    </div>
+
+                    <!-- Estado actual -->
+                    <div>
+                        {% if item.status == 'IN_STOCK' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                En Bodega
+                            </span>
+                        {% elif item.status == 'IN_SHOWCASE' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                En Vitrina
+                            </span>
+                        {% elif item.status == 'RESERVED' %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                Reservada
+                            </span>
+                        {% else %}
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400">
+                                {{ item.get_status_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 bg-slate-950 p-4 rounded-xl border border-slate-800/80">
+                    <div>
+                        <span class="text-[11px] uppercase font-bold text-slate-400">Condición</span>
+                        <p class="text-sm font-bold text-slate-200 mt-0.5">{{ item.get_condition_display }}</p>
+                    </div>
+                    <div>
+                        <span class="text-[11px] uppercase font-bold text-slate-400">Costo Adquisición</span>
+                        <p class="text-sm font-mono font-bold text-emerald-400 mt-0.5">${{ item.acquisition_cost|floatformat:0 }}</p>
+                    </div>
+                    <div>
+                        <span class="text-[11px] uppercase font-bold text-slate-400">Ubicación Actual</span>
+                        <p class="text-sm font-semibold text-slate-200 mt-0.5">{{ item.location|default:"Sin asignar" }}</p>
+                    </div>
+                    <div>
+                        <span class="text-[11px] uppercase font-bold text-slate-400">Fecha Ingreso</span>
+                        <p class="text-sm text-slate-300 mt-0.5">{{ item.acquisition_date|date:"d-m-Y" }}</p>
+                    </div>
+                </div>
+
+                {% if item.notes %}
+                    <p class="text-xs text-slate-400 mt-3 italic bg-slate-950/40 p-2.5 rounded-lg border border-slate-800">
+                        Notas: {{ item.notes }}
+                    </p>
+                {% endif %}
+            </div>
+
+            <!-- Formulario Rápido de Cambio de Ubicación / Estado -->
+            <form method="post" action="{% url 'inventory_update_status' item.id %}" class="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap gap-3 items-end">
+                {% csrf_token %}
+                <div class="w-44">
+                    <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Cambiar Estado</label>
+                    <select name="new_status" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none">
+                        {% for code, label in statuses %}
+                            <option value="{{ code }}" {% if item.status == code %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[180px]">
+                    <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Nueva Ubicación</label>
+                    <input type="text" name="new_location" value="{{ item.location }}" placeholder="Ej: Vitrina 2 - Slot B04" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none">
+                </div>
+                <div class="flex-1 min-w-[180px]">
+                    <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Motivo</label>
+                    <input type="text" name="reason" placeholder="Ej: Traslado a caja de exhibición" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:border-amber-500 focus:outline-none">
+                </div>
+                <button type="submit" class="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition-colors">
+                    Actualizar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Historial de Movimientos Auditados -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h2 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+            <span>📜</span> Trazabilidad de Movimientos ({{ movements.count }})
+        </h2>
+
+        <div class="space-y-3">
+            {% for m in movements %}
+                <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-3">
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <div>
+                            <span class="font-semibold text-slate-200">
+                                {% if m.from_status %}{{ m.from_status }} &rarr; {% endif %}
+                                <span class="text-amber-400 font-bold">{{ m.to_status }}</span>
+                            </span>
+                            <span class="text-slate-400 block mt-0.5">
+                                {% if m.from_location %}{{ m.from_location }} &rarr; {% endif %}{{ m.to_location }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 text-slate-400">
+                        {% if m.reason %}
+                            <span class="italic text-slate-300">"{{ m.reason }}"</span>
+                        {% endif %}
+                        <span class="font-mono text-slate-500">
+                            Por: {{ m.user.username|default:"Sistema" }} • {{ m.created_at|date:"d-m-Y H:i:s" }}
+                        </span>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-sm text-slate-500">No hay movimientos registrados.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

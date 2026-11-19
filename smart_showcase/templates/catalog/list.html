@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Catálogo de Cartas Yu-Gi-Oh! - Subarashii{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header y Estadísticas -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+            <h1 class="text-3xl font-black text-slate-100 tracking-tight">Catálogo Yu-Gi-Oh!</h1>
+            <p class="text-sm text-slate-400 mt-1">Explora la base de datos local o busca e importa directamente desde YGOPRODeck.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-center">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Cartas Únicas</span>
+                <p class="text-xl font-bold text-amber-400">{{ total_cards }}</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 px-4 py-2 rounded-xl text-center">
+                <span class="text-xs text-slate-400 uppercase font-semibold">Impresiones Registradas</span>
+                <p class="text-xl font-bold text-emerald-400">{{ total_prints }}</p>
+            </div>
+            <a href="{% url 'catalog_card_create' %}" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-lg shadow-amber-500/20">
+                + Crear Carta Manual
+            </a>
+        </div>
+    </div>
+
+    <!-- Buscador Integrado (Local y Remoto en tiempo real) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Búsqueda Local -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+            <h2 class="text-base font-bold text-slate-200 mb-3 flex items-center gap-2">
+                <span>🔍</span> Búsqueda en Catálogo Local
+            </h2>
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    name="q" 
+                    placeholder="Buscar por nombre local (ej: Dragón Blanco)..." 
+                    value="{{ query }}"
+                    hx-get="{% url 'catalog_list' %}"
+                    hx-trigger="keyup changed delay:300ms, search"
+                    hx-target="#local-results"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+            </div>
+        </div>
+
+        <!-- Búsqueda en YGOPRODeck -->
+        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-lg">
+            <h2 class="text-base font-bold text-slate-200 mb-3 flex items-center justify-between">
+                <span class="flex items-center gap-2"><span>🌐</span> Buscar e Importar desde YGOPRODeck</span>
+                <span id="remote-spinner" class="htmx-indicator text-xs text-amber-400 font-normal">Consultando API...</span>
+            </h2>
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    name="remote_q" 
+                    placeholder="Escribe al menos 3 letras (ej: Dark Magician)..." 
+                    hx-get="{% url 'catalog_remote_search' %}"
+                    hx-trigger="keyup changed delay:400ms"
+                    hx-target="#remote-results"
+                    hx-indicator="#remote-spinner"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+            </div>
+            <!-- Contenedor de resultados remotos de YGOPRODeck -->
+            <div id="remote-results" class="mt-4 max-h-72 overflow-y-auto space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- Resultados Locales -->
+    <div id="local-results">
+        {% include 'catalog/partials/card_table.html' %}
+    </div>
+</div>
+{% endblock %}

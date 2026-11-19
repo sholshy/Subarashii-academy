@@ -24,6 +24,10 @@ venv.bak/
 *.swo
 
 # Database and Data
+*.sqlite3
+*.sqlite3-journal
+smart_showcase/staticfiles/
+smart_showcase/media/
 data/ygo_data.db
 data/ygo_data.db-*
 data/tournament_autosave.json

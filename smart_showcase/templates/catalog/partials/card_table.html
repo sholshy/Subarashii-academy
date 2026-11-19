@@ -1,0 +1,60 @@
+<div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+    <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/40">
+        <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider">
+            Cartas en Base de Datos ({% if cards %}{{ cards|length }}{% else %}0{% endif %})
+        </h3>
+        {% if query %}
+            <span class="text-xs text-amber-400">Filtrado por: "{{ query }}"</span>
+        {% endif %}
+    </div>
+
+    {% if cards %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+            {% for card in cards %}
+                <div class="bg-slate-950/60 border border-slate-800/80 hover:border-amber-500/50 rounded-xl p-4 flex gap-4 transition-all">
+                    <!-- Thumbnail primera impresión con imagen -->
+                    <div class="w-16 h-24 bg-slate-900 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden border border-slate-800">
+                        {% with card.prints.all|first as first_print %}
+                            {% if first_print and first_print.image_url %}
+                                <img src="{{ first_print.image_url }}" alt="{{ card.name }}" class="w-full h-full object-cover">
+                            {% else %}
+                                <span class="text-2xl">🃏</span>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-slate-100 text-sm hover:text-amber-400 transition-colors">
+                                <a href="{% url 'catalog_card_detail' card.id %}">{{ card.name }}</a>
+                            </h4>
+                            <p class="text-xs text-slate-400 font-mono mt-0.5">
+                                {{ card.card_type|default:"Carta" }} • {{ card.race|default:"" }}
+                            </p>
+                            <div class="flex items-center gap-2 mt-2">
+                                <span class="px-2 py-0.5 bg-slate-800 text-[11px] font-semibold text-amber-400 rounded">
+                                    {{ card.prints.count }} impresión{{ card.prints.count|pluralize:"es" }}
+                                </span>
+                                {% if card.ygoprodeck_id %}
+                                    <span class="text-[10px] text-slate-500">ID: {{ card.ygoprodeck_id }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mt-3 flex gap-2">
+                            <a href="{% url 'catalog_card_detail' card.id %}" class="text-xs font-semibold px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors">
+                                Ver Impresiones
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="p-12 text-center text-slate-500">
+            <span class="text-4xl block mb-2">🔍</span>
+            <p class="text-base font-semibold text-slate-300">No se encontraron cartas en el catálogo local.</p>
+            <p class="text-xs text-slate-500 mt-1">Utiliza el buscador de la derecha para importar desde YGOPRODeck o crea una carta manual.</p>
+        </div>
+    {% endif %}
+</div>

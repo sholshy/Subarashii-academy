@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventario Físico - Subarashii Smart Showcase{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header y KPIs de inventario -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+            <h1 class="text-3xl font-black text-slate-100 tracking-tight">Inventario Físico</h1>
+            <p class="text-sm text-slate-400 mt-1">Control individualizado de cartas físicas, costos de adquisición y ubicación en tienda.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{% url 'inventory_create' %}" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                <span>➕</span> Ingresar Cartas Físicas
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Métricas -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Total Ejemplares</span>
+            <p class="text-2xl font-black text-slate-100 mt-1">{{ metrics.total_count }}</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-semibold text-emerald-400 uppercase">En Bodega</span>
+            <p class="text-2xl font-black text-emerald-400 mt-1">{{ metrics.in_stock_count }}</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-semibold text-amber-400 uppercase">En Vitrina</span>
+            <p class="text-2xl font-black text-amber-400 mt-1">{{ metrics.in_showcase_count }}</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+            <span class="text-xs font-semibold text-blue-400 uppercase">Valorización (Costo)</span>
+            <p class="text-2xl font-black text-blue-400 mt-1">${{ metrics.total_valuation|floatformat:0 }}</p>
+        </div>
+    </div>
+
+    <!-- Filtros de Inventario -->
+    <form method="get" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap gap-4 items-center">
+        <div class="flex-1 min-w-[200px]">
+            <input 
+                type="text" 
+                name="q" 
+                value="{{ q }}" 
+                placeholder="Buscar por SKU, nombre de carta o ubicación..." 
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500 focus:outline-none"
+            >
+        </div>
+        <div class="w-44">
+            <select name="status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-amber-500 focus:outline-none">
+                <option value="">Todos los Estados</option>
+                {% for code, label in statuses %}
+                    <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="w-44">
+            <select name="condition" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:border-amber-500 focus:outline-none">
+                <option value="">Todas las Condiciones</option>
+                {% for code, label in conditions %}
+                    <option value="{{ code }}" {% if condition_filter == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold rounded-xl transition-colors">
+            Filtrar
+        </button>
+        {% if q or status_filter or condition_filter %}
+            <a href="{% url 'inventory_list' %}" class="text-xs text-rose-400 hover:underline">Limpiar Filtros</a>
+        {% endif %}
+    </form>
+
+    <!-- Tabla de Ítems -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-800 bg-slate-950/50 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th class="p-4">SKU / Carta</th>
+                    <th class="p-4">Expansión</th>
+                    <th class="p-4">Condición</th>
+                    <th class="p-4">Costo Adq.</th>
+                    <th class="p-4">Estado</th>
+                    <th class="p-4">Ubicación</th>
+                    <th class="p-4 text-right">Acción</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-sm">
+                {% for item in items %}
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                        <td class="p-4 flex items-center gap-3">
+                            <div class="w-10 h-14 bg-slate-950 rounded overflow-hidden flex-shrink-0 border border-slate-800 flex items-center justify-center">
+                                {% if item.print.image_url %}
+                                    <img src="{{ item.print.image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-cover">
+                                {% else %}
+                                    <span class="text-xs">🃏</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <span class="font-mono text-xs font-bold text-amber-400 block">{{ item.sku }}</span>
+                                <a href="{% url 'inventory_detail' item.id %}" class="font-semibold text-slate-100 hover:text-amber-400 transition-colors">
+                                    {{ item.print.card.name }}
+                                </a>
+                            </div>
+                        </td>
+                        <td class="p-4">
+                            <span class="font-mono font-bold text-slate-200 text-xs block">{{ item.print.print_code }}</span>
+                            <span class="text-[11px] text-slate-400">{{ item.print.rarity }}</span>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-800 text-slate-300">
+                                {{ item.get_condition_display }}
+                            </span>
+                        </td>
+                        <td class="p-4 font-mono font-semibold text-slate-200">
+                            ${{ item.acquisition_cost|floatformat:0 }}
+                        </td>
+                        <td class="p-4">
+                            {% if item.status == 'IN_STOCK' %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    En Bodega
+                                </span>
+                            {% elif item.status == 'IN_SHOWCASE' %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                    En Vitrina
+                                </span>
+                            {% elif item.status == 'RESERVED' %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    Reservada
+                                </span>
+                            {% else %}
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-800 text-slate-400">
+                                    {{ item.get_status_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 text-xs text-slate-300">
+                            {{ item.location|default:"Sin asignar" }}
+                        </td>
+                        <td class="p-4 text-right">
+                            <a href="{% url 'inventory_detail' item.id %}" class="text-xs font-semibold px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors">
+                                Trazabilidad
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-500">
+                            No se encontraron ejemplares físicos registrados.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

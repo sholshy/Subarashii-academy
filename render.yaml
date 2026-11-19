@@ -1,4 +1,27 @@
 services:
+  # Servicio 1: Subarashii Smart Showcase (Django 5.2 LTS)
+  - type: web
+    name: subarashii-smart-showcase
+    runtime: python
+    plan: free
+    region: ohio
+    buildCommand: pip install -r smart_showcase/requirements.txt && python smart_showcase/manage.py collectstatic --noinput && python smart_showcase/manage.py migrate
+    startCommand: gunicorn config.wsgi:application --chdir smart_showcase --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com,localhost,127.0.0.1,subarashii.cl,*.subarashii.cl"
+      - key: SHOWCASE_BASE_URL
+        value: "https://subarashii-smart-showcase.onrender.com/v/"
+      - key: ACADEMY_BASE_URL
+        value: "https://subarashii-academy.onrender.com/"
+
+  # Servicio 2: Subarashii Duel Academy (Flask)
   - type: web
     name: subarashii-academy
     runtime: python

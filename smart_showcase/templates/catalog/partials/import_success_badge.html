@@ -1,0 +1,6 @@
+<div class="px-2.5 py-1.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold rounded-lg flex items-center gap-1.5">
+    <span>✓</span>
+    <a href="{% url 'catalog_card_detail' card.id %}" class="underline hover:text-emerald-300">
+        {{ prints_count }} set{{ prints_count|pluralize:"s" }} importados
+    </a>
+</div>

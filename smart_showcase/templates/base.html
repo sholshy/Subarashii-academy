@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Subarashii Smart Showcase{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f1f5f9;
+        }
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 200ms ease-in;
+        }
+        .htmx-request .htmx-indicator {
+            opacity: 1;
+        }
+        .htmx-request.htmx-indicator {
+            opacity: 1;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+    <!-- Navbar Unificado Subarashii -->
+    <nav class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-xl sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-6">
+                    <a href="/catalog/" class="flex items-center space-x-2">
+                        <span class="text-2xl font-black bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 bg-clip-text text-transparent tracking-wider">
+                            SUBARASHII
+                        </span>
+                        <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            Showcase
+                        </span>
+                    </a>
+                    <div class="hidden md:flex items-center space-x-1">
+                        <a href="/catalog/" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 transition-all">
+                            📚 Catálogo
+                        </a>
+                        <a href="/inventory/" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 transition-all">
+                            📦 Inventario
+                        </a>
+                        <a href="/showcases/" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 transition-all">
+                            🪟 Vitrinas y QR
+                        </a>
+                        <a href="/pricing/" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 transition-all">
+                            🏷️ Motor Precios
+                        </a>
+                        <a href="/catalog/create/" class="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-amber-400 hover:bg-slate-800/60 transition-all">
+                            ➕ Nueva Carta
+                        </a>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Integración con la Academia -->
+                    <a href="/academy/" class="text-sm font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-all shadow-sm">
+                        <span>⚔️</span>
+                        <span>Academia de Duelo</span>
+                    </a>
+                    <a href="/admin/" class="text-sm font-medium text-slate-400 hover:text-slate-200 transition-colors">
+                        Panel Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages Banner -->
+    {% if messages %}
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full">
+            {% for message in messages %}
+                <div class="p-4 mb-3 rounded-xl border flex items-center justify-between {% if message.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-300{% elif message.tags == 'success' %}bg-emerald-500/10 border-emerald-500/30 text-emerald-300{% else %}bg-amber-500/10 border-amber-500/30 text-amber-300{% endif %}">
+                    <span>{{ message }}</span>
+                    <button onclick="this.parentElement.remove()" class="text-lg opacity-70 hover:opacity-100">&times;</button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-slate-950 border-t border-slate-900 text-center py-6 text-sm text-slate-500">
+        <p>&copy; 2026 Subarashii Store & Duel Academy. Sistema de Vitrinas Inteligentes con QR.</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

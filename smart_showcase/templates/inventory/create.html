@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}Ingreso de Carta Física a Inventario - Subarashii{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6 flex items-center justify-between">
+        <h1 class="text-2xl font-black text-slate-100">Ingresar Carta Física al Inventario</h1>
+        <a href="{% url 'inventory_list' %}" class="text-sm text-slate-400 hover:text-slate-200">&larr; Volver</a>
+    </div>
+
+    <form method="post" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        {% csrf_token %}
+
+        <div>
+            <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Seleccionar Impresión de Catálogo *</label>
+            <select name="print_id" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                <option value="">-- Elige una carta e impresión --</option>
+                {% for p in prints %}
+                    <option value="{{ p.id }}" {% if selected_print and selected_print.id == p.id %}selected{% endif %}>
+                        {{ p.card.name }} [{{ p.print_code }}] ({{ p.rarity }} - {{ p.get_edition_display }} - {{ p.language }})
+                    </option>
+                {% endfor %}
+            </select>
+            <p class="text-xs text-slate-500 mt-1">¿No encuentras la carta? <a href="{% url 'catalog_list' %}" class="text-amber-400 underline">Búscala en YGOPRODeck</a> o créala manualmente primero.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Condición Física *</label>
+                <select name="condition" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                    {% for code, label in conditions %}
+                        <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Costo de Adquisición (CLP) *</label>
+                <input type="number" step="100" name="acquisition_cost" required placeholder="Ej: 15000" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Cantidad de Ejemplares Idénticos</label>
+                <input type="number" min="1" max="50" name="quantity" value="1" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                <p class="text-[11px] text-slate-500 mt-1">Cada uno recibirá su propio SKU y trazabilidad individual.</p>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Ubicación Física Inicial</label>
+                <input type="text" name="location" value="Bodega Principal" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Notas / Proveedor</label>
+            <textarea name="notes" rows="2" placeholder="Ej: Comprada en lote a jugador X, centrado impecable..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="pt-4 flex justify-end gap-3 border-t border-slate-800">
+            <a href="{% url 'inventory_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm rounded-xl">Cancelar</a>
+            <button type="submit" class="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-emerald-500/20">
+                Registrar en Inventario
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
