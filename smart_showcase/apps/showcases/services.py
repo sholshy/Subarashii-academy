@@ -14,7 +14,8 @@ class ShowcaseService:
         code: str,
         total_rows: int = 4,
         total_columns: int = 8,
-        description: str = ""
+        description: str = "",
+        contact_whatsapp: str = "+56912345678"
     ) -> Tuple[Showcase, int]:
         """
         Crea una vitrina y genera automáticamente todos sus slots en formato de cuadrícula
@@ -25,7 +26,8 @@ class ShowcaseService:
             code=code.strip().upper(),
             total_rows=total_rows,
             total_columns=total_columns,
-            description=description
+            description=description,
+            contact_whatsapp=contact_whatsapp
         )
 
         slots_to_create = []

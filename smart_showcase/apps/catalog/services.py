@@ -97,7 +97,7 @@ class CatalogService:
             # Por defecto las expansiones estándar se registran como 1st Edition o Unlimited
             edition = CardPrint.Edition.FIRST_EDITION if '1st' in s.get('set_edition', '').lower() else CardPrint.Edition.UNLIMITED
 
-            _, p_created = CardPrint.objects.get_or_create(
+            print_obj, p_created = CardPrint.objects.get_or_create(
                 card=card,
                 print_code=set_code,
                 rarity=rarity,
@@ -111,6 +111,22 @@ class CatalogService:
             )
             if p_created:
                 prints_created += 1
+
+            # Auto-cotización inicial en USD si el set incluye set_price de TCGplayer
+            set_price_str = s.get('set_price')
+            if set_price_str:
+                try:
+                    ref_usd = Decimal(str(set_price_str))
+                    if ref_usd > 0:
+                        from apps.pricing.services import PricingService
+                        from apps.pricing.models import PriceQuote
+                        PricingService.save_quote(
+                            card_print=print_obj,
+                            reference_price_usd=ref_usd,
+                            source=PriceQuote.Source.TCGPLAYER_DIRECT
+                        )
+                except Exception:
+                    pass
 
         return card, prints_created
 

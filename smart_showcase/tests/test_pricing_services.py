@@ -78,3 +78,38 @@ class TestPricingServices:
         active_quote = PriceQuote.objects.get(card_print=sample_print, is_current=True)
         # Base: 10 * 1100 = 11,000. Margen +20% = 13,200. Efectivo -10% = 11,880 -> redondeo 100 = 11,900
         assert active_quote.calculated_cash_price == Decimal("11900")
+
+    def test_exchange_rate_service_fallback(self, monkeypatch, pricing_config):
+        from apps.pricing.exchange_service import ExchangeRateService
+
+        # Mock APIs to return known rate
+        monkeypatch.setattr(ExchangeRateService, 'fetch_from_open_er', lambda: Decimal("985.50"))
+
+        rate = ExchangeRateService.fetch_current_usd_to_clp()
+        assert rate == Decimal("985.50")
+
+        updated_rate, recalc_count = ExchangeRateService.update_config_rate(auto_recalculate=False)
+        assert updated_rate == Decimal("985.50")
+        pricing_config.refresh_from_db()
+        assert pricing_config.usd_to_clp_rate == Decimal("985.50")
+
+    def test_card_price_api_service_extraction(self, sample_print):
+        from apps.pricing.card_price_service import CardPriceAPIService
+
+        mock_data = {
+            'card_sets': [
+                {'set_name': "Magician's Force", 'set_code': 'MFC-000', 'set_price': '45.00'},
+                {'set_name': 'Legendary Collection 3', 'set_code': 'LCYW-EN022', 'set_price': '12.50'},
+            ],
+            'card_prices': [
+                {'tcgplayer_price': '10.00'}
+            ]
+        }
+
+        # Exact match
+        price = CardPriceAPIService.extract_usd_price_for_print(mock_data, 'MFC-000')
+        assert price == Decimal('45.00')
+
+        # Fallback to general tcgplayer price when set not found
+        price_fallback = CardPriceAPIService.extract_usd_price_for_print(mock_data, 'UNKNOWN-001')
+        assert price_fallback == Decimal('10.00')

@@ -37,6 +37,7 @@ def showcase_create_view(request):
         total_rows = int(request.POST.get('total_rows', 4))
         total_columns = int(request.POST.get('total_columns', 8))
         description = request.POST.get('description', '').strip()
+        contact_whatsapp = request.POST.get('contact_whatsapp', '+56912345678').strip()
 
         if not name or not code:
             messages.error(request, "Nombre y código de vitrina son obligatorios.")
@@ -51,7 +52,8 @@ def showcase_create_view(request):
             code=code,
             total_rows=total_rows,
             total_columns=total_columns,
-            description=description
+            description=description,
+            contact_whatsapp=contact_whatsapp
         )
 
         messages.success(request, f"Vitrina '{showcase.name}' creada con éxito con {slots_count} slots y QRs permanentes.")

@@ -9,6 +9,13 @@ class Showcase(models.Model):
     name = models.CharField(max_length=150, verbose_name='Nombre de la Vitrina')
     code = models.CharField(max_length=30, unique=True, db_index=True, verbose_name='Código de Vitrina')
     description = models.TextField(blank=True, verbose_name='Descripción / Ubicación en Tienda')
+    contact_whatsapp = models.CharField(
+        max_length=30,
+        blank=True,
+        default='+56912345678',
+        verbose_name='WhatsApp de Contacto / Ventas',
+        help_text='Número con código de país para recibir consultas de clientes (ej: +56912345678).'
+    )
     total_rows = models.PositiveIntegerField(default=4, verbose_name='Total de Filas')
     total_columns = models.PositiveIntegerField(default=8, verbose_name='Total de Columnas')
     is_active = models.BooleanField(default=True, verbose_name='Activa')

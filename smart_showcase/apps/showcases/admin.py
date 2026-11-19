@@ -22,9 +22,10 @@ class ShowcaseSlotInline(admin.TabularInline):
 
 @admin.register(Showcase)
 class ShowcaseAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name', 'total_rows', 'total_columns', 'capacity', 'is_active')
-    search_fields = ('code', 'name')
+    list_display = ('code', 'name', 'contact_whatsapp', 'total_rows', 'total_columns', 'capacity', 'is_active')
+    search_fields = ('code', 'name', 'contact_whatsapp')
     list_filter = ('is_active',)
+    fields = ('code', 'name', 'contact_whatsapp', 'description', 'total_rows', 'total_columns', 'is_active')
     inlines = [ShowcaseSlotInline]
 
 @admin.register(ShowcaseSlot)

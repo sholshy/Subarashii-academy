@@ -15,13 +15,38 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Formulario de Configuración -->
         <div class="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-            <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
-                <span>⚙️</span> Reglas de Conversión
-            </h2>
+            <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h2 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span>⚙️</span> Reglas de Precios y Tienda
+                </h2>
+            </div>
+
+            <!-- Botón Sincronizar Dólar vía API -->
+            <form method="post" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+                {% csrf_token %}
+                <input type="hidden" name="sync_usd_rate" value="1">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-300">Tipo de Cambio en Vivo</span>
+                    <span class="text-xs font-mono font-bold text-amber-400">${{ config.usd_to_clp_rate }} CLP</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="auto_recalc" name="auto_recalc" value="1" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                    <label for="auto_recalc" class="text-[11px] text-slate-400">Recalcular cotizaciones activas</label>
+                </div>
+                <button type="submit" class="w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-lg transition-all shadow-md flex items-center justify-center gap-1.5">
+                    <span>🌐</span> Actualizar Dólar Hoy vía API
+                </button>
+            </form>
 
             <form method="post" class="space-y-4">
                 {% csrf_token %}
                 <input type="hidden" name="update_config" value="1">
+
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-400 mb-1">WhatsApp Tienda Principal</label>
+                    <input type="text" name="store_whatsapp_number" value="{{ config.store_whatsapp_number }}" placeholder="+56912345678" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 font-mono font-bold focus:border-amber-500 focus:outline-none">
+                    <p class="text-[10px] text-slate-500 mt-1">Número al que llegan consultas y reservas de las vitrinas.</p>
+                </div>
 
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-400 mb-1">Dólar Observado (USD/CLP)</label>

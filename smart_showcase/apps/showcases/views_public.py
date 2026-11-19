@@ -1,3 +1,5 @@
+import re
+from urllib.parse import quote_plus
 from django.shortcuts import render, get_object_or_404, redirect
 from apps.showcases.models import ShowcaseSlot
 from apps.pricing.models import PriceQuote, PricingRuleConfig
@@ -56,6 +58,20 @@ def public_slot_detail_view(request, qr_token):
             cash_price = round(float(provisional_cash) / unit) * unit
             card_price = round(float(provisional_card) / unit) * unit
 
+    # Determinar número de WhatsApp configurado (vitrina específica o configuración de tienda)
+    active_config = PricingRuleConfig.objects.filter(is_active=True).first()
+    raw_whatsapp = slot.showcase.contact_whatsapp or (active_config.store_whatsapp_number if active_config else '') or '+56912345678'
+    whatsapp_phone = re.sub(r'[^\d]', '', raw_whatsapp)
+
+    # Construir enlace directo a WhatsApp con mensaje personalizado
+    if item:
+        price_text = f" - ${cash_price:,.0f} CLP".replace(',', '.') if cash_price else ""
+        msg = f"Hola Subarashii! Quiero consultar/reservar la carta {item.print.card.name} ({item.print.print_code} - {item.get_condition_display()}) exhibida en el espacio {slot.visible_code}{price_text}"
+    else:
+        msg = f"Hola Subarashii! Vi el espacio {slot.visible_code} en la vitrina {slot.showcase.name} y me gustaría consultar disponibilidad de cartas."
+
+    whatsapp_url = f"https://wa.me/{whatsapp_phone}?text={quote_plus(msg)}"
+
     context = {
         'slot': slot,
         'item': item,
@@ -64,5 +80,7 @@ def public_slot_detail_view(request, qr_token):
         'card_price': card_price,
         'ref_usd': ref_usd,
         'quote_updated_at': quote_updated_at,
+        'whatsapp_phone': whatsapp_phone,
+        'whatsapp_url': whatsapp_url,
     }
     return render(request, 'showcases/public_slot_detail.html', context)

@@ -3,7 +3,8 @@ from .models import PricingRuleConfig, PriceQuote
 
 @admin.register(PricingRuleConfig)
 class PricingRuleConfigAdmin(admin.ModelAdmin):
-    list_display = ('name', 'usd_to_clp_rate', 'commercial_margin_percent', 'cash_discount_percent', 'is_active', 'updated_at')
+    list_display = ('name', 'store_whatsapp_number', 'usd_to_clp_rate', 'commercial_margin_percent', 'cash_discount_percent', 'is_active', 'updated_at')
+    fields = ('name', 'is_active', 'store_whatsapp_number', 'usd_to_clp_rate', 'commercial_margin_percent', 'cash_discount_percent', 'card_processing_fee_percent', 'tax_percent', 'rounding_unit')
 
 @admin.register(PriceQuote)
 class PriceQuoteAdmin(admin.ModelAdmin):

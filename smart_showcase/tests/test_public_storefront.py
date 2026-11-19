@@ -106,3 +106,14 @@ class TestPublicStorefront:
         response = client.get('/accounts/login/?next=/showcases/')
         assert response.status_code == 302
         assert '/admin/login/' in response.url
+
+    def test_whatsapp_link_includes_configured_phone(self, client, setup_data):
+        slot = setup_data['slot_occupied']
+        slot.showcase.contact_whatsapp = "+56 9 8765 4321"
+        slot.showcase.save()
+
+        url = reverse('public_slot_detail', kwargs={'qr_token': slot.qr_token})
+        response = client.get(url)
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "https://wa.me/56987654321?text=" in content

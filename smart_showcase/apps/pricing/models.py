@@ -4,6 +4,13 @@ from apps.catalog.models import CardPrint
 class PricingRuleConfig(models.Model):
     name = models.CharField(max_length=100, default='Configuración General de Precios', verbose_name='Nombre')
     is_active = models.BooleanField(default=True, verbose_name='Activa')
+    store_whatsapp_number = models.CharField(
+        max_length=30,
+        blank=True,
+        default='+56912345678',
+        verbose_name='WhatsApp Tienda Principal',
+        help_text='Número de WhatsApp general para consultas y reservas.'
+    )
     usd_to_clp_rate = models.DecimalField(max_digits=10, decimal_places=2, default=950.00, verbose_name='Tipo de Cambio USD/CLP')
     commercial_margin_percent = models.DecimalField(max_digits=5, decimal_places=2, default=25.00, verbose_name='Margen Comercial (%)')
     cash_discount_percent = models.DecimalField(max_digits=5, decimal_places=2, default=5.00, verbose_name='Descuento por Efectivo (%)')
