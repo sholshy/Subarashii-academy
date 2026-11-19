@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     region: ohio
-    buildCommand: pip install -r smart_showcase/requirements.txt && python smart_showcase/manage.py collectstatic --noinput && python smart_showcase/manage.py migrate
+    buildCommand: pip install -r smart_showcase/requirements.txt && python smart_showcase/manage.py collectstatic --noinput && python smart_showcase/manage.py migrate && python smart_showcase/manage.py init_admin
     startCommand: gunicorn config.wsgi:application --chdir smart_showcase --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
     envVars:
       - key: PYTHON_VERSION
@@ -14,6 +14,12 @@ services:
         generateValue: true
       - key: DEBUG
         value: "False"
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        value: subarashii2026
+      - key: ADMIN_EMAIL
+        value: admin@subarashii.cl
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1,subarashii.cl,*.subarashii.cl"
       - key: SHOWCASE_BASE_URL

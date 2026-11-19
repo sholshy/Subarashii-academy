@@ -34,3 +34,11 @@ class TestAccounts:
         )
         assert customer.is_store_admin is False
         assert customer.is_store_seller is False
+
+    def test_init_admin_command(self):
+        from django.core.management import call_command
+        call_command('init_admin')
+        user = CustomUser.objects.get(username='admin')
+        assert user.is_superuser is True
+        assert user.is_staff is True
+        assert user.is_store_admin is True
