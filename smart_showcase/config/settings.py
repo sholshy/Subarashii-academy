@@ -20,13 +20,28 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,testserver,.onrender.com,subarashii.cl,*.subarashii.cl').split(',') if h.strip()]
 
+# Configuración de Proxy Inverso SSL (Render / Cloudflare)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 CSRF_TRUSTED_ORIGINS = [
+    'https://subarashii-academy.onrender.com',
+    'https://subarashii-smart-showcase.onrender.com',
     'https://*.onrender.com',
     'https://subarashii.cl',
     'https://*.subarashii.cl',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
 ]
+
+# Cookies Seguras en Producción (Render)
+if not DEBUG or os.environ.get('RENDER') or os.environ.get('RENDER_EXTERNAL_URL'):
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.CustomUser'
