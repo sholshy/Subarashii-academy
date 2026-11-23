@@ -287,3 +287,29 @@ class TestShowcasesAndSlots:
         assert "98765432" in content_admin
         assert "Copiar Datos" in content_admin
 
+    def test_showcase_delete_view_with_active_and_historical_assignments(self, client, admin_user, setup_data):
+        client.force_login(admin_user)
+        showcase = setup_data['showcase']
+        slot1 = setup_data['slot1']
+        slot2 = setup_data['slot2']
+        item1 = setup_data['item1']
+        item2 = setup_data['item2']
+
+        # Crear asignación activa en slot1
+        SlotAssignment.objects.create(slot=slot1, item=item1, is_active=True)
+        # Crear asignación histórica (inactiva / finalizada) en slot2
+        SlotAssignment.objects.create(slot=slot2, item=item2, is_active=False)
+
+        delete_url = reverse('showcase_delete', kwargs={'showcase_id': showcase.id})
+        response = client.post(delete_url, follow=True)
+        assert response.status_code == 200
+
+        # Verificar que la vitrina fue eliminada sin ProtectedError
+        assert not Showcase.objects.filter(id=showcase.id).exists()
+        assert not ShowcaseSlot.objects.filter(showcase_id=showcase.id).exists()
+
+        # Verificar que la carta activa regresó a bodega
+        item1.refresh_from_db()
+        assert item1.status == InventoryItem.Status.IN_STOCK
+
+

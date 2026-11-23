@@ -95,7 +95,7 @@ class ShowcaseSlot(models.Model):
 class SlotAssignment(models.Model):
     slot = models.ForeignKey(
         ShowcaseSlot,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         related_name='assignments',
         verbose_name='Espacio (Slot)'
     )

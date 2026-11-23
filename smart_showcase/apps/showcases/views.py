@@ -259,11 +259,17 @@ def showcase_delete_view(request, showcase_id):
 
     if request.method == 'POST':
         name = showcase.name
-        # Desasignar cartas de slots ocupados
-        for slot in showcase.slots.filter(assignments__is_active=True):
-            ShowcaseService.unassign_slot(slot, user=user, reason="Vitrina eliminada")
-        showcase.delete()
-        messages.success(request, f"Vitrina '{name}' eliminada correctamente.")
+        with transaction.atomic():
+            # 1. Desasignar cartas físicas activas y devolverlas a bodega
+            for slot in showcase.slots.all():
+                if slot.current_assignment:
+                    ShowcaseService.unassign_slot(slot, user=user, reason="Vitrina eliminada")
+            # 2. Limpiar registros de asignación asociados a los slots de esta vitrina
+            SlotAssignment.objects.filter(slot__showcase=showcase).delete()
+            # 3. Eliminar la vitrina física y sus slots en cascada
+            showcase.delete()
+
+        messages.success(request, f"Vitrina '{name}' eliminada correctamente. Las cartas que contenía fueron devueltas a bodega.")
         return redirect('showcase_list')
 
     return render(request, 'showcases/confirm_delete.html', {'showcase': showcase})
