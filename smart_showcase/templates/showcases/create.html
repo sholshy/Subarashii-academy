@@ -29,16 +29,66 @@
             <p class="text-[11px] text-slate-500 mt-1">Número donde los clientes enviarán mensajes al escanear los QR de esta vitrina.</p>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Número de Filas</label>
-                <input type="number" min="1" max="26" name="total_rows" value="4" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
-                <p class="text-[11px] text-slate-500 mt-1">Letras: Fila A, B, C, D...</p>
+        <!-- Capacidad y Espacios de Vitrina -->
+        <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase text-amber-400">📏 Capacidad y Espacios de Vitrina</span>
+                <span id="capacityBadge" class="text-xs font-bold font-mono text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20">
+                    4 filas x 8 col = 32 espacios
+                </span>
             </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+                Elige la cantidad de espacios que tendrá tu nueva vitrina. Puedes seleccionar un tamaño predeterminado o ajustar manualmente las filas y columnas.
+            </p>
+
+            <!-- Botones de Tamaños Rápidos -->
             <div>
-                <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Columnas por Fila</label>
-                <input type="number" min="1" max="20" name="total_columns" value="8" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
-                <p class="text-[11px] text-slate-500 mt-1">Números: 01, 02, 03...</p>
+                <label class="block text-[11px] font-bold uppercase text-slate-400 mb-2">Tamaños Rápidos Recomendados</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <button type="button" onclick="setPreset(2, 4)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        8 espacios <span class="text-[10px] text-slate-400 block">(2x4)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(3, 4)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        12 espacios <span class="text-[10px] text-slate-400 block">(3x4)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(4, 4)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        16 espacios <span class="text-[10px] text-slate-400 block">(4x4)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(4, 5)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        20 espacios <span class="text-[10px] text-slate-400 block">(4x5)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(4, 6)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        24 espacios <span class="text-[10px] text-slate-400 block">(4x6)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(4, 8)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        32 espacios <span class="text-[10px] text-slate-400 block">(4x8)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(5, 8)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        40 espacios <span class="text-[10px] text-slate-400 block">(5x8)</span>
+                    </button>
+                    <button type="button" onclick="setPreset(6, 8)" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-amber-500/50 rounded-lg text-xs font-mono text-slate-200 transition-all text-center">
+                        48 espacios <span class="text-[10px] text-slate-400 block">(6x8)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Campos Manuales de Espacios, Filas y Columnas -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 border-t border-slate-900">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-amber-400 mb-1">Total de Espacios</label>
+                    <input type="number" id="spacesInput" min="1" max="200" name="total_spaces" value="32" oninput="onTotalSpacesChange()" class="w-full bg-slate-900 border border-amber-500/50 rounded-xl px-4 py-2 text-sm text-amber-300 font-bold focus:border-amber-500 focus:outline-none font-mono">
+                    <p class="text-[10px] text-slate-500 mt-1">Capacidad total</p>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Número de Filas</label>
+                    <input type="number" id="rowsInput" min="1" max="26" name="total_rows" value="4" oninput="updateCapacityFromInputs()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
+                    <p class="text-[10px] text-slate-500 mt-1">Filas (A, B, C...)</p>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Columnas por Fila</label>
+                    <input type="number" id="colsInput" min="1" max="20" name="total_columns" value="8" oninput="updateCapacityFromInputs()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
+                    <p class="text-[10px] text-slate-500 mt-1">Espacios/Fila (01..)</p>
+                </div>
             </div>
         </div>
 
@@ -55,4 +105,50 @@
         </div>
     </form>
 </div>
+
+<script>
+function setPreset(rows, cols) {
+    document.getElementById('rowsInput').value = rows;
+    document.getElementById('colsInput').value = cols;
+    document.getElementById('spacesInput').value = rows * cols;
+    updateBadge(rows, cols, rows * cols);
+}
+
+function updateCapacityFromInputs() {
+    const r = Math.max(1, parseInt(document.getElementById('rowsInput').value) || 1);
+    const c = Math.max(1, parseInt(document.getElementById('colsInput').value) || 1);
+    const total = r * c;
+    document.getElementById('spacesInput').value = total;
+    updateBadge(r, c, total);
+}
+
+function onTotalSpacesChange() {
+    const total = Math.max(1, parseInt(document.getElementById('spacesInput').value) || 1);
+    let r = 4;
+    let c = 8;
+    if (total % 4 === 0 && total >= 4) {
+        r = 4;
+        c = Math.floor(total / 4);
+    } else if (total % 3 === 0 && total >= 3) {
+        r = 3;
+        c = Math.floor(total / 3);
+    } else if (total % 2 === 0 && total >= 2) {
+        r = 2;
+        c = Math.floor(total / 2);
+    } else {
+        r = 1;
+        c = total;
+    }
+    document.getElementById('rowsInput').value = r;
+    document.getElementById('colsInput').value = c;
+    updateBadge(r, c, total);
+}
+
+function updateBadge(r, c, total) {
+    const badge = document.getElementById('capacityBadge');
+    if (badge) {
+        badge.innerText = `${r} filas x ${c} col = ${total} espacios`;
+    }
+}
+</script>
 {% endblock %}

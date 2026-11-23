@@ -7,11 +7,11 @@
     "code": "VIT-01",
     "description": "Vitrina principal de exhibición en tienda física con 32 espacios y códigos QR permanentes.",
     "contact_whatsapp": "+56912345678",
-    "total_rows": 4,
-    "total_columns": 8,
+    "total_rows": 2,
+    "total_columns": 4,
     "is_active": true,
     "created_at": "2026-11-19T20:49:30.824Z",
-    "updated_at": "2026-11-19T20:49:30.824Z"
+    "updated_at": "2026-11-19T21:22:10.307Z"
   }
 },
 {
@@ -64,58 +64,10 @@
 },
 {
   "model": "showcases.showcaseslot",
-  "pk": 5,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 5,
-    "visible_code": "VIT-01-A05",
-    "qr_token": "fd167a9c-744b-4b4c-9e22-45a244eb9019",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 6,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 6,
-    "visible_code": "VIT-01-A06",
-    "qr_token": "bed8c404-938b-436b-b2be-d03ada8a7ae9",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 7,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 7,
-    "visible_code": "VIT-01-A07",
-    "qr_token": "edc9c075-958a-48e7-af7e-d1510f6bd98d",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 8,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 8,
-    "visible_code": "VIT-01-A08",
-    "qr_token": "22c4aab9-e663-4711-aaf2-e030ba9cea05",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
   "pk": 9,
   "fields": {
     "showcase": 1,
-    "slot_number": 9,
+    "slot_number": 5,
     "visible_code": "VIT-01-B01",
     "qr_token": "0b171415-9f69-40fa-8e11-cce1fc4eebed",
     "is_active": true,
@@ -127,7 +79,7 @@
   "pk": 10,
   "fields": {
     "showcase": 1,
-    "slot_number": 10,
+    "slot_number": 6,
     "visible_code": "VIT-01-B02",
     "qr_token": "e56095f4-94c2-4a30-984e-978d010c3218",
     "is_active": true,
@@ -139,7 +91,7 @@
   "pk": 11,
   "fields": {
     "showcase": 1,
-    "slot_number": 11,
+    "slot_number": 7,
     "visible_code": "VIT-01-B03",
     "qr_token": "e3fbd4a3-a2c7-47f9-bc33-ba92ad743fca",
     "is_active": true,
@@ -151,249 +103,9 @@
   "pk": 12,
   "fields": {
     "showcase": 1,
-    "slot_number": 12,
+    "slot_number": 8,
     "visible_code": "VIT-01-B04",
     "qr_token": "febe8bda-8646-4250-8d28-4c715614bc75",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 13,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 13,
-    "visible_code": "VIT-01-B05",
-    "qr_token": "e07d69c3-3c38-4ae5-a0ea-f46427e0f2b2",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 14,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 14,
-    "visible_code": "VIT-01-B06",
-    "qr_token": "5fbfcf68-eaef-4437-bfff-1d34eca876c5",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 15,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 15,
-    "visible_code": "VIT-01-B07",
-    "qr_token": "c75c045d-4698-4f40-b154-7d514877f8a0",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 16,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 16,
-    "visible_code": "VIT-01-B08",
-    "qr_token": "27e09dcb-069c-41c7-8921-8a37fa29ff22",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 17,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 17,
-    "visible_code": "VIT-01-C01",
-    "qr_token": "0bf6e09d-964e-4880-b25e-add76a75ad34",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 18,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 18,
-    "visible_code": "VIT-01-C02",
-    "qr_token": "400004af-c619-46a5-af95-606502ad8711",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 19,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 19,
-    "visible_code": "VIT-01-C03",
-    "qr_token": "1d917322-2722-4d47-be98-28e611894e85",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 20,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 20,
-    "visible_code": "VIT-01-C04",
-    "qr_token": "e24e2756-72ec-4f0e-919f-b47c0616c66c",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 21,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 21,
-    "visible_code": "VIT-01-C05",
-    "qr_token": "3610b046-71a3-4675-b8ae-b91f72d94c12",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 22,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 22,
-    "visible_code": "VIT-01-C06",
-    "qr_token": "80721332-d437-4550-aead-87548caa4a32",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 23,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 23,
-    "visible_code": "VIT-01-C07",
-    "qr_token": "04326943-72f8-4535-8c2c-48b02534836b",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 24,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 24,
-    "visible_code": "VIT-01-C08",
-    "qr_token": "1bc13eae-f559-47aa-b7db-34ed65b15ca6",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 25,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 25,
-    "visible_code": "VIT-01-D01",
-    "qr_token": "04026011-cc8e-4f83-bdfa-d1f383ca5794",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 26,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 26,
-    "visible_code": "VIT-01-D02",
-    "qr_token": "6302bb88-5089-4e9e-9f97-a4925ab1a861",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 27,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 27,
-    "visible_code": "VIT-01-D03",
-    "qr_token": "4fad5ab8-5b9a-4d1d-ba60-da246b731ec0",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 28,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 28,
-    "visible_code": "VIT-01-D04",
-    "qr_token": "a0b7ec95-17e7-4457-af22-a11d70b0a439",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 29,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 29,
-    "visible_code": "VIT-01-D05",
-    "qr_token": "137706d3-675b-41fb-9075-55c8f47a9527",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 30,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 30,
-    "visible_code": "VIT-01-D06",
-    "qr_token": "37217160-e625-44d8-b7c3-536f874d74b7",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 31,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 31,
-    "visible_code": "VIT-01-D07",
-    "qr_token": "18ba08b2-b508-4817-ad83-271806f1da40",
-    "is_active": true,
-    "created_at": "2026-11-19T20:49:30.835Z"
-  }
-},
-{
-  "model": "showcases.showcaseslot",
-  "pk": 32,
-  "fields": {
-    "showcase": 1,
-    "slot_number": 32,
-    "visible_code": "VIT-01-D08",
-    "qr_token": "853adbea-3fdf-4e86-95bb-421378ebfce3",
     "is_active": true,
     "created_at": "2026-11-19T20:49:30.835Z"
   }

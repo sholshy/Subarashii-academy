@@ -485,6 +485,44 @@ def resolve_player(cursor, name_or_alias: str = None, konami_id: str = None):
     except Exception:
         pass
 
+    # 6. Búsqueda expandiendo diminutivos comunes en español (ej. Seba -> Sebastián, Nico -> Nicolás)
+    DIMINUTIVE_MAP = {
+        'seba': 'sebastian',
+        'sebitas': 'sebastian',
+        'nico': 'nicolas',
+        'nacho': 'ignacio',
+        'pancho': 'francisco',
+        'lucho': 'luis',
+        'tomi': 'tomas',
+        'tomy': 'tomas',
+        'mati': 'matias',
+        'ale': 'alejandro',
+        'alex': 'alejandro',
+        'maxi': 'maximiliano',
+        'dani': 'daniel',
+        'manu': 'manuel',
+        'javi': 'javier',
+        'pepe': 'jose',
+        'chelo': 'marcelo',
+        'leo': 'leonardo',
+        'rafa': 'rafael',
+        'gabi': 'gabriel',
+        'cris': 'cristobal',
+        'criss': 'cristobal',
+    }
+    tokens = norm.split()
+    if tokens and tokens[0] in DIMINUTIVE_MAP:
+        expanded_norm = ' '.join([DIMINUTIVE_MAP[tokens[0]]] + tokens[1:])
+        try:
+            cursor.execute("SELECT * FROM players")
+            for p in cursor.fetchall():
+                p_norm = normalize_player_name(p['name'])
+                if p_norm == expanded_norm:
+                    link_player_alias(cursor, p['id'], raw)
+                    return dict(p)
+        except Exception:
+            pass
+
     return None
 
 def link_player_alias(cursor, player_id: int, alias: str, is_nickname: bool = False):

@@ -436,19 +436,27 @@ class TournamentRoomManager:
         cursor = self._get_cursor()
         migrate_rooms_schema(cursor)
 
+        clean_nick = nickname.strip() if nickname else ""
+        kid = konami_id.strip() if konami_id else None
+
         # 1. Verificar si este session_token ya está registrado en la sala
         cursor.execute("""
             SELECT * FROM room_checkins WHERE room_id = ? AND session_token = ?
         """, (room['id'], token))
         existing_token = cursor.fetchone()
         if existing_token:
-            return True, {
-                "message": "Ya estás inscrito en este torneo.",
-                "session_token": token,
-                "player_name": existing_token['player_name'],
-                "dorm": existing_token['dorm'],
-                "room_code": room['room_code']
-            }
+            # Si el token coincide y el nombre es el mismo, es reconexión legítima del mismo usuario
+            if existing_token['player_name'].strip().lower() == clean_name.lower():
+                return True, {
+                    "message": "Ya estás inscrito en este torneo.",
+                    "session_token": token,
+                    "player_name": existing_token['player_name'],
+                    "dorm": existing_token['dorm'],
+                    "room_code": room['room_code']
+                }
+            else:
+                # El token pertenecía a otro duelista en un dispositivo compartido; generamos nuevo token
+                token = str(uuid.uuid4())
 
         # 2. Verificar si el nombre ya fue registrado en esta misma sala
         cursor.execute("""
@@ -456,14 +464,31 @@ class TournamentRoomManager:
         """, (room['id'], clean_name))
         existing_name = cursor.fetchone()
         if existing_name:
-            # SEGURIDAD DEFENSIVA: Jamás exponer o devolver el session_token de un jugador ya registrado.
-            # Solo se permite reconexión si el cliente ya envió el session_token correcto (comprobado en paso 1).
-            return False, f"El jugador '{clean_name}' ya se encuentra inscrito en este torneo desde otro dispositivo. Si eres tú, continúa desde el navegador donde te inscribiste o solicita asistencia al organizador/juez."
+            # Si el jugador ya fue inscrito (por el organizador o desde otro navegador/WhatsApp):
+            # Vinculamos este nuevo dispositivo a su registro existente en lugar de bloquearlo
+            try:
+                cursor.execute("""
+                    UPDATE room_checkins 
+                    SET session_token = ?,
+                        nickname = COALESCE(?, nickname),
+                        konami_id = COALESCE(?, konami_id)
+                    WHERE id = ?
+                """, (token, clean_nick or None, kid or None, existing_name['id']))
+                if hasattr(cursor, 'connection') and cursor.connection:
+                    cursor.connection.commit()
+            except Exception:
+                pass
+
+            return True, {
+                "message": f"¡Bienvenido, {existing_name['player_name']}! Tu dispositivo ha sido conectado a la sala.",
+                "session_token": token,
+                "player_name": existing_name['player_name'],
+                "dorm": existing_name['dorm'],
+                "room_code": room['room_code']
+            }
 
         # 3. Resolución unificada de jugador por Konami ID, nombre real o alias/nickname
         from database import resolve_player, link_player_alias
-        clean_nick = nickname.strip() if nickname else ""
-        kid = konami_id.strip() if konami_id else None
 
         resolved = resolve_player(cursor, name_or_alias=clean_name, konami_id=kid)
         if not resolved and clean_nick:
@@ -714,6 +739,20 @@ class TournamentRoomManager:
                     "report": rep
                 })
 
+        round_history = []
+        if getattr(manager, 'rounds', None):
+            for r_idx, r_matches in enumerate(manager.rounds, 1):
+                m_list = []
+                for t_idx, m in enumerate(r_matches, 1):
+                    m_list.append({
+                        "table": t_idx,
+                        "p1": m.p1.name if m.p1 else "BYE",
+                        "p2": m.p2.name if m.p2 else "BYE",
+                        "score": m.result_text,
+                        "reported": m.reported
+                    })
+                round_history.append({"round": r_idx, "matches": m_list})
+
         live_data = {
             "title": room['title'],
             "format": room['format_name'],
@@ -723,6 +762,8 @@ class TournamentRoomManager:
             "players_count": len(manager.players),
             "matches": current_round_matches,
             "standings": standings,
+            "round_history": round_history,
+            "is_dummy": getattr(manager, 'is_dummy', False) or getattr(manager, 'is_dummy_tournament', False),
             "time_left": time_left,
             "timer_running": bool(timer_running),
             "synced_at": datetime.now().strftime("%H:%M:%S")
@@ -1160,6 +1201,10 @@ class TournamentRoomManager:
             print("[RoomManager] Error actualizando live_data tras drop:", e)
 
         return True, "Te has retirado del torneo exitosamente. No serás emparejado en las rondas siguientes."
+
+    def drop_player(self, room_code, player_name, reason=None, session_token=None, round_num=1):
+        """Alias de conveniencia para drop_player_from_room."""
+        return self.drop_player_from_room(room_code, player_name, session_token=session_token, round_num=round_num)
 
     def get_room_dropped_players(self, room_code):
         """Retorna la lista de jugadores que han dropeado en la sala."""

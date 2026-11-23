@@ -1,103 +1,286 @@
 {% extends 'base.html' %}
 
-{% block title %}Crear Carta e Impresión Manual - Subarashii{% endblock %}
+{% block title %}Agregar Nueva Carta - Subarashii Smart Showcase{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-2xl font-black text-slate-100">Crear Carta e Impresión Manual</h1>
-        <a href="{% url 'catalog_list' %}" class="text-sm text-slate-400 hover:text-slate-200">&larr; Volver</a>
+<div class="max-w-3xl mx-auto space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-black text-slate-100">Agregar Nueva Carta</h1>
+            <p class="text-xs text-slate-400 mt-0.5">Importa desde YGOPRODeck / YGO Topdeck con variantes automáticas o regístrala manualmente con foto real.</p>
+        </div>
+        <a href="{% url 'catalog_list' %}" class="text-sm text-slate-400 hover:text-slate-200 transition-colors">&larr; Volver al Catálogo</a>
     </div>
 
-    <form method="post" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+    <!-- 1. Buscador e Importador de YGOPRODeck / YGO Topdeck -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="text-base">🌐</span>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">Importar desde YGOPRODeck / YGO Topdeck</h2>
+            </div>
+            <span id="searchStatus" class="text-xs text-slate-400 font-mono hidden">Buscando...</span>
+        </div>
+
+        <div class="relative">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Escribe el nombre de la carta en inglés o español (ej: Dark Magician, Ash Blossom, Blue-Eyes)..." 
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors"
+                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); executeSearch(); }"
+                >
+                <button 
+                    type="button" 
+                    onclick="executeSearch()" 
+                    class="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-md flex items-center gap-1.5 flex-shrink-0"
+                >
+                    <span>🔍</span> Buscar
+                </button>
+            </div>
+
+            <!-- Menú Desplegable de Resultados de Búsqueda -->
+            <div id="searchResultsDropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 space-y-1">
+                <!-- Se llena dinámicamente con JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Principal -->
+    <form method="post" enctype="multipart/form-data" id="cardForm" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         {% csrf_token %}
+        <input type="hidden" name="ygoprodeck_id" id="ygoprodeckIdInput" value="">
+        <input type="hidden" name="image_url" id="imageUrlInput" value="">
 
-        <div class="border-b border-slate-800 pb-4">
-            <h2 class="text-base font-bold text-amber-400 mb-4">1. Datos de la Carta Base</h2>
-            <div class="space-y-4">
+        <!-- 2. Información Base de la Carta -->
+        <div class="border-b border-slate-800 pb-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300">1. Datos de la Carta Base</h2>
+                <span id="selectedCardBadge" class="text-xs font-mono font-bold text-amber-400 hidden bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20"></span>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-5">
+                <!-- Preview de Ilustración Oficial -->
+                <div class="w-32 h-44 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center shadow-inner relative group">
+                    <img id="cardArtPreview" src="" alt="Ilustración" class="w-full h-full object-contain hidden">
+                    <div id="artPlaceholder" class="text-center p-2 text-slate-600">
+                        <span class="text-3xl block mb-1">🃏</span>
+                        <span class="text-[10px] uppercase font-bold tracking-wider">Arte Oficial</span>
+                    </div>
+                </div>
+
+                <!-- Campos de la Carta -->
+                <div class="flex-1 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Nombre de la Carta *</label>
+                        <input type="text" name="name" id="cardNameInput" required placeholder="Ej: Dark Magician" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-bold">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Tipo de Carta</label>
+                            <input type="text" name="card_type" id="cardTypeInput" placeholder="Normal Monster, Spell..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Raza / Tipo</label>
+                            <input type="text" name="race" id="cardRaceInput" placeholder="Spellcaster, Dragon..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Atributo</label>
+                            <input type="text" name="attribute" id="cardAttributeInput" placeholder="DARK..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nivel/Rango</label>
+                            <input type="number" name="level" id="cardLevelInput" placeholder="7" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">ATK</label>
+                            <input type="number" name="atk" id="cardAtkInput" placeholder="2500" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">DEF</label>
+                            <input type="number" name="def_points" id="cardDefInput" placeholder="2100" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Efecto / Descripción</label>
+                <textarea name="description" id="cardDescInput" rows="2" placeholder="Texto oficial del efecto..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-amber-500 focus:outline-none"></textarea>
+            </div>
+        </div>
+
+        <!-- 3. Selección de Variante / Expansión y Rareza Automática -->
+        <div class="border-b border-slate-800 pb-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">2. Variante, Edición y Rareza</h2>
+                <span id="variantCountBadge" class="text-xs text-slate-400 font-mono"></span>
+            </div>
+
+            <!-- Selector Inteligente de Variantes del Set -->
+            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                <label class="block text-xs font-bold uppercase text-amber-400">
+                    ✨ Seleccionar Variante / Expansión de YGOPRODeck (Auto-configura la Rareza)
+                </label>
+                <select id="variantSelect" onchange="onVariantSelected()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                    <option value="">-- Primero busca una carta arriba para ver sus expansiones --</option>
+                </select>
+                <p class="text-[11px] text-slate-400">Al seleccionar una variante, el código de impresión, el nombre del set y la rareza oficial se rellenan automáticamente.</p>
+            </div>
+
+            <!-- Campos detallados de la impresión seleccionada -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Nombre de la Carta *</label>
-                    <input type="text" name="name" required placeholder="Ej: Mago Oscuro" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Código de Impresión *</label>
+                    <input type="text" name="print_code" id="printCodeInput" required placeholder="Ej: LOB-005 o RA01-EN001" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-mono font-bold uppercase">
                 </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Tipo de Carta</label>
-                        <input type="text" name="card_type" placeholder="Ej: Normal Monster, Spell Card..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Raza / Tipo</label>
-                        <input type="text" name="race" placeholder="Ej: Spellcaster, Dragon..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Atributo</label>
-                        <input type="text" name="attribute" placeholder="DARK, LIGHT..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">ATK</label>
-                        <input type="number" name="atk" placeholder="2500" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">DEF</label>
-                        <input type="number" name="def_points" placeholder="2100" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                    </div>
-                </div>
-
                 <div>
-                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Efecto / Descripción</label>
-                    <textarea name="description" rows="3" placeholder="Texto o descripción oficial de la carta..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"></textarea>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Nombre de la Expansión (Set) *</label>
+                    <input type="text" name="set_name" id="setNameInput" required placeholder="Ej: Legend of Blue Eyes White Dragon" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Rareza *</label>
+                    <input type="text" name="rarity" id="rarityInput" required placeholder="Ultra Rare, Common..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-amber-300 font-bold focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Edición</label>
+                    <select name="edition" id="editionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                        {% for code, label in editions %}
+                            <option value="{{ code }}" {% if code == '1ST' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Idioma</label>
+                    <select name="language" id="languageSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                        {% for code, label in languages %}
+                            <option value="{{ code }}" {% if code == 'EN' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
             </div>
         </div>
 
-        <div>
-            <h2 class="text-base font-bold text-emerald-400 mb-4">2. Datos de la Impresión Inicial</h2>
-            <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Código de Impresión *</label>
-                        <input type="text" name="print_code" required placeholder="Ej: LOB-005 o RA01-ES001" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Nombre de la Expansión *</label>
-                        <input type="text" name="set_name" required placeholder="Ej: Legend of Blue Eyes White Dragon" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+        <!-- 4. Fotografía de la Carta Real (Cámara Web / Móvil o Subir Archivo) -->
+        <div class="border-b border-slate-800 pb-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">📸</span>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">3. Fotografía de la Carta Real (Física)</h2>
+                </div>
+                <span class="text-[11px] text-slate-400">Opcional pero recomendado para vitrina</span>
+            </div>
+
+            <!-- Input oculto para el archivo de imagen que se enviará en el POST -->
+            <input type="file" id="realImageInput" name="card_image" accept="image/*" class="hidden" onchange="previewUploadedFile(this)">
+
+            <!-- Controles de Cámara y Subida -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button 
+                    type="button" 
+                    id="startCameraBtn" 
+                    onclick="startCamera()" 
+                    class="py-3 px-4 bg-slate-950 hover:bg-slate-800 border border-sky-500/40 hover:border-sky-400 text-sky-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <span class="text-base">📷</span> Usar Cámara Web / Celular
+                </button>
+
+                <button 
+                    type="button" 
+                    onclick="document.getElementById('realImageInput').click()" 
+                    class="py-3 px-4 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <span class="text-base">📁</span> Subir Archivo / Galería
+                </button>
+            </div>
+
+            <!-- Mensaje de error de cámara si no hay permisos -->
+            <div id="cameraError" class="hidden p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300"></div>
+
+            <!-- Visor en Vivo de la Cámara -->
+            <div id="cameraContainer" class="hidden bg-slate-950 p-4 rounded-xl border border-sky-500/30 space-y-3">
+                <div class="relative w-full max-w-sm mx-auto aspect-[3/4] bg-black rounded-lg overflow-hidden border border-slate-700 flex items-center justify-center">
+                    <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <!-- Guía de encuadre de carta -->
+                    <div class="absolute inset-4 border-2 border-dashed border-sky-400/60 rounded pointer-events-none flex items-end justify-center pb-2">
+                        <span class="text-[10px] bg-slate-900/80 text-sky-300 px-2 py-0.5 rounded font-mono">Encuadra la carta aquí</span>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Rareza *</label>
-                        <input type="text" name="rarity" required placeholder="Ultra Rare, Common..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Edición</label>
-                        <select name="edition" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                            {% for code, label in editions %}
-                                <option value="{{ code }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Idioma</label>
-                        <select name="language" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
-                            {% for code, label in languages %}
-                                <option value="{{ code }}">{{ label }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                <div class="flex justify-center gap-3">
+                    <button 
+                        type="button" 
+                        onclick="capturePhoto()" 
+                        class="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md flex items-center gap-1.5"
+                    >
+                        <span>📸</span> Capturar Foto
+                    </button>
+                    <button 
+                        type="button" 
+                        onclick="stopCamera()" 
+                        class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl"
+                    >
+                        Cerrar Cámara
+                    </button>
                 </div>
+            </div>
 
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-300 mb-1">URL de Imagen (Opcional)</label>
-                    <input type="url" name="image_url" placeholder="https://..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+            <!-- Contenedor de Previsualización de la Foto de la Carta Real -->
+            <div id="photoPreviewContainer" class="hidden bg-slate-950 p-4 rounded-xl border border-emerald-500/30 flex items-center gap-4">
+                <div class="w-20 h-28 bg-black rounded-lg overflow-hidden border border-slate-700 flex-shrink-0 flex items-center justify-center">
+                    <img id="photoPreview" src="" alt="Foto Real" class="w-full h-full object-cover">
+                </div>
+                <div class="flex-1">
+                    <span class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                        <span>✓</span> Foto de la carta real lista para guardar
+                    </span>
+                    <p class="text-[11px] text-slate-400 mt-0.5">Esta foto se asociará al ejemplar físico y se mostrará al escanear el QR en vitrina.</p>
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" onclick="startCamera()" class="text-xs text-sky-400 hover:text-sky-300 underline font-medium">Tomar otra con cámara</button>
+                        <span class="text-slate-600">•</span>
+                        <button type="button" onclick="removePhoto()" class="text-xs text-rose-400 hover:text-rose-300 underline font-medium">Quitar foto</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="pt-4 flex justify-end gap-3">
+        <!-- 5. Opciones de Ingreso Físico a Bodega (Opcional) -->
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="addToInventory" name="add_to_inventory" value="1" onchange="toggleInventoryFields(this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+                <label for="addToInventory" class="text-xs font-bold text-slate-200 cursor-pointer">
+                    📦 Ingresar también un ejemplar físico a Bodega inmediatamente
+                </label>
+            </div>
+
+            <div id="inventoryFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-900">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Condición Física</label>
+                    <select name="condition" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-amber-500 focus:outline-none">
+                        <option value="NM" selected>Near Mint (NM)</option>
+                        <option value="LP">Lightly Played (LP)</option>
+                        <option value="MP">Moderately Played (MP)</option>
+                        <option value="HP">Heavily Played (HP)</option>
+                        <option value="DMG">Damaged (DMG)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Costo de Adquisición (CLP)</label>
+                    <input type="number" step="100" name="acquisition_cost" placeholder="Ej: 5000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-amber-500 focus:outline-none font-mono">
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
             <a href="{% url 'catalog_list' %}" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm rounded-xl">Cancelar</a>
             <button type="submit" class="px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm rounded-xl shadow-lg shadow-amber-500/20">
                 Guardar Carta e Impresión
@@ -105,4 +288,302 @@
         </div>
     </form>
 </div>
+
+<script>
+let currentCardSets = [];
+let mediaStream = null;
+
+// --- Búsqueda de cartas en YGOPRODeck ---
+let searchDebounce = null;
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchDebounce);
+        const q = this.value.trim();
+        if (q.length >= 2) {
+            searchDebounce = setTimeout(executeSearch, 350);
+        } else {
+            document.getElementById('searchResultsDropdown').classList.add('hidden');
+        }
+    });
+}
+
+async function executeSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (q.length < 2) return;
+
+    const status = document.getElementById('searchStatus');
+    const dropdown = document.getElementById('searchResultsDropdown');
+    status.classList.remove('hidden');
+
+    try {
+        const resp = await fetch(`/catalog/api/search/?q=${encodeURIComponent(q)}`);
+        const data = await resp.json();
+        renderSearchResults(data.cards || []);
+    } catch (err) {
+        console.error("Error al buscar cartas:", err);
+    } finally {
+        status.classList.add('hidden');
+    }
+}
+
+function renderSearchResults(cards) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    dropdown.innerHTML = '';
+
+    if (!cards || cards.length === 0) {
+        dropdown.innerHTML = `
+            <div class="p-3 text-center text-xs text-slate-400">
+                No se encontraron cartas para esa búsqueda. Puedes llenar los datos manualmente abajo.
+            </div>
+        `;
+        dropdown.classList.remove('hidden');
+        return;
+    }
+
+    cards.forEach(card => {
+        const item = document.createElement('div');
+        item.className = 'p-2.5 hover:bg-slate-800/80 rounded-xl cursor-pointer flex items-center justify-between gap-3 transition-colors border border-transparent hover:border-slate-700';
+        item.onclick = () => selectCard(card);
+
+        const setsCount = (card.card_sets || []).length;
+        const imgHtml = card.image_url ? 
+            `<img src="${card.image_url}" class="w-8 h-12 object-cover rounded shadow" alt="${card.name}">` : 
+            `<div class="w-8 h-12 bg-slate-800 rounded flex items-center justify-center text-xs">🃏</div>`;
+
+        item.innerHTML = `
+            <div class="flex items-center gap-3">
+                ${imgHtml}
+                <div>
+                    <h4 class="text-xs font-bold text-slate-100">${card.name}</h4>
+                    <p class="text-[10px] text-slate-400 font-mono">${card.card_type || ''} ${card.race ? '• ' + card.race : ''}</p>
+                </div>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
+                ${setsCount} variante${setsCount === 1 ? '' : 's'}
+            </span>
+        `;
+        dropdown.appendChild(item);
+    });
+
+    dropdown.classList.remove('hidden');
+}
+
+// Cierra el dropdown al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    const input = document.getElementById('searchInput');
+    if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
+        dropdown.classList.add('hidden');
+    }
+});
+
+// --- Selección de Carta y Carga de Variantes ---
+function selectCard(card) {
+    document.getElementById('searchResultsDropdown').classList.add('hidden');
+    document.getElementById('searchInput').value = card.name;
+
+    // Rellenar campos base
+    document.getElementById('ygoprodeckIdInput').value = card.ygoprodeck_id || '';
+    document.getElementById('cardNameInput').value = card.name || '';
+    document.getElementById('cardTypeInput').value = card.card_type || '';
+    document.getElementById('cardRaceInput').value = card.race || '';
+    document.getElementById('cardAttributeInput').value = card.attribute || '';
+    document.getElementById('cardLevelInput').value = card.level !== null && card.level !== undefined ? card.level : '';
+    document.getElementById('cardAtkInput').value = card.atk !== null && card.atk !== undefined ? card.atk : '';
+    document.getElementById('cardDefInput').value = card.def_points !== null && card.def_points !== undefined ? card.def_points : '';
+    document.getElementById('cardDescInput').value = card.description || '';
+    document.getElementById('imageUrlInput').value = card.image_url || '';
+
+    // Preview de arte oficial
+    const artPreview = document.getElementById('cardArtPreview');
+    const artPlaceholder = document.getElementById('artPlaceholder');
+    if (card.image_url) {
+        artPreview.src = card.image_url;
+        artPreview.classList.remove('hidden');
+        artPlaceholder.classList.add('hidden');
+    } else {
+        artPreview.classList.add('hidden');
+        artPlaceholder.classList.remove('hidden');
+    }
+
+    // Badge
+    const badge = document.getElementById('selectedCardBadge');
+    badge.innerText = card.ygoprodeck_id ? `YGOPRODeck #${card.ygoprodeck_id}` : 'Carta Seleccionada';
+    badge.classList.remove('hidden');
+
+    // Cargar variantes / sets en el selector
+    currentCardSets = card.card_sets || [];
+    populateVariantSelect(currentCardSets);
+}
+
+function populateVariantSelect(sets) {
+    const select = document.getElementById('variantSelect');
+    select.innerHTML = '';
+
+    const countBadge = document.getElementById('variantCountBadge');
+    countBadge.innerText = `${sets.length} variante${sets.length === 1 ? '' : 's'} disponible${sets.length === 1 ? '' : 's'}`;
+
+    if (!sets || sets.length === 0) {
+        select.innerHTML = '<option value="manual">-- Sin sets automáticos (escribe código y rareza abajo) --</option>';
+        return;
+    }
+
+    // Agregar primera opción explicativa
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = "";
+    defaultOpt.innerText = `-- Elige una variante (${sets.length} encontradas) --`;
+    select.appendChild(defaultOpt);
+
+    sets.forEach((s, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        const priceStr = s.set_price ? ` ($${s.set_price})` : '';
+        opt.innerText = `[${s.set_code}] ${s.set_name} — ${s.set_rarity}${priceStr}`;
+        select.appendChild(opt);
+    });
+
+    // Opción para ingresar variante manual
+    const customOpt = document.createElement('option');
+    customOpt.value = "manual";
+    customOpt.innerText = "➕ Ingresar otra variante o código manual...";
+    select.appendChild(customOpt);
+
+    // Seleccionar automáticamente la primera variante
+    if (sets.length > 0) {
+        select.selectedIndex = 1;
+        onVariantSelected();
+    }
+}
+
+function onVariantSelected() {
+    const select = document.getElementById('variantSelect');
+    const val = select.value;
+    if (val === "" || val === "manual") return;
+
+    const idx = parseInt(val);
+    const s = currentCardSets[idx];
+    if (!s) return;
+
+    // Auto-configurar campos según el set elegido
+    document.getElementById('printCodeInput').value = s.set_code || '';
+    document.getElementById('setNameInput').value = s.set_name || '';
+    
+    // Auto-configurar la RAREZA
+    document.getElementById('rarityInput').value = s.set_rarity || 'Common';
+
+    // Auto-detectar idioma por el código de impresión (ej: LOB-E001 -> EN, LOB-S001 -> ES)
+    const code = (s.set_code || '').toUpperCase();
+    const langSelect = document.getElementById('languageSelect');
+    if (code.includes('-SP') || code.includes('-S') || code.includes('-ES')) {
+        langSelect.value = 'ES';
+    } else if (code.includes('-JP') || code.includes('-JA')) {
+        langSelect.value = 'JP';
+    } else if (code.includes('-DE') || code.includes('-G')) {
+        langSelect.value = 'DE';
+    } else if (code.includes('-FR') || code.includes('-F')) {
+        langSelect.value = 'FR';
+    } else if (code.includes('-IT') || code.includes('-I')) {
+        langSelect.value = 'IT';
+    } else if (code.includes('-PT')) {
+        langSelect.value = 'PT';
+    } else if (code.includes('-KO') || code.includes('-K')) {
+        langSelect.value = 'KO';
+    } else {
+        langSelect.value = 'EN';
+    }
+}
+
+// --- Soporte de Cámara en Vivo y Captura de Foto Real ---
+async function startCamera() {
+    const video = document.getElementById('cameraVideo');
+    const cameraContainer = document.getElementById('cameraContainer');
+    const cameraError = document.getElementById('cameraError');
+    cameraError.classList.add('hidden');
+
+    try {
+        const constraints = {
+            video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = mediaStream;
+        await video.play();
+        cameraContainer.classList.remove('hidden');
+        document.getElementById('startCameraBtn').classList.add('hidden');
+    } catch (err) {
+        console.error("Camera access error:", err);
+        cameraError.textContent = "No se pudo acceder a la cámara (" + (err.message || 'permiso denegado') + "). Puedes subir la foto directamente usando 'Subir Archivo'.";
+        cameraError.classList.remove('hidden');
+    }
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob((blob) => {
+        if (!blob) return;
+        const file = new File([blob], `real_card_${Date.now()}.jpg`, { type: "image/jpeg" });
+
+        // Asignar el archivo capturado al input file del formulario
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('realImageInput').files = dataTransfer.files;
+
+        // Mostrar previsualización
+        const previewImg = document.getElementById('photoPreview');
+        previewImg.src = canvas.toDataURL('image/jpeg');
+        document.getElementById('photoPreviewContainer').classList.remove('hidden');
+
+        // Detener cámara
+        stopCamera();
+    }, 'image/jpeg', 0.92);
+}
+
+function stopCamera() {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    const container = document.getElementById('cameraContainer');
+    if (container) container.classList.add('hidden');
+    const startBtn = document.getElementById('startCameraBtn');
+    if (startBtn) startBtn.classList.remove('hidden');
+}
+
+function previewUploadedFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreview').src = e.target.result;
+            document.getElementById('photoPreviewContainer').classList.remove('hidden');
+            stopCamera();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removePhoto() {
+    document.getElementById('realImageInput').value = '';
+    document.getElementById('photoPreview').src = '';
+    document.getElementById('photoPreviewContainer').classList.add('hidden');
+}
+
+function toggleInventoryFields(checked) {
+    const div = document.getElementById('inventoryFields');
+    if (checked) {
+        div.classList.remove('hidden');
+    } else {
+        div.classList.add('hidden');
+    }
+}
+</script>
 {% endblock %}

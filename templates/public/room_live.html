@@ -951,6 +951,22 @@
         </div>
     </div>
 
+    <!-- BANNER DE MODO TEST / SALA DE SIMULACIÓN -->
+    {% if '[TEST]' in room.title or (room.live_data_json and '"is_dummy": true' in room.live_data_json.lower()) %}
+    <div style="background: rgba(139, 92, 246, 0.15); border: 1px solid #8b5cf6; border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.4rem;">🧪</span>
+            <div>
+                <strong style="color: #c4b5fd; font-family: 'Orbitron', sans-serif; font-size: 0.9rem;">SALA DE PRUEBA / SIMULACIÓN (SANDBOX)</strong>
+                <p style="margin: 2px 0 0; color: #a5b4fc; font-size: 0.8rem;">Esta sala es de prueba técnica. Sus resultados no afectan el ranking oficial de la academia.</p>
+            </div>
+        </div>
+        <a href="/torneo-prueba/{{ room.room_code }}" class="btn" style="background: #8b5cf6; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 0.82rem; font-weight: 800;">
+            📊 Ver Resultados de Prueba
+        </a>
+    </div>
+    {% endif %}
+
     <!-- SECCIÓN PERSONALIZADA: MI MATCH EN VIVO & FASE 2 -->
     <div id="myMatchSection" style="display: none;">
         <!-- Se inyecta dinámicamente con JS si el usuario está registrado en este teléfono -->

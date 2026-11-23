@@ -32,10 +32,13 @@
 
             <!-- Imagen Centrada -->
             <div class="relative w-full max-w-[260px] mx-auto aspect-[59/86] mb-6 rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-950 flex items-center justify-center">
-                {% if item.print.image_url %}
-                    <img src="{{ item.print.image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-contain">
-                {% elif item.print.image %}
-                    <img src="{{ item.print.image.url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-contain">
+                {% if item.print.display_image_url %}
+                    <img src="{{ item.print.display_image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-contain">
+                    {% if item.print.image %}
+                    <div class="absolute top-2 right-2 bg-indigo-900/90 text-indigo-200 border border-indigo-500/50 text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                        📷 Foto Real
+                    </div>
+                    {% endif %}
                 {% else %}
                     <div class="p-8 text-center text-slate-600">
                         <span class="text-5xl block mb-2">🃏</span>
@@ -138,6 +141,80 @@
                     </details>
                 </div>
             {% endif %}
+
+            <!-- Panel Privado de Administración (Consignación y Pago Directo al Dueño) -->
+            {% if is_admin %}
+                <div class="mt-6 pt-4 border-t border-purple-500/40 bg-purple-950/20 p-4 rounded-2xl border border-purple-500/30 text-left">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-1.5 text-xs font-black text-purple-300 uppercase tracking-wider">
+                            <span>🔒</span> Panel Admin: Propietario y Liquidación
+                        </div>
+                        <span class="text-[10px] font-mono text-purple-300 bg-purple-900/60 px-2 py-0.5 rounded border border-purple-500/30">
+                            Solo Personal
+                        </span>
+                    </div>
+
+                    <!-- Datos del Dueño -->
+                    <div class="space-y-2 text-xs text-slate-300">
+                        <div class="flex justify-between py-1 border-b border-purple-500/20">
+                            <span class="text-slate-400">Propietario / Consignatario:</span>
+                            <strong class="text-slate-100">{{ item.owner_name|default:"Tienda" }}</strong>
+                        </div>
+                        {% if item.owner_phone %}
+                        <div class="flex justify-between py-1 border-b border-purple-500/20">
+                            <span class="text-slate-400">Teléfono / WhatsApp:</span>
+                            <a href="https://wa.me/{{ item.owner_phone|cut:'+'|cut:' '|cut:'-' }}" target="_blank" class="text-emerald-400 hover:underline font-mono">
+                                {{ item.owner_phone }} 💬
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% if item.owner_payout_amount %}
+                        <div class="flex justify-between py-1 border-b border-purple-500/20">
+                            <span class="text-slate-400">Monto a Transferir al Dueño:</span>
+                            <strong class="text-emerald-400 font-mono text-sm">${{ item.owner_payout_amount|floatformat:0 }} CLP</strong>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Datos Bancarios para Transferencia Directa -->
+                    {% if item.owner_bank or item.owner_account_number or item.owner_rut %}
+                    <div class="mt-3 bg-slate-950/90 rounded-xl p-3 border border-purple-500/30">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1">
+                                <span>🏦</span> Pago Directo por Transferencia
+                            </span>
+                            <button 
+                                type="button" 
+                                onclick="copyBankDetails()" 
+                                id="copyBankBtn"
+                                class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold rounded-lg transition-colors flex items-center gap-1 shadow cursor-pointer"
+                            >
+                                <span>📋</span> Copiar Datos
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                            <div><span class="text-slate-500">Banco:</span> <span class="text-slate-200">{{ item.owner_bank|default:"-" }}</span></div>
+                            <div><span class="text-slate-500">Tipo:</span> <span class="text-slate-200">{{ item.owner_account_type|default:"-" }}</span></div>
+                            <div><span class="text-slate-500">N° Cuenta:</span> <span class="text-slate-200 font-bold">{{ item.owner_account_number|default:"-" }}</span></div>
+                            <div><span class="text-slate-500">RUT:</span> <span class="text-slate-200 font-bold">{{ item.owner_rut|default:"-" }}</span></div>
+                            {% if item.owner_email %}
+                            <div class="col-span-2"><span class="text-slate-500">Email:</span> <span class="text-slate-200">{{ item.owner_email }}</span></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Acciones Rápidas -->
+                    <div class="mt-3 flex items-center gap-2 pt-2 border-t border-purple-500/20">
+                        <a href="{% url 'slot_unassign' slot.id %}" class="flex-1 py-1.5 px-3 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 rounded-lg text-center text-xs font-bold transition-colors">
+                            Retirar de Vitrina
+                        </a>
+                        <a href="{% url 'inventory_detail' item.id %}" class="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-center text-xs font-bold transition-colors">
+                            Ficha Inventario
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     {% else %}
         <!-- Slot Vacío -->
@@ -149,10 +226,47 @@
             <p class="text-xs text-slate-400 max-w-xs mx-auto mb-6">
                 Actualmente no hay ninguna carta asignada a este espacio de la vitrina física.
             </p>
+
+            {% if is_admin %}
+                <div class="max-w-xs mx-auto mb-4">
+                    <a href="{% url 'showcase_quick_intake' %}?token={{ slot.qr_token }}" class="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black rounded-xl text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all">
+                        <span>📥</span> Poner Carta en este Espacio
+                    </a>
+                </div>
+            {% endif %}
+
             <a href="/catalog/" class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 rounded-xl transition-colors">
                 <span>📚</span> Explorar Catálogo de la Tienda
             </a>
         </div>
     {% endif %}
 </div>
+
+{% if is_admin and item %}
+<script>
+function copyBankDetails() {
+    const text = `DATOS DE TRANSFERENCIA DIRECTA:
+Titular: {{ item.owner_name|default:'Dueño' }}
+RUT: {{ item.owner_rut|default:'' }}
+Banco: {{ item.owner_bank|default:'' }}
+Tipo de Cuenta: {{ item.owner_account_type|default:'' }}
+N° Cuenta: {{ item.owner_account_number|default:'' }}
+Email: {{ item.owner_email|default:'' }}
+{% if item.owner_payout_amount %}Monto a Transferir: ${{ item.owner_payout_amount|floatformat:0 }} CLP{% endif %}`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('copyBankBtn');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span>✓</span> ¡Copiado!';
+        btn.classList.replace('bg-purple-600', 'bg-emerald-600');
+        setTimeout(() => {
+            btn.innerHTML = orig;
+            btn.classList.replace('bg-emerald-600', 'bg-purple-600');
+        }, 2200);
+    }).catch(err => {
+        alert("No se pudo copiar automáticamente: " + err);
+    });
+}
+</script>
+{% endif %}
 {% endblock %}

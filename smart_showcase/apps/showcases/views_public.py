@@ -43,20 +43,9 @@ def public_slot_detail_view(request, qr_token):
             quote_updated_at = price_quote.created_at
         else:
             # Si no hay cotización previa, calcular un precio de referencia base
-            config = PricingRuleConfig.objects.filter(is_active=True).first()
-            if not config:
-                config = PricingRuleConfig.objects.create()
-            
-            # Cálculo provisional transparente basado en el costo del item
-            base_cost = item.acquisition_cost
-            margin_multiplier = 1 + (config.commercial_margin_percent / 100)
-            provisional_cash = base_cost * margin_multiplier
-            provisional_card = provisional_cash * (1 + (config.card_processing_fee_percent / 100))
-            
-            # Redondeo
-            unit = config.rounding_unit or 100
-            cash_price = round(float(provisional_cash) / unit) * unit
-            card_price = round(float(provisional_card) / unit) * unit
+            from apps.pricing.services import PricingService
+            config = PricingService.get_active_config()
+            cash_price, card_price = PricingService.calculate_prices_from_clp_cost(item.acquisition_cost, config)
 
     # Determinar número de WhatsApp configurado (vitrina específica o configuración de tienda)
     active_config = PricingRuleConfig.objects.filter(is_active=True).first()
@@ -72,6 +61,11 @@ def public_slot_detail_view(request, qr_token):
 
     whatsapp_url = f"https://wa.me/{whatsapp_phone}?text={quote_plus(msg)}"
 
+    # Verificar si el usuario que consulta tiene permisos de administración/vendedor
+    is_admin = False
+    if request.user.is_authenticated:
+        is_admin = getattr(request.user, 'is_store_seller', False) or request.user.is_staff or request.user.is_superuser
+
     context = {
         'slot': slot,
         'item': item,
@@ -82,5 +76,6 @@ def public_slot_detail_view(request, qr_token):
         'quote_updated_at': quote_updated_at,
         'whatsapp_phone': whatsapp_phone,
         'whatsapp_url': whatsapp_url,
+        'is_admin': is_admin,
     }
     return render(request, 'showcases/public_slot_detail.html', context)

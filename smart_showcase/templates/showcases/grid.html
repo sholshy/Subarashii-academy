@@ -19,10 +19,16 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'showcase_quick_intake' %}?showcase_id={{ showcase.id }}" class="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-slate-950 text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-1.5">
+                <span>⚡</span> Ingreso Rápido
+            </a>
             <div class="bg-slate-950 px-3.5 py-1.5 rounded-xl border border-slate-800 text-xs">
                 <span class="text-slate-400">Ocupación:</span>
                 <strong class="text-emerald-400 font-bold ml-1">{{ occupied_count }}/{{ total_slots }}</strong>
             </div>
+            <a href="{% url 'showcase_edit' showcase.id %}" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-sm">
+                <span>✏️</span> Editar Vitrina
+            </a>
             <a href="{% url 'download_showcase_sheet' showcase.id %}" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-sm">
                 <span>📄</span> Descargar Lámina A4 de QRs
             </a>
@@ -60,8 +66,8 @@
                             {% if cell.has_card %}
                                 <div class="my-1.5">
                                     <div class="w-full aspect-[59/86] bg-slate-900 rounded-lg overflow-hidden border border-slate-800 mb-1.5 flex items-center justify-center">
-                                        {% if cell.item.print.image_url %}
-                                            <img src="{{ cell.item.print.image_url }}" alt="{{ cell.item.print.card.name }}" class="w-full h-full object-cover">
+                                        {% if cell.item.print.display_image_url %}
+                                            <img src="{{ cell.item.print.display_image_url }}" alt="{{ cell.item.print.card.name }}" class="w-full h-full object-cover">
                                         {% else %}
                                             <span class="text-xl">🃏</span>
                                         {% endif %}
@@ -96,9 +102,12 @@
                                 </div>
 
                                 {% if user.is_authenticated %}
-                                <div class="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between">
-                                    <button onclick="openAssignModal('{{ cell.slot.id }}', '{{ cell.slot.visible_code }}')" class="w-full py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1">
-                                        <span>+</span> Asignar
+                                <div class="mt-2 pt-2 border-t border-slate-900 flex items-center justify-between gap-1">
+                                    <a href="{% url 'showcase_quick_intake' %}?slot_id={{ cell.slot.id }}" class="flex-1 py-1 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 text-amber-300 border border-amber-500/30 text-[10px] font-bold rounded-lg transition-colors flex items-center justify-center gap-1">
+                                        <span>⚡</span> Ingresar
+                                    </a>
+                                    <button onclick="openAssignModal('{{ cell.slot.id }}', '{{ cell.slot.visible_code }}')" class="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] font-bold rounded-lg transition-colors" title="Asignar carta desde bodega">
+                                        Bodega
                                     </button>
                                 </div>
                                 {% endif %}

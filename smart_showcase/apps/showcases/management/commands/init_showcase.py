@@ -27,13 +27,13 @@ class Command(BaseCommand):
             except Exception as e:
                 self.stdout.write(self.style.WARNING(f"No se pudo cargar fixture ({e}), generando vitrina base..."))
 
-        # Crear Vitrina Principal inicial para evitar pantallas vacías
+        # Crear Vitrina Principal inicial para evitar pantallas vacías (8 espacios: 4 arriba, 4 abajo)
         showcase, slots_count = ShowcaseService.create_showcase(
             name="Vitrina Principal Yu-Gi-Oh!",
             code="VIT-01",
-            total_rows=4,
-            total_columns=8,
-            description="Vitrina principal de exhibición en tienda física con 32 espacios y códigos QR permanentes.",
+            total_rows=2,
+            total_columns=4,
+            description="Vitrina frontal Yu-Gi-Oh! de 8 espacios (4 arriba y 4 abajo) con códigos QR permanentes.",
             contact_whatsapp="+56912345678"
         )
 

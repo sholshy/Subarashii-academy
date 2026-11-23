@@ -50,6 +50,8 @@ class TournamentUI(ctk.CTkFrame):
         self._tournament_already_published = False
         self._last_saved_history_filename = None
         self._current_saved_tournament_id = None
+        self.is_dummy_tournament = False
+        self._dummy_drop_simulated = False
         self.date_var = tk.StringVar(value=datetime.now().strftime("%d-%m-%y"))
         self.load_db()
         
@@ -70,24 +72,71 @@ class TournamentUI(ctk.CTkFrame):
                 "phone": row['phone'] or "", 
                 "email": row['email'] or ""
             }
+        self.players_aliases_map = {}
+        try:
+            self.cursor.execute("SELECT player_id, alias FROM player_aliases")
+            for r in self.cursor.fetchall():
+                pid = r['player_id']
+                self.players_aliases_map.setdefault(pid, []).append(r['alias'])
+        except Exception:
+            pass
                         
-    def refresh_db_listbox(self, keep_position=True):
+    def refresh_db_listbox(self, keep_position=True, filter_text=None):
         if hasattr(self, 'db_listbox') and self.db_listbox.winfo_exists():
             top_fraction = self.db_listbox.yview()[0] if keep_position else 0
             selected_items = [self.db_listbox.get(i) for i in self.db_listbox.curselection()]
 
             self.db_listbox.delete(0, tk.END)
+
+            from utils import normalize_player_name
+            norm_query = normalize_player_name(filter_text) if filter_text else ""
+
             sorted_items = sorted(self.players_db.items(), key=lambda x: x[1]['name'].lower())
             for db_id, data in sorted_items:
-                k_text = data['konami_id'] if data['konami_id'] else "Sin ID"
-                nick_str = f" \"{data['nickname']}\"" if data.get('nickname') else ""
-                self.db_listbox.insert(tk.END, f"{data['name']}{nick_str} ({k_text}) [{db_id}]")
+                name = data['name']
+                nickname = data.get('nickname') or ""
+                konami_id = data.get('konami_id') or ""
+                aliases = getattr(self, 'players_aliases_map', {}).get(db_id, [])
+
+                # Si hay texto de búsqueda, descartar los que no tengan coincidencias
+                if norm_query:
+                    match_found = False
+                    if norm_query in normalize_player_name(name):
+                        match_found = True
+                    elif nickname and norm_query in normalize_player_name(nickname):
+                        match_found = True
+                    elif konami_id and norm_query in konami_id.lower():
+                        match_found = True
+                    elif any(norm_query in normalize_player_name(a) for a in aliases):
+                        match_found = True
+                    
+                    if not match_found:
+                        continue
+
+                k_text = konami_id if konami_id else "Sin ID"
+                nick_str = f" \"{nickname}\"" if nickname else ""
+                self.db_listbox.insert(tk.END, f"{name}{nick_str} ({k_text}) [{db_id}]")
 
             if keep_position:
                 self.db_listbox.yview_moveto(top_fraction)
                 for index in range(self.db_listbox.size()):
                     if self.db_listbox.get(index) in selected_items:
                         self.db_listbox.selection_set(index)
+
+    def on_name_filter_change(self, event=None):
+        """Filtra la lista de jugadores frecuentes en tiempo real mientras se escribe el nombre."""
+        if hasattr(self, 'name_entry'):
+            query = self.name_entry.get().strip()
+            self.refresh_db_listbox(keep_position=False, filter_text=query)
+
+    def on_name_down_key(self, event=None):
+        """Permite navegar directamente a la lista de coincidencias con la flecha abajo."""
+        if hasattr(self, 'db_listbox') and self.db_listbox.size() > 0:
+            self.db_listbox.focus_set()
+            self.db_listbox.selection_clear(0, tk.END)
+            self.db_listbox.selection_set(0)
+            self.db_listbox.activate(0)
+            return "break"
                 
     def setup_ui(self):
         header_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -150,6 +199,9 @@ class TournamentUI(ctk.CTkFrame):
             self.timer_running = False
             self.exported_to_league = ui_state.get("exported_to_league", False)
             self.date_var.set(ui_state.get("date", self.date_var.get()))
+            self.is_dummy_tournament = payload.get("is_dummy_tournament", False)
+            if payload.get("active_room_code"):
+                self.active_room_code = payload.get("active_room_code")
             return True
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo recuperar el torneo temporal:\n{e}")
@@ -167,6 +219,8 @@ class TournamentUI(ctk.CTkFrame):
             "version": 1,
             "saved_at": datetime.now().strftime("%d-%m-%Y %H:%M:%S"),
             "manager": self.manager.to_dict(),
+            "is_dummy_tournament": getattr(self, 'is_dummy_tournament', False),
+            "active_room_code": getattr(self, 'active_room_code', None),
             "ui": {
                 "time_left": self.time_left,
                 "round_minutes": getattr(self, "round_minutes", 50),
@@ -261,6 +315,20 @@ class TournamentUI(ctk.CTkFrame):
                         if status:
                             status_val = status
 
+                        round_history_data = []
+                        if getattr(self.manager, 'rounds', None):
+                            for r_idx, r_matches in enumerate(self.manager.rounds, 1):
+                                m_list = []
+                                for t_idx, m in enumerate(r_matches, 1):
+                                    m_list.append({
+                                        "table": t_idx,
+                                        "p1": m.p1.name if m.p1 else "BYE",
+                                        "p2": m.p2.name if m.p2 else "BYE",
+                                        "score": m.result_text,
+                                        "reported": m.reported
+                                    })
+                                round_history_data.append({"round": r_idx, "matches": m_list})
+
                         self.remote_sync.sync_room_state(
                             room_code=self.active_room_code,
                             title=title,
@@ -269,7 +337,9 @@ class TournamentUI(ctk.CTkFrame):
                             standings=standings_data,
                             timer_info=timer_info,
                             status=status_val,
-                            format_name=getattr(self.manager, 'format_name', 'EDISON')
+                            format_name=getattr(self.manager, 'format_name', 'EDISON'),
+                            round_history=round_history_data,
+                            is_dummy=getattr(self, 'is_dummy_tournament', False)
                         )
                     except Exception as err:
                         print("[TournamentUI] Error syncing to cloud hosting:", err)
@@ -286,6 +356,9 @@ class TournamentUI(ctk.CTkFrame):
             title = f"Torneo {fmt} ({date_str})"
             room = trm.create_or_get_room(title=title, format_name=fmt, scheduled_id=sched_id, room_code=getattr(self, 'active_room_code', None))
             self.active_room_code = room['room_code']
+            if not getattr(self, '_room_cloud_initialized', False):
+                self._room_cloud_initialized = True
+                self.sync_active_room(status="LOBBY")
             return self.active_room_code
         except Exception as e:
             print("[TournamentUI] Error ensuring active room:", e)
@@ -425,7 +498,12 @@ class TournamentUI(ctk.CTkFrame):
         """
         Guarda el torneo actual en data/history/, migra a SQLite matches history,
         calcula Academy ELO/Misiones, genera el snapshot y lo sube automáticamente a Render.
+        Si es un Torneo de Prueba (Dummy), publica únicamente en la sala / resultados de prueba sin tocar la academia.
         """
+        if getattr(self, 'is_dummy_tournament', False):
+            from dummy_tournament_manager import DummyTournamentEngine
+            return bool(DummyTournamentEngine.finish_dummy_tournament(self, notify=notify))
+
         if not self.manager.players:
             if notify:
                 messagebox.showwarning("Atención", "No hay jugadores en el torneo para guardar.")
@@ -653,6 +731,24 @@ class TournamentUI(ctk.CTkFrame):
                     cloud_drops = cloud_data.get("drops", [])
                     for cd in cloud_drops:
                         dropped_names.add(cd.get("player_name", "").strip().lower())
+
+            # 3.5 Auto-confirmar si el rival pendiente es un bot virtual
+            for rep in reports:
+                if rep.get('status') == 'PENDING_CONFIRMATION' and rep.get('round_num') == curr_round:
+                    p1_name = rep.get('p1_name', '')
+                    p2_name = rep.get('p2_name', '')
+                    rep_by = (rep.get('reported_by') or '').strip().lower()
+                    opp_name = p2_name if rep_by == p1_name.strip().lower() else p1_name
+                    from dummy_tournament_manager import is_bot_player
+                    if is_bot_player(opp_name):
+                        trm.confirm_match_report(
+                            room_code=self.active_room_code,
+                            round_num=curr_round,
+                            table_num=rep['table_num'],
+                            confirmer_name=opp_name,
+                            is_admin=True
+                        )
+                        rep['status'] = 'CONFIRMED'
 
             # 4. Procesar reportes en las mesas activas
             matches = self.manager.get_current_matches()
@@ -1273,6 +1369,8 @@ class TournamentUI(ctk.CTkFrame):
         ctk.CTkLabel(add_frame, text="Nombre del Jugador:", text_color="#60a5fa", font=UI_FONT_SMALL).pack(anchor="w")
         self.name_entry = ctk.CTkEntry(add_frame, font=UI_FONT, width=250)
         self.name_entry.pack(pady=(0, 10))
+        self.name_entry.bind("<KeyRelease>", self.on_name_filter_change)
+        self.name_entry.bind("<Down>", self.on_name_down_key)
         
         ctk.CTkLabel(add_frame, text="Konami ID (Opcional):", text_color="#60a5fa", font=UI_FONT_SMALL).pack(anchor="w")
         self.id_entry = ctk.CTkEntry(add_frame, font=UI_FONT, width=250)
@@ -1303,6 +1401,7 @@ class TournamentUI(ctk.CTkFrame):
         self.refresh_db_listbox()
             
         self.db_listbox.bind("<Double-1>", self.on_db_player_select)
+        self.db_listbox.bind("<Return>", self.on_db_player_select)
         
         db_btns = ctk.CTkFrame(add_frame, fg_color="transparent")
         db_btns.pack(fill="x", pady=10)
@@ -1375,6 +1474,39 @@ class TournamentUI(ctk.CTkFrame):
         # We need to bind Return and FocusOut to capture custom types correctly if they type manually
         self.format_combo.bind("<Return>", lambda e: self.on_format_changed(self.format_var.get()))
         self.format_combo.bind("<FocusOut>", lambda e: self.on_format_changed(self.format_var.get()))
+
+        # Caja / Ticket de Modo Prueba (Dummy)
+        dummy_box = ctk.CTkFrame(list_frame, fg_color="#1e1b4b", border_width=1, border_color="#8b5cf6", corner_radius=8)
+        dummy_box.pack(fill="x", pady=(5, 5))
+
+        self.is_dummy_var = ctk.BooleanVar(value=getattr(self, 'is_dummy_tournament', False))
+        ctk.CTkCheckBox(
+            dummy_box,
+            text="🧪 Modo Test / Torneo de Prueba (7 Bots Virtuales + Tú)",
+            variable=self.is_dummy_var,
+            font=UI_FONT_SMALL,
+            text_color="#c4b5fd",
+            fg_color="#8b5cf6",
+            hover_color="#7c3aed"
+        ).pack(side="left", padx=12, pady=8)
+
+        ctk.CTkLabel(
+            dummy_box,
+            text="Prueba sala web, QR, reportes móviles y drops aislados de la academia.",
+            font=("Segoe UI", 9),
+            text_color="#a5b4fc"
+        ).pack(side="left", padx=5)
+
+        ctk.CTkButton(
+            dummy_box,
+            text="🚀 Lanzar Test",
+            command=self.start_dummy_tournament,
+            font=UI_FONT_SMALL,
+            width=115,
+            height=26,
+            fg_color="#7c3aed",
+            hover_color="#6d28d9"
+        ).pack(side="right", padx=10, pady=6)
         
         start_frame = ctk.CTkFrame(list_frame, fg_color="transparent")
         start_frame.pack(fill="x", pady=10)
@@ -1669,6 +1801,7 @@ class TournamentUI(ctk.CTkFrame):
                     if hasattr(self, 'email_entry'): self.email_entry.delete(0, tk.END)
                     if hasattr(self, 'paid_var'): self.paid_var.set(False)
                     if hasattr(self, 'invited_var'): self.invited_var.set(False)
+                    self.refresh_db_listbox(filter_text="")
                     self.autosave_tournament()
                     self.update_player_list()
                 return
@@ -1704,9 +1837,6 @@ class TournamentUI(ctk.CTkFrame):
                 messagebox.showerror("Error BD", f"Error al guardar: {e}")
                 return
             
-        self.load_db()
-        self.refresh_db_listbox()
-            
         self.manager.add_player(name, k_id, phone, email, paid, invited)
         self.name_entry.delete(0, tk.END)
         self.id_entry.delete(0, tk.END)
@@ -1714,6 +1844,8 @@ class TournamentUI(ctk.CTkFrame):
         if hasattr(self, 'email_entry'): self.email_entry.delete(0, tk.END)
         if hasattr(self, 'paid_var'): self.paid_var.set(False)
         if hasattr(self, 'invited_var'): self.invited_var.set(False)
+        self.load_db()
+        self.refresh_db_listbox(filter_text="")
         self.autosave_tournament()
         self.update_player_list()
         
@@ -1793,7 +1925,15 @@ class TournamentUI(ctk.CTkFrame):
         else:
             self.round_minutes_var.set("50")
 
+    def start_dummy_tournament(self):
+        """Lanza el modo de prueba (Sandbox) con 7 bots virtuales y el usuario."""
+        from dummy_tournament_manager import DummyTournamentEngine
+        DummyTournamentEngine.setup_dummy_tournament(self)
+
     def start_tournament(self):
+        if getattr(self, 'is_dummy_var', None) and self.is_dummy_var.get():
+            self.start_dummy_tournament()
+            return
         try:
             self.stop_setup_room_poll()
             # Sincronización rápida final de check-ins de sala antes de generar pareos
@@ -1915,6 +2055,58 @@ class TournamentUI(ctk.CTkFrame):
         self.timer_label.pack(side="left", padx=10)
         self.timer_btn = ctk.CTkButton(timer_frame, text="PAUSE" if self.timer_running else "PLAY", command=self.toggle_timer, font=UI_FONT, width=100)
         self.timer_btn.pack(side="left", padx=10, pady=5)
+
+        if getattr(self, 'is_dummy_tournament', False):
+            import webbrowser
+            dummy_panel = ctk.CTkFrame(buf, fg_color="#1e1b4b", border_width=1, border_color="#8b5cf6", corner_radius=8)
+            dummy_panel.pack(fill="x", pady=(0, 10))
+
+            ctk.CTkLabel(
+                dummy_panel,
+                text="🧪 MODO PRUEBA / SIMULACIÓN ACTIVO (SANDBOX)",
+                font=("Orbitron", 11, "bold"),
+                text_color="#c4b5fd"
+            ).pack(side="left", padx=12, pady=6)
+
+            ctk.CTkButton(
+                dummy_panel,
+                text="⚡ Simular Reportes de Bots",
+                command=lambda: (
+                    __import__('dummy_tournament_manager').DummyTournamentEngine.simulate_bot_reports(self)
+                ),
+                font=UI_FONT_SMALL,
+                fg_color="#8b5cf6",
+                hover_color="#7c3aed",
+                width=190,
+                height=28
+            ).pack(side="right", padx=8, pady=5)
+
+            ctk.CTkButton(
+                dummy_panel,
+                text="🚪 Simular Drop (Retiro)",
+                command=lambda: (
+                    __import__('dummy_tournament_manager').DummyTournamentEngine.simulate_bot_drop(self)
+                ),
+                font=UI_FONT_SMALL,
+                fg_color="#dc2626",
+                hover_color="#b91c1c",
+                width=160,
+                height=28
+            ).pack(side="right", padx=4, pady=5)
+
+            ctk.CTkButton(
+                dummy_panel,
+                text="🌐 Ver Sala Web",
+                command=lambda: (
+                    webbrowser.open(__import__('dummy_tournament_manager').DummyTournamentEngine.get_effective_web_url(self, getattr(self, 'active_room_code', '')))
+                ),
+                font=UI_FONT_SMALL,
+                fg_color="#38bdf8",
+                hover_color="#0284c7",
+                text_color="#0f172a",
+                width=130,
+                height=28
+            ).pack(side="right", padx=4, pady=5)
         
         split = tk.PanedWindow(buf, orient="horizontal", bg="#0f172a", sashwidth=4)
         split.pack(fill="both", expand=True, padx=10, pady=10)
@@ -2256,25 +2448,173 @@ class TournamentUI(ctk.CTkFrame):
         buf = self.current_view_frame
             
         ctk.CTkLabel(buf, text="Resultados Finales", font=UI_FONT_BIG, text_color="#60a5fa").pack(pady=20)
+
+        if getattr(self, 'is_dummy_tournament', False):
+            info_dummy = ctk.CTkFrame(buf, fg_color="#1e1b4b", border_width=1, border_color="#8b5cf6", corner_radius=8)
+            info_dummy.pack(fill="x", padx=40, pady=(0, 15))
+            ctk.CTkLabel(
+                info_dummy,
+                text="🧪 TORNEO DE PRUEBA FINALIZADO (MODO SANDBOX) — Resultados aislados de la academia oficial.",
+                font=("Orbitron", 11, "bold"),
+                text_color="#c4b5fd"
+            ).pack(side="left", padx=15, pady=8)
+            import webbrowser
+            ctk.CTkButton(
+                info_dummy,
+                text="🌐 Abrir Resultados en la Web",
+                command=lambda: webbrowser.open(
+                    __import__('dummy_tournament_manager').DummyTournamentEngine.get_effective_web_url(
+                        self, getattr(self, 'active_room_code', ''), is_results=True
+                    )
+                ),
+                font=UI_FONT_SMALL,
+                fg_color="#8b5cf6",
+                hover_color="#7c3aed",
+                width=220,
+                height=28
+            ).pack(side="right", padx=15, pady=6)
         
         bottom_frame = ctk.CTkFrame(buf, fg_color="transparent")
-        bottom_frame.pack(side="bottom", fill="x", pady=20)
+        bottom_frame.pack(side="bottom", fill="x", padx=40, pady=(10, 20))
 
         final_actions_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
-        final_actions_frame.pack(anchor="center")
-        
-        ctk.CTkButton(final_actions_frame, text="☁️ PUBLICAR EN LA WEB Y RANKING", command=lambda: self.save_and_publish_tournament(notify=True), font=UI_FONT_SMALL, width=220, fg_color="#8b5cf6", hover_color="#7c3aed").pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="CREAR POST DEL CAMPEÓN", command=self.open_champion_deck_post, font=UI_FONT_SMALL, width=150).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="🔍 EXPLICAR DESEMPATES (OMW%)", command=self.show_tiebreaker_explanation_dialog, font=UI_FONT_SMALL, width=210, fg_color="#0284c7", hover_color="#0369a1").pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="EXPORTAR STANDING PNG", command=self.export_standings_image, font=UI_FONT_SMALL, width=150).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="EXPORTAR A INSTAGRAM", command=self.export_to_instagram, font=UI_FONT_SMALL, width=170, fg_color="#d946ef", hover_color="#c026d3").pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="COMPARTIR STANDING WHATSAPP", command=self.share_standings_whatsapp, font=UI_FONT_SMALL, width=190).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="ACTUALIZAR PUNTOS DE LIGA", command=self.export_to_league, font=UI_FONT_SMALL, width=170).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="CALCULAR PREMIOS", command=self.open_prize_calculator_from_tournament, font=UI_FONT_SMALL, width=130).pack(side="left", padx=5, pady=5)
-        ctk.CTkButton(final_actions_frame, text="FINALIZAR TORNEO Y PREPARAR NUEVO", command=self.reset_tournament, font=UI_FONT_SMALL, width=220).pack(side="left", padx=5, pady=5)
-        
+        final_actions_frame.pack(fill="x", expand=True)
+
+        for c in range(4):
+            final_actions_frame.grid_columnconfigure(c, weight=1, uniform="actions_col")
+
+        # Fila 0: Difusión web, Campeón, Desempates y Liga
+        if getattr(self, 'is_dummy_tournament', False):
+            import webbrowser
+            btn_web = ctk.CTkButton(
+                final_actions_frame,
+                text="🧪 VER RESULTADOS DE PRUEBA EN LA WEB",
+                command=lambda: webbrowser.open(
+                    __import__('dummy_tournament_manager').DummyTournamentEngine.get_effective_web_url(
+                        self, getattr(self, 'active_room_code', ''), is_results=True
+                    )
+                ),
+                font=UI_FONT_SMALL,
+                height=34,
+                fg_color="#8b5cf6",
+                hover_color="#7c3aed"
+            )
+        else:
+            btn_web = ctk.CTkButton(
+                final_actions_frame,
+                text="☁️ PUBLICAR EN LA WEB Y RANKING",
+                command=lambda: self.save_and_publish_tournament(notify=True),
+                font=UI_FONT_SMALL,
+                height=34,
+                fg_color="#8b5cf6",
+                hover_color="#7c3aed"
+            )
+        btn_web.grid(row=0, column=0, padx=5, pady=4, sticky="ew")
+
+        btn_champ = ctk.CTkButton(
+            final_actions_frame,
+            text="🏆 CREAR POST DEL CAMPEÓN",
+            command=self.open_champion_deck_post,
+            font=UI_FONT_SMALL,
+            height=34,
+            fg_color="#f59e0b",
+            hover_color="#d97706",
+            text_color="#0f172a"
+        )
+        btn_champ.grid(row=0, column=1, padx=5, pady=4, sticky="ew")
+
+        btn_omw = ctk.CTkButton(
+            final_actions_frame,
+            text="🔍 EXPLICAR DESEMPATES (OMW%)",
+            command=self.show_tiebreaker_explanation_dialog,
+            font=UI_FONT_SMALL,
+            height=34,
+            fg_color="#0284c7",
+            hover_color="#0369a1"
+        )
+        btn_omw.grid(row=0, column=2, padx=5, pady=4, sticky="ew")
+
+        btn_league = ctk.CTkButton(
+            final_actions_frame,
+            text="🎖️ ACTUALIZAR PUNTOS DE LIGA",
+            command=self.export_to_league,
+            font=UI_FONT_SMALL,
+            height=34,
+            fg_color="#3b82f6",
+            hover_color="#2563eb"
+        )
+        btn_league.grid(row=0, column=3, padx=5, pady=4, sticky="ew")
+
+        # Fila 1: Exportaciones a Redes Sociales y Premios
+        btn_png = ctk.CTkButton(
+            final_actions_frame,
+            text="🖼️ EXPORTAR STANDING PNG",
+            command=self.export_standings_image,
+            font=UI_FONT_SMALL,
+            height=34
+        )
+        btn_png.grid(row=1, column=0, padx=5, pady=4, sticky="ew")
+
+        btn_ig = ctk.CTkButton(
+            final_actions_frame,
+            text="📸 EXPORTAR A INSTAGRAM",
+            command=self.export_to_instagram,
+            font=UI_FONT_SMALL,
+            height=34,
+            fg_color="#d946ef",
+            hover_color="#c026d3"
+        )
+        btn_ig.grid(row=1, column=1, padx=5, pady=4, sticky="ew")
+
+        btn_wa = ctk.CTkButton(
+            final_actions_frame,
+            text="💬 COMPARTIR STANDING WHATSAPP",
+            command=self.share_standings_whatsapp,
+            font=UI_FONT_SMALL,
+            height=34,
+            fg_color="#16a34a",
+            hover_color="#15803d"
+        )
+        btn_wa.grid(row=1, column=2, padx=5, pady=4, sticky="ew")
+
+        btn_prizes = ctk.CTkButton(
+            final_actions_frame,
+            text="🎁 CALCULAR PREMIOS",
+            command=self.open_prize_calculator_from_tournament,
+            font=UI_FONT_SMALL,
+            height=34,
+            fg_color="#eab308",
+            hover_color="#ca8a04",
+            text_color="#0f172a"
+        )
+        btn_prizes.grid(row=1, column=3, padx=5, pady=4, sticky="ew")
+
+        # Fila 2: Acciones críticas y cierre de torneo
+        btn_finish = ctk.CTkButton(
+            final_actions_frame,
+            text="🏁 FINALIZAR TORNEO Y PREPARAR NUEVO",
+            command=self.reset_tournament,
+            font=UI_FONT_SMALL,
+            height=36,
+            fg_color="#10b981",
+            hover_color="#059669",
+            text_color="#0f172a"
+        )
+
         if self.manager.current_round > 1:
-            ctk.CTkButton(final_actions_frame, text="< DESHACER Y VOLVER A ÚLTIMA RONDA", command=self.rollback_round_ui, font=UI_FONT_SMALL, width=220, fg_color="#ef4444", hover_color="#b91c1c").pack(side="left", padx=5, pady=5)
+            btn_rollback = ctk.CTkButton(
+                final_actions_frame,
+                text="< DESHACER Y VOLVER A ÚLTIMA RONDA",
+                command=self.rollback_round_ui,
+                font=UI_FONT_SMALL,
+                height=36,
+                fg_color="#ef4444",
+                hover_color="#b91c1c"
+            )
+            btn_rollback.grid(row=2, column=0, columnspan=2, padx=5, pady=(6, 4), sticky="ew")
+            btn_finish.grid(row=2, column=2, columnspan=2, padx=5, pady=(6, 4), sticky="ew")
+        else:
+            btn_finish.grid(row=2, column=1, columnspan=2, padx=5, pady=(6, 4), sticky="ew")
             
         cols = ("Rank", "Name", "Points", "Rivales%", "2do nivel%", "Nota desempate")
         tree = ttk.Treeview(buf, columns=cols, show="headings", height=15)
@@ -2584,6 +2924,8 @@ class TournamentUI(ctk.CTkFrame):
             self.round_minutes = 40
             self.date_var.set(datetime.now().strftime("%d-%m-%y"))
             self.active_room_code = None
+            self.is_dummy_tournament = False
+            self._dummy_drop_simulated = False
             self._tournament_already_published = False
             self._last_saved_history_filename = None
             self._current_saved_tournament_id = None

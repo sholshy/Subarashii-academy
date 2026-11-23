@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from apps.catalog.models import Card, CardPrint
@@ -129,4 +130,51 @@ def pricing_sync_card_prints_api_view(request, card_id):
         messages.warning(request, f"No se pudieron obtener precios en dólares para las impresiones de '{card.name}'.")
 
     return redirect('catalog_card_detail', card_id=card.id)
+
+
+def pricing_api_quote_preview_view(request):
+    """
+    API endpoint para cotización en tiempo real.
+    Calcula conversión USD a CLP, margen comercial, precio efectivo y tarjeta.
+    """
+    config = PricingService.get_active_config()
+
+    ref_usd_str = request.GET.get('ref_usd') or request.POST.get('ref_usd')
+    ygoprodeck_id = request.GET.get('ygoprodeck_id') or request.POST.get('ygoprodeck_id')
+    card_name = request.GET.get('card_name', '').strip() or request.POST.get('card_name', '').strip()
+    print_code = request.GET.get('print_code', '').strip() or request.POST.get('print_code', '').strip()
+
+    ref_usd = None
+    if ref_usd_str:
+        ref_usd = parse_decimal_input(ref_usd_str, default=None)
+
+    # Si no se pasó ref_usd explícito, buscarlo en la API por ID/código
+    if not ref_usd or ref_usd <= 0:
+        y_id = int(ygoprodeck_id) if ygoprodeck_id and str(ygoprodeck_id).isdigit() else None
+        ref_usd = CardPriceAPIService.get_usd_price_for_card_and_code(
+            ygoprodeck_id=y_id,
+            card_name=card_name,
+            print_code=print_code
+        )
+
+    if ref_usd and ref_usd > 0:
+        cash_price, card_price = PricingService.calculate_prices_from_usd(ref_usd, config)
+        return JsonResponse({
+            'status': 'success',
+            'ref_usd': str(ref_usd),
+            'usd_to_clp_rate': str(config.usd_to_clp_rate),
+            'commercial_margin_percent': str(config.commercial_margin_percent),
+            'cash_price': int(cash_price),
+            'card_price': int(card_price),
+            'formatted_cash': f"${int(cash_price):,}".replace(',', '.'),
+            'formatted_card': f"${int(card_price):,}".replace(',', '.'),
+        })
+    else:
+        return JsonResponse({
+            'status': 'not_found',
+            'usd_to_clp_rate': str(config.usd_to_clp_rate),
+            'commercial_margin_percent': str(config.commercial_margin_percent),
+            'message': 'No se encontró precio automático. Puedes ingresar el valor USD o CLP manualmente.'
+        })
+
 

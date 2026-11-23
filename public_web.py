@@ -517,6 +517,52 @@ def view_tournament_room(room_code):
     players = trm.get_room_players(room_code)
     return render_template('room_live.html', room=room, players=players)
 
+@app.route('/torneo-prueba/<room_code>')
+@app.route('/test-tournament/<room_code>')
+def view_test_tournament_results(room_code):
+    """Página dedicada exclusiva para visualizar resultados finales de un Torneo de Prueba / Simulación."""
+    from tournament_room_manager import TournamentRoomManager
+    trm = TournamentRoomManager()
+    room = trm.get_room_by_code(room_code)
+    if not room:
+        abort(404)
+
+    live = {}
+    try:
+        raw_live = room.get('live_data_json')
+        if raw_live:
+            live = json.loads(raw_live) if isinstance(raw_live, str) else raw_live
+    except Exception:
+        pass
+
+    standings = live.get('standings', [])
+    round_history = live.get('round_history', [])
+    total_rounds = live.get('total_rounds', room.get('current_round', 3))
+
+    # Mapa de arquetipos de deck
+    deck_map = {}
+    players = trm.get_room_players(room_code) or []
+    for p in players:
+        deck_map[p.get('player_name')] = p.get('deck_archetype') or 'Estándar'
+
+    dropped_players = trm.get_room_dropped_players(room_code) or []
+    dropped_names = {d.get('player_name') for d in dropped_players}
+
+    champion = standings[0] if standings else None
+
+    return render_template(
+        'test_tournament_results.html',
+        room=room,
+        live=live,
+        standings=standings,
+        round_history=round_history,
+        total_rounds=total_rounds,
+        deck_map=deck_map,
+        dropped_names=dropped_names,
+        dropped_count=len(dropped_names),
+        champion=champion
+    )
+
 @app.route('/api/room/<room_code>/join', methods=['POST'])
 def api_room_join(room_code):
     try:
@@ -883,6 +929,8 @@ def api_organizer_sync():
                 "current_round": current_round,
                 "matches": pairings,
                 "standings": standings,
+                "round_history": data.get("round_history", []),
+                "is_dummy": bool(data.get("is_dummy", False)),
                 "time_left": timer_data.get("time_left"),
                 "duration_secs": timer_data.get("duration_secs", 50 * 60),
                 "timer_running": (timer_data.get("status") == "running"),

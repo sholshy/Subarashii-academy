@@ -108,3 +108,52 @@ class TestShowcaseServices:
         assert len(matrix[0]['slots']) == 3
         assert matrix[0]['row_letter'] == 'A'
         assert matrix[1]['row_letter'] == 'B'
+
+    def test_update_showcase_grid_resize(self, seller_user, sample_item):
+        showcase, _ = ShowcaseService.create_showcase(name="Vitrina Resize", code="VR", total_rows=4, total_columns=8)
+        assert showcase.slots.filter(is_active=True).count() == 32
+
+        # Asignar una carta en A01
+        slot_a01 = showcase.slots.get(visible_code="VR-A01")
+        ShowcaseService.assign_item_to_slot(slot=slot_a01, item=sample_item, user=seller_user)
+
+        # Reducir a 2 filas x 4 columnas = 8 espacios (4 arriba y 4 abajo)
+        active_count, deact_count = ShowcaseService.update_showcase_grid(showcase, new_rows=2, new_cols=4, user=seller_user)
+        assert active_count == 8
+        assert showcase.slots.filter(is_active=True).count() == 8
+        assert showcase.total_rows == 2
+        assert showcase.total_columns == 4
+
+        # A01 debe seguir conservando la carta asignada
+        slot_a01.refresh_from_db()
+        assert slot_a01.is_active is True
+        assert slot_a01.current_item == sample_item
+
+        # Matriz resultante debe tener exactamente 2 filas de 4 slots
+        matrix = ShowcaseService.get_showcase_matrix(showcase)
+        assert len(matrix) == 2
+        assert len(matrix[0]['slots']) == 4
+        assert len(matrix[1]['slots']) == 4
+
+    def test_update_showcase_grid_arbitrary_resizes_no_collision(self, seller_user):
+        """Verifica que cambiar dimensiones (expandir, contraer, cambiar filas y columnas) nunca falle por IntegrityError."""
+        showcase, _ = ShowcaseService.create_showcase(name="Vitrina Flexible", code="VF", total_rows=2, total_columns=4)
+        assert showcase.slots.filter(is_active=True).count() == 8
+
+        # 1. Expandir a 3 filas x 5 columnas = 15 espacios
+        active_count, _ = ShowcaseService.update_showcase_grid(showcase, new_rows=3, new_cols=5, user=seller_user)
+        assert active_count == 15
+        assert showcase.slots.filter(is_active=True).count() == 15
+        assert showcase.capacity == 15
+
+        # 2. Re-dimensionar a 4 filas x 4 columnas = 16 espacios
+        active_count, _ = ShowcaseService.update_showcase_grid(showcase, new_rows=4, new_cols=4, user=seller_user)
+        assert active_count == 16
+        assert showcase.slots.filter(is_active=True).count() == 16
+        assert showcase.capacity == 16
+
+        # 3. Re-dimensionar a 1 fila x 8 columnas = 8 espacios
+        active_count, _ = ShowcaseService.update_showcase_grid(showcase, new_rows=1, new_cols=8, user=seller_user)
+        assert active_count == 8
+        assert showcase.slots.filter(is_active=True).count() == 8
+        assert showcase.capacity == 8

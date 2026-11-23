@@ -70,10 +70,12 @@ class StoreManager:
         self.conn.commit()
 
     def get_active_league_db_path(self):
-        return "data/ygo_data.db"
+        from database import DB_PATH
+        return DB_PATH
     
     def get_players_db_path(self, store_name=None):
-        return "data/ygo_data.db"
+        from database import DB_PATH
+        return DB_PATH
 
     def get_store_stats(self, store_name):
         import os, json

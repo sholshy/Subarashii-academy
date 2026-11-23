@@ -1,86 +1,141 @@
 {% extends 'base.html' %}
 {% block content %}
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <h2 class="title" style="margin-bottom: 0;">Calculadora de Premios</h2>
+    <h2 class="title" style="margin-bottom: 0;">Calculadora de Premios y Accesorios</h2>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-    <!-- Entradas -->
-    <div class="glass-panel" style="padding: 2rem;">
-        <h3 style="color: white; margin-bottom: 1.5rem;">Parámetros del Evento</h3>
+<div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 2rem;">
+    <!-- Entradas y Parámetros -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h3 style="color: #60a5fa; margin-bottom: 1.2rem; font-size: 1.2rem;">Parámetros del Evento</h3>
         
         <form id="calculator-form" oninput="calculatePrizes()" onsubmit="event.preventDefault();">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div>
-                    <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Jugadores (Pagaron)</label>
-                    <input type="number" id="paid_players" value="0" min="0" style="width: 100%; text-align: right;">
+                    <label style="color: var(--primary); display: block; margin-bottom: 0.3rem; font-weight: bold; font-size: 0.85rem;">Jugadores (Pagaron)</label>
+                    <input type="number" id="paid_players" value="16" min="0" style="width: 100%; text-align: right;">
                 </div>
                 <div>
-                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Jugadores (Invitados)</label>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">Jugadores (Invitados)</label>
                     <input type="number" id="invited_players" value="0" min="0" style="width: 100%; text-align: right;">
                 </div>
 
                 <div>
-                    <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Costo de Inscripción ($)</label>
-                    <input type="number" id="entry_fee" value="5000" min="0" step="100" style="width: 100%; text-align: right;">
+                    <label style="color: var(--primary); display: block; margin-bottom: 0.3rem; font-weight: bold; font-size: 0.85rem;">Costo Entrada ($)</label>
+                    <input type="number" id="entry_fee" value="5000" min="0" step="500" style="width: 100%; text-align: right;">
                 </div>
                 <div>
-                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">IVA (%)</label>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">IVA Incluido (%)</label>
                     <input type="number" id="iva_pct" value="19" min="0" step="0.1" style="width: 100%; text-align: right;">
                 </div>
 
                 <div>
-                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Comisión Transbank (%)</label>
+                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.3rem; font-size: 0.85rem;">Comisión Transbank (%)</label>
                     <input type="number" id="commission_pct" value="2.9" min="0" step="0.1" style="width: 100%; text-align: right;">
                 </div>
                 <div>
-                    <label style="color: var(--primary); display: block; margin-bottom: 0.5rem; font-weight: bold; font-size: 0.9rem;">Costo por Caja ($)</label>
-                    <input type="number" id="box_cost" value="65000" min="0" step="1000" style="width: 100%; text-align: right;">
+                    <label style="color: #4ade80; display: block; margin-bottom: 0.3rem; font-weight: bold; font-size: 0.85rem;">Margen Ganancia Tienda (%)</label>
+                    <input type="number" id="profit_margin_pct" value="40" min="0" step="1" style="width: 100%; text-align: right;">
                 </div>
 
-                <div>
-                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Sobres por Caja</label>
-                    <input type="number" id="packs_per_box" value="24" min="1" style="width: 100%; text-align: right;">
-                </div>
-                <div>
-                    <label style="color: var(--text-muted); display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Margen Ganancia Tienda (%)</label>
-                    <input type="number" id="profit_margin_pct" value="40" min="0" step="1" style="width: 100%; text-align: right;">
+                <div style="grid-column: span 2;">
+                    <label style="color: #a78bfa; display: block; margin-bottom: 0.3rem; font-weight: bold; font-size: 0.85rem;">Sobre de Premios (del Inventario)</label>
+                    <select id="selected_pack_id" onchange="calculatePrizes()" style="width: 100%; background: #1e293b; color: white; border: 1px solid #475569; padding: 0.45rem; border-radius: 4px; font-size: 0.9rem;">
+                        <!-- Opciones de sobres cargadas dinámicamente -->
+                    </select>
                 </div>
             </div>
         </form>
+
+        <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(30, 41, 59, 0.6); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="color: #38bdf8; font-weight: bold; font-size: 0.9rem; margin-bottom: 0.3rem;">🃏 Sobre de Premios Seleccionado</div>
+            <div id="res_suggested_pack" style="color: #2dd4bf; font-weight: bold; font-size: 0.95rem;">Cargando...</div>
+        </div>
     </div>
 
-    <!-- Resultados -->
-    <div class="glass-panel" style="padding: 2rem;">
-        <h3 style="color: white; margin-bottom: 1.5rem;">Resultados y Distribución</h3>
+    <!-- Resultados y Asignación de Premios -->
+    <div class="glass-panel" style="padding: 1.5rem;">
+        <h3 style="color: #60a5fa; margin-bottom: 1.2rem; font-size: 1.2rem;">Balance Financiero</h3>
 
-        <div style="background: rgba(0, 0, 0, 0.3); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                <span style="color: var(--text-muted);">Total Jugadores:</span>
-                <strong style="color: white; font-size: 1.1rem;" id="res_total_players">0</strong>
+        <div style="background: rgba(15, 23, 42, 0.8); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; font-size: 0.9rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Total Jugadores:</span>
+                    <strong style="color: white;" id="res_total_players">0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Ingreso Bruto:</span>
+                    <strong style="color: white;" id="res_gross">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Pozo Neto:</span>
+                    <strong style="color: #4ade80;" id="res_net">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Presupuesto Premios:</span>
+                    <strong style="color: #38bdf8;" id="res_budget">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Valor Accesorios (Venta):</span>
+                    <strong style="color: #38bdf8;" id="res_acc_sale">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Costo Real Accesorios:</span>
+                    <strong style="color: #fbbf24;" id="res_acc_cost">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Ganancia en Accesorios:</span>
+                    <strong style="color: #4ade80;" id="res_acc_profit">+$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Sobres Extras:</span>
+                    <strong style="color: #a78bfa;" id="res_packs">0 Sobres</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Costo Real Sobres:</span>
+                    <strong style="color: #a78bfa;" id="res_packs_cost">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Ganancia en Sobres:</span>
+                    <strong style="color: #4ade80;" id="res_packs_profit">+$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Costo Real Total Premios:</span>
+                    <strong style="color: #f87171;" id="res_total_prizes">$0</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">Ganancia Real Tienda:</span>
+                    <strong style="color: #4ade80;" id="res_real_profit">$0 (0%)</strong>
+                </div>
             </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                <span style="color: var(--text-muted);">Ingreso Bruto:</span>
-                <strong style="color: white; font-size: 1.1rem;" id="res_gross">$0</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                <span style="color: var(--text-muted);">Ingreso Neto (Pozo):</span>
-                <strong style="color: var(--success); font-size: 1.2rem;" id="res_net">$0</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color: var(--text-muted);">Total Sobres a Repartir:</span>
-                <strong style="color: var(--primary); font-size: 1.3rem;" id="res_packs">0 Sobres</strong>
+            <div id="res_alert" style="margin-top: 0.8rem; font-size: 0.85rem; color: #4ade80;"></div>
+        </div>
+
+        <!-- Top Configuration -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h4 style="color: var(--primary); margin: 0; font-size: 1.1rem;">Premios del Top</h4>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <label style="color: var(--text-muted); font-size: 0.85rem;">Corte del Top:</label>
+                <select id="top_cut_mode" onchange="calculatePrizes()" style="background: #1e293b; color: white; border: 1px solid #334155; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">
+                    <option value="auto">Automático</option>
+                    <option value="2">Top 2</option>
+                    <option value="3">Top 3</option>
+                    <option value="4">Top 4</option>
+                    <option value="8">Top 8</option>
+                </select>
             </div>
         </div>
 
-        <h4 style="color: var(--primary); margin-bottom: 1rem;">Sugerencia de Distribución</h4>
-        <div style="display: flex; flex-direction: column; gap: 0.5rem;" id="distribution_container">
-            <!-- Dynamic distribution -->
+        <div style="display: flex; flex-direction: column; gap: 0.6rem;" id="distribution_container">
+            <!-- Dynamic distribution rows with accessory dropdowns -->
         </div>
     </div>
 </div>
 
 <script>
+const ACCESSORIES = {{ (accessories or []) | tojson }};
+const selectedAccessories = {};
+
 function val(id) {
     return parseFloat(document.getElementById(id).value) || 0;
 }
@@ -89,85 +144,224 @@ function formatCurrency(num) {
     return '$' + Math.floor(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+function getTopCount(totalPlayers) {
+    const mode = document.getElementById('top_cut_mode').value;
+    if (mode === '2') return 2;
+    if (mode === '3') return 3;
+    if (mode === '4') return 4;
+    if (mode === '8') return 8;
+
+    // Automático
+    if (totalPlayers <= 4) return 2;
+    if (totalPlayers < 16) return 3;
+    if (totalPlayers < 32) return 4;
+    return 8;
+}
+
+function getTopWeights(count) {
+    if (count === 2) return [0.70, 0.30];
+    if (count === 3) return [0.50, 0.30, 0.20];
+    if (count === 4) return [0.45, 0.25, 0.15, 0.15];
+    if (count === 8) return [0.35, 0.20, 0.13, 0.12, 0.05, 0.05, 0.05, 0.05];
+    return Array(count).fill(1 / count);
+}
+
+function distributePacks(totalPacks, weights) {
+    if (totalPacks <= 0) return Array(weights.length).fill(0);
+    if (totalPacks === 1) {
+        const res = Array(weights.length).fill(0);
+        res[0] = 1;
+        return res;
+    }
+    const raw = weights.map(w => totalPacks * w);
+    const floors = raw.map(r => Math.floor(r));
+    let remainder = totalPacks - floors.reduce((a, b) => a + b, 0);
+    const remainders = raw.map((r, i) => ({ rem: r - floors[i], idx: i }));
+    remainders.sort((a, b) => b.rem - a.rem);
+    for (let i = 0; i < remainder; i++) {
+        floors[remainders[i].idx]++;
+    }
+    return floors;
+}
+
+function initPackSelect() {
+    const sel = document.getElementById('selected_pack_id');
+    if (!sel) return;
+    sel.innerHTML = '';
+    const packs = ACCESSORIES.filter(a => a.category === 'Sobres' || a.category === 'Sobre');
+    const list = packs.length > 0 ? packs : ACCESSORIES;
+    list.forEach(p => {
+        const cost = Number(p.cost || 0);
+        const sale = (p.sale_price !== undefined && p.sale_price !== null) ? Number(p.sale_price) : cost;
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${p.name} (Venta: ${formatCurrency(sale)} | Costo: ${formatCurrency(cost)}) [Stock: ${p.stock || 0}]`;
+        sel.appendChild(opt);
+    });
+}
+
+function onAccessoryChange(slotIdx, selectElem) {
+    selectedAccessories[slotIdx] = selectElem.value;
+    calculatePrizes();
+}
+
 function calculatePrizes() {
     const paid = val('paid_players');
     const invited = val('invited_players');
     const fee = val('entry_fee');
     const iva = val('iva_pct');
     const comm = val('commission_pct');
-    const boxCost = val('box_cost');
-    const packsPerBox = Math.max(1, val('packs_per_box'));
     const profitMargin = val('profit_margin_pct');
 
     const totalPlayers = paid + invited;
     const grossIncome = paid * fee;
 
-    // Calcular Neto por Inscripción
+    // Neto por Entrada
     const netFromIva = fee / (1 + (iva / 100));
     const commCost = fee * (comm / 100);
-    const netFee = netFromIva - commCost;
-
+    const netFee = Math.max(0, netFromIva - commCost);
     const totalNetIncome = netFee * paid;
 
-    // Costos de producto
-    const basePackCost = boxCost / packsPerBox;
-    const packCost = basePackCost * (1 + (profitMargin / 100));
+    const desiredProfit = totalNetIncome * (profitMargin / 100);
+    const prizeBudget = Math.max(0, totalNetIncome - desiredProfit);
 
-    let totalPacks = 0;
-    if (packCost > 0) {
-        totalPacks = Math.ceil(totalNetIncome / packCost);
+    // Sobre de Premios seleccionado desde inventario
+    const selPackId = document.getElementById('selected_pack_id') ? document.getElementById('selected_pack_id').value : '';
+    let selectedPack = ACCESSORIES.find(a => a.id === selPackId);
+    if (!selectedPack) {
+        selectedPack = ACCESSORIES.find(a => a.category === 'Sobres' || a.category === 'Sobre') || ACCESSORIES[0] || {};
+    }
+    const packCost = Number(selectedPack.cost || 0);
+    const packSale = (selectedPack.sale_price !== undefined && selectedPack.sale_price !== null) ? Number(selectedPack.sale_price) : packCost;
+    const packProfit = packSale - packCost;
+    const packStock = Number(selectedPack.stock || 0);
+    const packName = selectedPack.name || 'Sobre';
+
+    const topCount = getTopCount(totalPlayers);
+
+    // Costo y Valor Venta de accesorios seleccionados
+    let totalAccCost = 0;
+    let totalAccSale = 0;
+    const accCounts = {};
+    for (let i = 0; i < topCount; i++) {
+        const accId = selectedAccessories[i];
+        if (accId && accId !== 'none') {
+            const acc = ACCESSORIES.find(a => a.id === accId);
+            if (acc) {
+                const cost = Number(acc.cost || 0);
+                const sale = (acc.sale_price !== undefined && acc.sale_price !== null) ? Number(acc.sale_price) : cost;
+                totalAccCost += cost;
+                totalAccSale += sale;
+                accCounts[accId] = (accCounts[accId] || 0) + 1;
+            }
+        }
     }
 
-    // Actualizar UI
-    document.getElementById('res_total_players').innerText = `${totalPlayers} (${paid} Pagaron, ${invited} Inv.)`;
+    const totalAccProfit = totalAccSale - totalAccCost;
+
+    // El presupuesto descuenta los accesorios a su PRECIO DE VENTA
+    const remainingBudget = Math.max(0, prizeBudget - totalAccSale);
+    const totalPacks = packSale > 0 ? Math.floor(remainingBudget / packSale) : (packCost > 0 ? Math.floor(remainingBudget / packCost) : 0);
+    const totalPacksCost = totalPacks * packCost;
+    const totalPacksProfit = totalPacks * packProfit;
+    const totalPrizesCost = totalAccCost + totalPacksCost;
+    const realProfit = totalNetIncome - totalPrizesCost;
+    const realProfitPct = totalNetIncome > 0 ? (realProfit / totalNetIncome * 100) : 0;
+
+    // Actualizar Panel Financiero
+    document.getElementById('res_total_players').innerText = `${totalPlayers} (${paid} Pag., ${invited} Inv.)`;
     document.getElementById('res_gross').innerText = formatCurrency(grossIncome);
     document.getElementById('res_net').innerText = formatCurrency(totalNetIncome);
+    document.getElementById('res_budget').innerText = formatCurrency(prizeBudget);
+    document.getElementById('res_acc_sale').innerText = formatCurrency(totalAccSale);
+    document.getElementById('res_acc_cost').innerText = formatCurrency(totalAccCost);
+    document.getElementById('res_acc_profit').innerText = `+${formatCurrency(totalAccProfit)}`;
     document.getElementById('res_packs').innerText = `${totalPacks} Sobres`;
+    document.getElementById('res_packs_cost').innerText = formatCurrency(totalPacksCost);
+    document.getElementById('res_packs_profit').innerText = `+${formatCurrency(totalPacksProfit)}`;
+    document.getElementById('res_total_prizes').innerText = formatCurrency(totalPrizesCost);
+    document.getElementById('res_real_profit').innerText = `${formatCurrency(realProfit)} (${realProfitPct.toFixed(1)}%)`;
 
-    // Calcular distribución
+    // Resumen del Sobre Seleccionado
+    const packBox = document.getElementById('res_suggested_pack');
+    if (packBox) {
+        packBox.innerHTML = `<strong>${packName}</strong><br>Venta: ${formatCurrency(packSale)} | Costo: ${formatCurrency(packCost)} | Ganancia: +${formatCurrency(packProfit)} c/u<br><span style="color: #fbbf24;">Stock en inventario: ${packStock} sobres</span>`;
+    }
+
+    // Alertas
+    const alertElem = document.getElementById('res_alert');
+    const alerts = [];
+    if (totalAccSale > prizeBudget) {
+        alerts.push(`⚠️ El valor venta de los accesorios (${formatCurrency(totalAccSale)}) excede el presupuesto (${formatCurrency(prizeBudget)}). La ganancia bajará al ${realProfitPct.toFixed(1)}%.`);
+    }
+    if (selectedPack && totalPacks > packStock) {
+        alerts.push(`⚠️ Stock insuficiente de sobres: Se requieren ${totalPacks} sobres de '${packName}', pero solo hay ${packStock} en inventario.`);
+    }
+    for (const [accId, count] of Object.entries(accCounts)) {
+        const item = ACCESSORIES.find(a => a.id === accId);
+        if (item && count > (item.stock || 0)) {
+            alerts.push(`⚠️ Stock insuficiente para '${item.name}': seleccionado ${count} veces (Stock: ${item.stock || 0}).`);
+        }
+    }
+    if (alerts.length > 0) {
+        alertElem.innerHTML = alerts.join('<br>');
+        alertElem.style.color = '#f59e0b';
+    } else {
+        alertElem.innerHTML = totalPacks > 0 ? `✅ Presupuesto cubierto. Saldo remanente otorga ${totalPacks} sobres (${packName}) al Top.` : `✅ Premios ajustados al presupuesto y margen de ganancia.`;
+        alertElem.style.color = '#4ade80';
+    }
+
+    // Distribución del Top
+    const weights = getTopWeights(topCount);
+    const packsDist = distributePacks(totalPacks, weights);
+
     const container = document.getElementById('distribution_container');
     container.innerHTML = '';
 
-    if (totalPacks > 0) {
-        let remaining = totalPacks;
-        const dist = [];
-        
-        if (totalPacks === 1) {
-            dist.push({place: '1er Lugar', packs: 1, color: '#fbbf24'});
-        } else if (totalPacks === 2) {
-            dist.push({place: '1er Lugar', packs: 2, color: '#fbbf24'});
-        } else if (totalPacks === 3) {
-            dist.push({place: '1er Lugar', packs: 2, color: '#fbbf24'});
-            dist.push({place: '2do Lugar', packs: 1, color: '#9ca3af'});
-        } else if (totalPacks >= 4) {
-            // Ejemplo de distribución progresiva (aprox 50%, 25%, 12%, 12%)
-            let p1 = Math.ceil(totalPacks * 0.5);
-            let p2 = Math.ceil(totalPacks * 0.25);
-            let p34 = Math.floor((totalPacks - p1 - p2) / 2);
-            let p4 = totalPacks - p1 - p2 - p34;
+    const rankNames = ['1er Lugar 🥇', '2do Lugar 🥈', '3er Lugar 🥉', '4to Lugar 🎖️', '5to Lugar', '6to Lugar', '7mo Lugar', '8vo Lugar'];
+    const rankColors = ['#fbbf24', '#9ca3af', '#b45309', '#38bdf8', '#cbd5e1', '#cbd5e1', '#cbd5e1', '#cbd5e1'];
 
-            dist.push({place: '1er Lugar', packs: p1, color: '#fbbf24'});
-            dist.push({place: '2do Lugar', packs: p2, color: '#9ca3af'});
-            if (p34 > 0) dist.push({place: '3er Lugar', packs: p34, color: '#b45309'});
-            if (p4 > 0) dist.push({place: '4to Lugar', packs: p4, color: '#b45309'});
-        }
+    for (let i = 0; i < topCount; i++) {
+        const currentAccId = selectedAccessories[i] || 'none';
+        const packsForSlot = packsDist[i] || 0;
+        const currentAcc = ACCESSORIES.find(a => a.id === currentAccId);
 
-        dist.forEach(item => {
-            const div = document.createElement('div');
-            div.style.display = 'flex';
-            div.style.justifyContent = 'space-between';
-            div.style.padding = '0.5rem 1rem';
-            div.style.background = 'rgba(255,255,255,0.05)';
-            div.style.borderRadius = '4px';
-            div.innerHTML = `<span style="color: ${item.color}; font-weight: bold;">${item.place}</span> <span style="color: white; font-weight: bold;">${item.packs} Sobres</span>`;
-            container.appendChild(div);
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.justifyContent = 'space-between';
+        row.style.padding = '0.7rem 1rem';
+        row.style.background = 'rgba(255, 255, 255, 0.04)';
+        row.style.borderRadius = '6px';
+        row.style.gap = '0.8rem';
+
+        // Puesto
+        const rankSpan = `<span style="color: ${rankColors[i]}; font-weight: bold; width: 110px; font-size: 0.95rem;">${rankNames[i] || `${i+1}to Lugar`}</span>`;
+
+        // Select de Accesorio
+        let selectHtml = `<select onchange="onAccessoryChange(${i}, this)" style="background: #1e293b; color: white; border: 1px solid #334155; padding: 0.35rem 0.5rem; border-radius: 4px; font-size: 0.85rem; flex: 1;">`;
+        selectHtml += `<option value="none" ${currentAccId === 'none' ? 'selected' : ''}>(Sin accesorio - Solo sobres)</option>`;
+        ACCESSORIES.forEach(a => {
+            const isSel = a.id === currentAccId ? 'selected' : '';
+            const cost = Number(a.cost || 0);
+            const sale = (a.sale_price !== undefined && a.sale_price !== null) ? Number(a.sale_price) : cost;
+            const profit = sale - cost;
+            const profitTxt = profit > 0 ? ` (+${formatCurrency(profit)} gan.)` : '';
+            selectHtml += `<option value="${a.id}" ${isSel}>${a.name} (Venta: ${formatCurrency(sale)}${profitTxt} | Costo: ${formatCurrency(cost)}) [Stock: ${a.stock || 0}]</option>`;
         });
-    } else {
-        container.innerHTML = '<span style="color: var(--text-muted); font-style: italic;">No hay suficientes ingresos para repartir premios.</span>';
+        selectHtml += `</select>`;
+
+        // Sobres
+        const packsBadge = packsForSlot > 0 ? `<span style="color: #a78bfa; font-weight: bold; font-size: 0.9rem; min-width: 80px; text-align: right;">+ ${packsForSlot} Sobres</span>` : `<span style="color: var(--text-muted); font-size: 0.85rem; min-width: 80px; text-align: right;">0 Sobres</span>`;
+
+        row.innerHTML = rankSpan + selectHtml + packsBadge;
+        container.appendChild(row);
     }
 }
 
-// Calcular al cargar la página
-document.addEventListener('DOMContentLoaded', calculatePrizes);
+document.addEventListener('DOMContentLoaded', () => {
+    initPackSelect();
+    calculatePrizes();
+});
 </script>
 {% endblock %}

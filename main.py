@@ -30,6 +30,13 @@ class YgoToolsApp(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
 
+        icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app_icon.ico")
+        if os.path.exists(icon_path):
+            try:
+                self.iconbitmap(icon_path)
+            except Exception:
+                pass
+
         self.setup_styles()
         
         self.main_menu_frame = ctk.CTkFrame(self, fg_color="transparent")

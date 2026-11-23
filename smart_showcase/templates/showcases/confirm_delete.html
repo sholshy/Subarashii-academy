@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block title %}Eliminar Vitrina {{ showcase.name }} - Subarashii{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-slate-900 border border-rose-500/30 rounded-2xl p-6 shadow-2xl space-y-6">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">⚠️</span>
+            <div>
+                <h1 class="text-xl font-black text-rose-300">¿Eliminar Vitrina?</h1>
+                <p class="text-xs text-slate-400 mt-0.5">Esta acción no se puede deshacer.</p>
+            </div>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2 text-xs">
+            <p class="text-slate-200">
+                Vas a eliminar la vitrina <strong>{{ showcase.name }}</strong> (<span class="font-mono text-amber-400">{{ showcase.code }}</span>).
+            </p>
+            <p class="text-slate-400">
+                Tiene <strong>{{ showcase.slots.count }}</strong> espacios físicos registrados. Si alguna carta está asignada actualmente, será devuelta a bodega de forma segura.
+            </p>
+        </div>
+
+        <form method="post" class="flex justify-end gap-3 pt-2 border-t border-slate-800">
+            {% csrf_token %}
+            <a href="{% url 'showcase_grid' showcase.id %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl">Cancelar</a>
+            <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-colors">
+                Sí, Eliminar Vitrina
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

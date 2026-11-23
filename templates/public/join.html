@@ -443,12 +443,14 @@ function submitJoin(e) {
     btn.disabled = true;
     btn.innerText = "Registrando...";
 
-    // Obtener session_token previo o generar uno nuevo
-    let sessionToken = localStorage.getItem('duel_player_token');
+    // Obtener session_token previo o generar uno nuevo para este jugador/sala
+    const playerKey = 'duel_player_token_' + encodeURIComponent(name.toLowerCase());
+    let sessionToken = localStorage.getItem(playerKey) || localStorage.getItem('duel_player_token');
     if (!sessionToken) {
         sessionToken = 'p_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
         localStorage.setItem('duel_player_token', sessionToken);
     }
+    localStorage.setItem(playerKey, sessionToken);
 
     const payload = {
         player_name: name,

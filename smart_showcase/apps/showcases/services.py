@@ -53,6 +53,78 @@ class ShowcaseService:
 
     @classmethod
     @transaction.atomic
+    def update_showcase_grid(
+        cls,
+        showcase: Showcase,
+        new_rows: int,
+        new_cols: int,
+        user = None
+    ) -> Tuple[int, int]:
+        """
+        Ajusta la cuadrícula física de la vitrina a nuevas dimensiones (filas x columnas).
+        - Calcula los códigos visibles objetivo según el nuevo tamaño (ej: A01..A04, B01..B04).
+        - Desactiva los slots fuera del nuevo tamaño (desasignando cartas si tenían).
+        - Activa o crea los slots necesarios para la nueva cuadrícula.
+        Retorna (slots_activos, slots_desactivados).
+        """
+        target_codes = {}
+        slot_num = 1
+        for r in range(new_rows):
+            row_letter = chr(65 + r) if r < 26 else f"R{r+1}"
+            for c in range(1, new_cols + 1):
+                vis_code = f"{showcase.code}-{row_letter}{c:02d}"
+                target_codes[vis_code] = slot_num
+                slot_num += 1
+
+        existing_slots = {s.visible_code: s for s in showcase.slots.all()}
+
+        deactivated_count = 0
+        for code, slot in list(existing_slots.items()):
+            if code not in target_codes:
+                if slot.current_assignment:
+                    cls.unassign_slot(slot, user=user, reason="Reducción de dimensiones de vitrina")
+                if slot.assignments.count() == 0:
+                    slot.delete()
+                    del existing_slots[code]
+                else:
+                    slot.is_active = False
+                    # Asignar un número fuera de rango para evitar colisiones con slots activos
+                    slot.slot_number = 1000000 + slot.id
+                    slot.save(update_fields=['is_active', 'slot_number'])
+                deactivated_count += 1
+
+        # Mover temporalmente los slots existentes que permanecerán activos a un rango seguro
+        # para garantizar que ninguna reasignación o creación intermedia cause una violación
+        # de la restricción UniqueConstraint(showcase, slot_number).
+        for slot in existing_slots.values():
+            if slot.is_active and slot.id:
+                slot.slot_number = 500000 + slot.id
+                slot.save(update_fields=['slot_number'])
+
+        activated_or_created = 0
+        for code, target_num in target_codes.items():
+            if code in existing_slots:
+                s = existing_slots[code]
+                s.is_active = True
+                s.slot_number = target_num
+                s.save()
+                activated_or_created += 1
+            else:
+                ShowcaseSlot.objects.create(
+                    showcase=showcase,
+                    slot_number=target_num,
+                    visible_code=code,
+                    is_active=True
+                )
+                activated_or_created += 1
+
+        showcase.total_rows = new_rows
+        showcase.total_columns = new_cols
+        showcase.save()
+        return len(target_codes), deactivated_count
+
+    @classmethod
+    @transaction.atomic
     def assign_item_to_slot(
         cls,
         slot: ShowcaseSlot,
@@ -165,7 +237,7 @@ class ShowcaseService:
         con datos optimizados para el renderizado visual de la cuadrícula física.
         """
         slots = list(
-            showcase.slots.prefetch_related(
+            showcase.slots.filter(is_active=True).prefetch_related(
                 'assignments__item__print__card'
             ).order_by('slot_number')
         )

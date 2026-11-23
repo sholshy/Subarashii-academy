@@ -9,8 +9,11 @@
             <h1 class="text-3xl font-black text-slate-100 tracking-tight">Vitrinas Físicas y Códigos QR</h1>
             <p class="text-sm text-slate-400 mt-1">Administra los espacios físicos de exhibición, asignaciones de cartas y códigos QR permanentes.</p>
         </div>
-        <div>
-            <a href="{% url 'showcase_create' %}" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center gap-2">
+        <div class="flex items-center gap-3">
+            <a href="{% url 'showcase_quick_intake' %}" class="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-600 hover:to-emerald-600 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                <span>⚡</span> Ingresar Carta a Vitrina
+            </a>
+            <a href="{% url 'showcase_create' %}" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm rounded-xl transition-all border border-slate-700 flex items-center gap-2">
                 <span>➕</span> Nueva Vitrina
             </a>
         </div>
@@ -59,9 +62,14 @@
 
                 <!-- Botones de Acción -->
                 <div class="space-y-2 pt-2 border-t border-slate-800/80">
-                    <a href="{% url 'showcase_grid' s.showcase.id %}" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
-                        <span>🎯</span> Abrir Cuadrícula Visual
-                    </a>
+                    <div class="flex gap-2">
+                        <a href="{% url 'showcase_grid' s.showcase.id %}" class="flex-1 py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1.5">
+                            <span>🎯</span> Abrir Cuadrícula Visual
+                        </a>
+                        <a href="{% url 'showcase_edit' s.showcase.id %}" title="Editar Vitrina y Espacios" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition-colors flex items-center justify-center">
+                            <span>✏️</span>
+                        </a>
+                    </div>
                     <a href="{% url 'download_showcase_sheet' s.showcase.id %}" class="w-full py-2 px-4 bg-slate-950 hover:bg-slate-900 text-amber-400 border border-amber-500/30 font-semibold text-xs rounded-xl transition-colors flex items-center justify-center gap-2">
                         <span>📄</span> Descargar Lámina A4 con QRs
                     </a>

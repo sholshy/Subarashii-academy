@@ -78,3 +78,9 @@ class CardPrint(models.Model):
 
     def __str__(self) -> str:
         return f"{self.card.name} [{self.print_code}] ({self.rarity} - {self.get_edition_display()} - {self.language})"
+
+    @property
+    def display_image_url(self) -> str:
+        if self.image:
+            return self.image.url
+        return self.image_url or ''

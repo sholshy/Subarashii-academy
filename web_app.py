@@ -510,7 +510,10 @@ def cache_image(filename):
 @app.route('/prizes')
 @login_required
 def prizes():
-    return render_template('prizes.html')
+    from accessories_manager import AccessoriesManager
+    am = AccessoriesManager()
+    accessories = am.load_accessories()
+    return render_template('prizes.html', accessories=accessories)
 
 @app.route('/leagues')
 @login_required

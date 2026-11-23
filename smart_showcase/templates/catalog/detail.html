@@ -18,8 +18,8 @@
         <!-- Thumbnail -->
         <div class="w-48 h-72 bg-slate-950 rounded-xl overflow-hidden border border-slate-700 flex-shrink-0 flex items-center justify-center shadow-lg">
             {% with card.prints.all|first as first_print %}
-                {% if first_print and first_print.image_url %}
-                    <img src="{{ first_print.image_url }}" alt="{{ card.name }}" class="w-full h-full object-contain">
+                {% if first_print and first_print.display_image_url %}
+                    <img src="{{ first_print.display_image_url }}" alt="{{ card.name }}" class="w-full h-full object-contain">
                 {% else %}
                     <span class="text-5xl">🃏</span>
                 {% endif %}
@@ -94,9 +94,16 @@
                     <div>
                         <div class="flex justify-between items-start mb-2">
                             <span class="font-mono font-black text-amber-400 text-sm">{{ print.print_code }}</span>
-                            <span class="text-xs px-2 py-0.5 rounded bg-slate-800 font-semibold text-slate-300">
-                                {{ print.rarity }}
-                            </span>
+                            <div class="flex items-center gap-1.5">
+                                {% if print.image %}
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 font-bold" title="Tiene foto de la carta real">
+                                        📷 Foto Real
+                                    </span>
+                                {% endif %}
+                                <span class="text-xs px-2 py-0.5 rounded bg-slate-800 font-semibold text-slate-300">
+                                    {{ print.rarity }}
+                                </span>
+                            </div>
                         </div>
                         <h4 class="text-xs font-medium text-slate-200 line-clamp-1 mb-2">{{ print.set_name }}</h4>
                         <div class="flex gap-2 text-[11px] text-slate-400 font-mono">

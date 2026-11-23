@@ -1,7 +1,7 @@
 {
-    "current_version": 52,
-    "latest_snapshot": "snapshot_v52.json",
-    "status": "PENDING",
-    "timestamp": "2026-10-26T23:22:44.780038",
-    "checksum": "89285121e2926a93a345564c73d2e9f711182870163a46862dd887e4522c45be"
+    "current_version": 77,
+    "latest_snapshot": "snapshot_v77.json",
+    "status": "PUBLISHED",
+    "timestamp": "2026-11-22T18:29:18.545641",
+    "checksum": "4580c2471bbf4896e7830b4861070dd2c2cd4a5ac4d64b2a9ecf2c22f3f5f3b5"
 }

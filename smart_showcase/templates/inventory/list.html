@@ -91,8 +91,8 @@
                     <tr class="hover:bg-slate-800/30 transition-colors">
                         <td class="p-4 flex items-center gap-3">
                             <div class="w-10 h-14 bg-slate-950 rounded overflow-hidden flex-shrink-0 border border-slate-800 flex items-center justify-center">
-                                {% if item.print.image_url %}
-                                    <img src="{{ item.print.image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-cover">
+                                {% if item.print.display_image_url %}
+                                    <img src="{{ item.print.display_image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-cover">
                                 {% else %}
                                     <span class="text-xs">🃏</span>
                                 {% endif %}

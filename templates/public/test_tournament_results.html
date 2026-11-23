@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}Resultados Torneo de Prueba #{{ room.room_code }} - Duelorapido.cl{% endblock %}
+{% block head %}
+<style>
+.test-banner-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139, 92, 246, 0.18);
+    border: 1px solid #8b5cf6;
+    color: #c4b5fd;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 800;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+}
+.test-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 24px 0 32px 0;
+}
+.test-card {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+}
+.test-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #38bdf8, #8b5cf6);
+}
+.test-card-label {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+}
+.test-card-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.45rem;
+    font-weight: 900;
+    color: #f8fafc;
+}
+.podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 16px;
+    margin: 30px 0 45px 0;
+    flex-wrap: wrap;
+}
+.podium-step {
+    flex: 1;
+    min-width: 220px;
+    max-width: 300px;
+    background: #0f172a;
+    border-radius: 16px;
+    padding: 24px 18px;
+    text-align: center;
+    border: 1px solid #1e293b;
+    position: relative;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+}
+.podium-step.gold {
+    border-color: #f59e0b;
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, #0f172a 100%);
+    transform: translateY(-10px);
+}
+.podium-step.silver {
+    border-color: #94a3b8;
+    background: linear-gradient(180deg, rgba(148, 163, 184, 0.1) 0%, #0f172a 100%);
+}
+.podium-step.bronze {
+    border-color: #d97706;
+    background: linear-gradient(180deg, rgba(217, 119, 6, 0.1) 0%, #0f172a 100%);
+}
+.podium-medal {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+}
+.podium-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 4px;
+}
+.podium-pts {
+    font-size: 0.9rem;
+    color: #38bdf8;
+    font-weight: 700;
+}
+.tag-bot {
+    background: rgba(148, 163, 184, 0.15);
+    border: 1px solid #475569;
+    color: #94a3b8;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+.tag-human {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid #22c55e;
+    color: #4ade80;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-left: 6px;
+}
+.tag-dropped {
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid #ef4444;
+    color: #f87171;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 800;
+}
+.rounds-breakdown {
+    margin-top: 40px;
+}
+.round-card {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.round-header {
+    background: #1e293b;
+    padding: 12px 20px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #60a5fa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.round-table-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid #1e293b;
+    font-size: 0.9rem;
+}
+.round-table-row:last-child {
+    border-bottom: none;
+}
+.match-score-badge {
+    background: #0284c7;
+    color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 0 auto; padding: 20px 15px;">
+
+    <!-- HEADER DE RESULTADOS -->
+    <div style="text-align: center; margin-bottom: 25px;">
+        <div class="test-banner-badge">
+            <span>🧪</span> ENTORNO DE SIMULACIÓN Y TEST (SANDBOX)
+        </div>
+        <h1 style="font-family: 'Orbitron', sans-serif; font-size: 2.1rem; font-weight: 900; color: #f8fafc; margin: 5px 0 10px;">
+            RESULTADOS TORNEO DE PRUEBA {{ room.format_name }}
+        </h1>
+        <p style="color: #94a3b8; font-size: 0.95rem; max-width: 650px; margin: 0 auto;">
+            Simulación técnica completada exitosamente. Todos los emparejamientos, reportes variables y retiros (Drop) fueron testeados sin modificar el ranking ELO oficial.
+        </p>
+        <p style="color: #64748b; font-size: 0.8rem; margin-top: 6px;">
+            SALA PIN: <strong style="color: #38bdf8;">#{{ room.room_code }}</strong> &bull; Fecha: {{ room.created_at[:10] if room.created_at else 'Hoy' }}
+        </p>
+    </div>
+
+    <!-- TARJETAS DE RESUMEN KPI -->
+    <div class="test-summary-grid">
+        <div class="test-card">
+            <div class="test-card-label">👑 Campeón del Test</div>
+            <div class="test-card-value" style="color: #fbbf24; font-size: 1.25rem;">
+                {{ champion.name if champion else 'Sin definir' }}
+            </div>
+        </div>
+        <div class="test-card">
+            <div class="test-card-label">👥 Total Duelistas</div>
+            <div class="test-card-value">{{ standings|length }}</div>
+        </div>
+        <div class="test-card">
+            <div class="test-card-label">⚔️ Rondas Disputadas</div>
+            <div class="test-card-value">{{ total_rounds }}</div>
+        </div>
+        <div class="test-card">
+            <div class="test-card-label">🚪 Retiros Simulados (Drop)</div>
+            <div class="test-card-value" style="color: #f87171;">{{ dropped_count }}</div>
+        </div>
+    </div>
+
+    <!-- PODIO TOP 3 -->
+    {% if standings|length >= 3 %}
+    <div class="podium-container">
+        <!-- 2º Lugar -->
+        <div class="podium-step silver">
+            <div class="podium-medal">🥈</div>
+            <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: 800;">2º Lugar</div>
+            <div class="podium-name">{{ standings[1].name }}</div>
+            <div class="podium-pts">{{ standings[1].points }} Puntos</div>
+            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">OMW: {{ standings[1].omw }}</div>
+        </div>
+
+        <!-- 1º Lugar (Campeón) -->
+        <div class="podium-step gold">
+            <div class="podium-medal">🥇</div>
+            <div style="font-size: 0.8rem; color: #f59e0b; text-transform: uppercase; font-weight: 900;">👑 Campeón</div>
+            <div class="podium-name" style="color: #fef08a;">{{ standings[0].name }}</div>
+            <div class="podium-pts" style="color: #f59e0b;">{{ standings[0].points }} Puntos</div>
+            <div style="font-size: 0.78rem; color: #cbd5e1; margin-top: 4px;">OMW: {{ standings[0].omw }}</div>
+        </div>
+
+        <!-- 3º Lugar -->
+        <div class="podium-step bronze">
+            <div class="podium-medal">🥉</div>
+            <div style="font-size: 0.75rem; color: #d97706; text-transform: uppercase; font-weight: 800;">3º Lugar</div>
+            <div class="podium-name">{{ standings[2].name }}</div>
+            <div class="podium-pts">{{ standings[2].points }} Puntos</div>
+            <div style="font-size: 0.75rem; color: #64748b; margin-top: 4px;">OMW: {{ standings[2].omw }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- TABLA DE POSICIONES FINALES (STANDINGS) -->
+    <div style="margin-top: 20px;">
+        <h2 style="font-family: 'Orbitron', sans-serif; font-size: 1.35rem; color: #38bdf8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>🏆</span> TABLA FINAL DE POSICIONES (STANDINGS)
+        </h2>
+
+        <div class="table-container" style="background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; overflow-x: auto;">
+            <table class="ranking-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #1e293b; text-align: left;">
+                        <th style="padding: 12px 16px; width: 60px;">#</th>
+                        <th style="padding: 12px 16px;">Duelista</th>
+                        <th style="padding: 12px 16px;">Arquetipo / Deck</th>
+                        <th style="padding: 12px 16px; text-align: center;">Puntos</th>
+                        <th style="padding: 12px 16px; text-align: center;">OMW%</th>
+                        <th style="padding: 12px 16px; text-align: center;">OOMW%</th>
+                        <th style="padding: 12px 16px; text-align: center;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in standings %}
+                    <tr style="border-bottom: 1px solid #1e293b;">
+                        <td style="padding: 12px 16px; font-weight: 800; font-family: 'Orbitron', sans-serif; color: {% if loop.index == 1 %}#f59e0b{% elif loop.index == 2 %}#94a3b8{% elif loop.index == 3 %}#d97706{% else %}#64748b{% endif %};">
+                            {{ loop.index }}
+                        </td>
+                        <td style="padding: 12px 16px; font-weight: 700; color: #f8fafc;">
+                            {{ p.name }}
+                            {% if '[BOT]' in p.name %}
+                                <span class="tag-bot">🤖 BOT</span>
+                            {% else %}
+                                <span class="tag-human">👤 TÚ</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 16px; color: #94a3b8; font-size: 0.88rem;">
+                            {{ p.deck if p.deck else (deck_map.get(p.name, 'Estándar')) }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; font-family: 'Orbitron', sans-serif; font-weight: 800; color: #38bdf8;">
+                            {{ p.points }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; color: #cbd5e1; font-size: 0.88rem;">
+                            {{ p.omw }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; color: #94a3b8; font-size: 0.88rem;">
+                            {{ p.oomw if p.oomw else '-' }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            {% if not p.active or p.name in dropped_names %}
+                                <span class="tag-dropped">🚪 RETIRADO (DROP)</span>
+                            {% else %}
+                                <span style="color: #22c55e; font-size: 0.78rem; font-weight: 700;">✓ ACTIVO</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- DESGLOSE DE RONDAS Y DUELOS -->
+    {% if round_history and round_history|length > 0 %}
+    <div class="rounds-breakdown">
+        <h2 style="font-family: 'Orbitron', sans-serif; font-size: 1.35rem; color: #38bdf8; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>⚔️</span> HISTORIAL DE DUELOS POR RONDA
+        </h2>
+
+        {% for r in round_history %}
+        <div class="round-card">
+            <div class="round-header">
+                <span>Ronda {{ r.round }}</span>
+                <span style="font-size: 0.78rem; color: #94a3b8; font-family: 'Inter', sans-serif;">{{ r.matches|length }} Mesas disputadas</span>
+            </div>
+            <div>
+                {% for m in r.matches %}
+                <div class="round-table-row">
+                    <div style="flex: 0 0 80px; font-weight: 800; color: #64748b; font-family: 'Orbitron', sans-serif;">
+                        Mesa {{ m.table }}
+                    </div>
+                    <div style="flex: 1; text-align: right; font-weight: 700; color: #f8fafc;">
+                        {{ m.p1 }}
+                    </div>
+                    <div style="flex: 0 0 110px; text-align: center; padding: 0 10px;">
+                        <span class="match-score-badge">{{ m.score if m.score else 'Completado' }}</span>
+                    </div>
+                    <div style="flex: 1; text-align: left; font-weight: 700; color: #f8fafc;">
+                        {{ m.p2 }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ACCIONES FINALES -->
+    <div style="margin: 40px 0; text-align: center; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+        <a href="/sala/{{ room.room_code }}" class="btn" style="background: #0284c7; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 0.9rem;">
+            📱 Ver Sala en Vivo (#{{ room.room_code }})
+        </a>
+        <a href="/" class="btn" style="background: #1e293b; border: 1px solid #334155; color: #cbd5e1; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 0.9rem;">
+            🏛️ Ir al Inicio de la Academia
+        </a>
+    </div>
+
+</div>
+{% endblock %}

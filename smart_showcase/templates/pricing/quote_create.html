@@ -12,8 +12,8 @@
     <!-- Ficha de la Impresión -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl mb-6 flex items-center gap-4">
         <div class="w-14 h-20 bg-slate-950 rounded-lg overflow-hidden border border-slate-800 flex-shrink-0 flex items-center justify-center">
-            {% if card_print.image_url %}
-                <img src="{{ card_print.image_url }}" alt="{{ card_print.card.name }}" class="w-full h-full object-cover">
+            {% if card_print.display_image_url %}
+                <img src="{{ card_print.display_image_url }}" alt="{{ card_print.card.name }}" class="w-full h-full object-cover">
             {% else %}
                 <span class="text-xl">🃏</span>
             {% endif %}

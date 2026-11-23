@@ -121,3 +121,21 @@ class TestPricingServices:
         # Fallback to general tcgplayer price when set not found
         price_fallback = CardPriceAPIService.extract_usd_price_for_print(mock_data, 'UNKNOWN-001')
         assert price_fallback == Decimal('10.00')
+
+    def test_pricing_api_quote_preview_view(self, pricing_config):
+        from django.test import Client
+        import json
+        client = Client()
+
+        # Call with explicit ref_usd=10.00
+        # With pricing_config: rate=1000, margin=20%, cash=-10%, card=+5%
+        # -> cash=10800, card=12600
+        response = client.get("/pricing/api/quote-preview/?ref_usd=10.00")
+        assert response.status_code == 200
+        data = json.loads(response.content)
+        assert data['status'] == 'success'
+        assert data['cash_price'] == 10800
+        assert data['card_price'] == 12600
+        assert "$10.800" in data['formatted_cash']
+        assert "$12.600" in data['formatted_card']
+

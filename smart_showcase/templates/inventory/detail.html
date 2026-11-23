@@ -14,8 +14,8 @@
     <!-- Ficha del Ejemplar Físico -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-6">
         <div class="w-48 h-68 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex-shrink-0 flex items-center justify-center shadow-inner">
-            {% if item.print.image_url %}
-                <img src="{{ item.print.image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-contain">
+            {% if item.print.display_image_url %}
+                <img src="{{ item.print.display_image_url }}" alt="{{ item.print.card.name }}" class="w-full h-full object-contain">
             {% else %}
                 <span class="text-5xl">🃏</span>
             {% endif %}

@@ -1,0 +1,776 @@
+{% extends "base.html" %}
+
+{% block title %}Ingreso Rápido a Vitrina - Subarashii Smart Showcase{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+    <!-- Encabezado -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-800">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    ⚡ Asistente Rápido
+                </span>
+                <span class="text-xs text-slate-400 font-mono">1-Click Showcase Setup</span>
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-100 tracking-tight mt-1">
+                Ingresar Carta a Vitrina
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+                Busca en YGOPRODeck, cotiza en TCGPlayer a CLP, registra al dueño y publícala en el espacio físico.
+            </p>
+        </div>
+        {% if selected_slot %}
+        <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-3">
+            <span class="text-2xl">📍</span>
+            <div>
+                <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">Espacio Preseleccionado</span>
+                <span class="font-black text-slate-100 text-sm">{{ selected_slot.showcase.name }} • {{ selected_slot.visible_code }}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- 1. Buscador YGOPRODeck / YGO Topdeck -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl relative">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">1</span>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">Buscar Carta en YGOPRODeck / YGO Topdeck</h2>
+            </div>
+            <span id="searchStatus" class="text-xs text-slate-400 font-mono hidden">Buscando...</span>
+        </div>
+
+        <div class="relative">
+            <div class="flex gap-2">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Escribe el nombre de la carta (ej: Dark Magician, Ash Blossom, Blue-Eyes, Nibiru)..." 
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:border-amber-500 focus:outline-none transition-colors"
+                    onkeydown="if(event.key === 'Enter'){ event.preventDefault(); executeSearch(); }"
+                >
+                <button 
+                    type="button" 
+                    onclick="executeSearch()" 
+                    class="px-5 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm rounded-xl transition-all shadow-md flex items-center gap-1.5 flex-shrink-0"
+                >
+                    <span>🔍</span> Buscar
+                </button>
+            </div>
+
+            <!-- Desplegable de Resultados -->
+            <div id="searchResultsDropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto p-2 space-y-1">
+                <!-- Se llena dinámicamente con JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario Principal -->
+    <form method="POST" enctype="multipart/form-data" id="intakeForm" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Campos Ocultos de Carta Base -->
+        <input type="hidden" name="ygoprodeck_id" id="ygoprodeckIdInput" value="">
+        <input type="hidden" name="card_type" id="cardTypeInput" value="">
+        <input type="hidden" name="description" id="descriptionInput" value="">
+        <input type="hidden" name="race" id="raceInput" value="">
+        <input type="hidden" name="attribute" id="attributeInput" value="">
+        <input type="hidden" name="atk" id="atkInput" value="">
+        <input type="hidden" name="def_points" id="defInput" value="">
+        <input type="hidden" name="level" id="levelInput" value="">
+        <input type="hidden" name="image_url" id="imageUrlInput" value="">
+
+        <!-- 2. Información de la Carta y Selección de Edición -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+                <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">2</span>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-amber-400">Variante, Edición y Rareza Automática</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                <!-- Columna Izquierda: Ilustración y Vista Previa -->
+                <div class="flex flex-col items-center">
+                    <div class="w-40 aspect-[59/86] bg-slate-950 rounded-xl overflow-hidden border-2 border-slate-800 shadow-2xl flex items-center justify-center relative mb-2">
+                        <img id="cardArtPreview" src="" alt="Vista Previa" class="w-full h-full object-contain hidden">
+                        <div id="artPlaceholder" class="text-center p-4 text-slate-600">
+                            <span class="text-4xl block mb-1">🃏</span>
+                            <span class="text-xs">Sin imagen</span>
+                        </div>
+                    </div>
+                    <span id="cardBadge" class="text-[11px] font-mono text-slate-400 text-center">Selecciona una carta arriba</span>
+                </div>
+
+                <!-- Columna Derecha: Selección de Edición y Campos Autoconfigurados -->
+                <div class="md:col-span-2 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                            Nombre de la Carta *
+                        </label>
+                        <input 
+                            type="text" 
+                            name="name" 
+                            id="cardNameInput" 
+                            required 
+                            placeholder="Ej: Blue-Eyes White Dragon"
+                            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 font-bold focus:border-amber-500 focus:outline-none"
+                        >
+                    </div>
+
+                    <!-- Selector de Variante / Edición -->
+                    <div class="bg-slate-950/80 p-3.5 rounded-xl border border-amber-500/30">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold text-amber-400 uppercase tracking-wider">
+                                🌟 Seleccionar Edición / Set (Autoconfigura Rareza) *
+                            </label>
+                            <span id="variantCountBadge" class="text-[10px] text-slate-400 font-mono">0 variantes</span>
+                        </div>
+                        <select 
+                            id="variantSelect" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                            onchange="onVariantSelected(this.value)"
+                        >
+                            <option value="">-- Primero busca y selecciona una carta --</option>
+                        </select>
+                        <p class="text-[11px] text-slate-400 mt-1.5">
+                            Al elegir la edición, se configurará la <strong>rareza</strong>, <strong>código</strong> y <strong>precio de mercado TCGPlayer</strong> automáticamente.
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                Código de Impresión *
+                            </label>
+                            <input 
+                                type="text" 
+                                name="print_code" 
+                                id="printCodeInput" 
+                                required 
+                                placeholder="Ej: LOB-001"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 font-mono font-bold focus:border-amber-500 focus:outline-none"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                Rareza *
+                            </label>
+                            <input 
+                                type="text" 
+                                name="rarity" 
+                                id="rarityInput" 
+                                required 
+                                placeholder="Ej: Ultra Rare"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-amber-400 font-bold focus:border-amber-500 focus:outline-none"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                Expansión (Set) *
+                            </label>
+                            <input 
+                                type="text" 
+                                name="set_name" 
+                                id="setNameInput" 
+                                required 
+                                placeholder="Ej: Legend of Blue Eyes"
+                                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                Edición
+                            </label>
+                            <select name="edition" id="editionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                                {% for val, label in editions %}
+                                    <option value="{{ val }}" {% if val == '1ST' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                Idioma
+                            </label>
+                            <select name="language" id="languageSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                                {% for val, label in languages %}
+                                    <option value="{{ val }}" {% if val == 'EN' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                                Condición Física
+                            </label>
+                            <select name="condition" id="conditionSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-amber-500 focus:outline-none">
+                                {% for val, label in conditions %}
+                                    <option value="{{ val }}" {% if val == 'NM' %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Foto Real con Cámara Web o Subida de Archivo -->
+            <div class="mt-5 pt-4 border-t border-slate-800">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>📷</span> Foto Real del Ejemplar Físico (Opcional)
+                    </span>
+                    <span class="text-[11px] text-slate-500">Se priorizará sobre el arte oficial en el QR</span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl cursor-pointer border border-slate-700 flex items-center gap-2 transition-colors">
+                        <span>📁</span> Subir Archivo
+                        <input type="file" name="card_image" id="realImageInput" accept="image/*" class="hidden" onchange="previewUploadedFile(this)">
+                    </label>
+
+                    <button 
+                        type="button" 
+                        onclick="startCamera()" 
+                        class="px-4 py-2 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/40 text-xs font-bold rounded-xl flex items-center gap-2 transition-colors"
+                    >
+                        <span>📸</span> Usar Cámara Web / Celular
+                    </button>
+                    <span id="photoStatusText" class="text-xs text-slate-400">Sin foto física adjunta</span>
+                </div>
+
+                <!-- Visor en Vivo de la Cámara -->
+                <div id="cameraContainer" class="hidden mt-3 bg-slate-950 p-3 rounded-2xl border border-sky-500/30 max-w-sm">
+                    <div class="relative aspect-[59/86] bg-black rounded-xl overflow-hidden mb-2">
+                        <video id="cameraVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="capturePhoto()" class="flex-1 py-2 bg-sky-500 hover:bg-sky-600 text-slate-950 font-black text-xs rounded-lg transition-colors">
+                            📸 Capturar Foto
+                        </button>
+                        <button type="button" onclick="stopCamera()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Previsualización de Foto Real Adjunta -->
+                <div id="photoPreviewBox" class="hidden mt-3 flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-emerald-500/40 max-w-sm">
+                    <img id="photoPreviewImg" src="" alt="Foto Real" class="w-12 h-16 object-cover rounded-lg border border-slate-700">
+                    <div class="flex-1">
+                        <span class="text-xs font-bold text-emerald-400 block">✓ Foto real adjunta</span>
+                        <button type="button" onclick="removePhoto()" class="text-[11px] text-rose-400 hover:text-rose-300 underline">Quitar foto</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Cotización Automática USD a CLP y Precios -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center">3</span>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-emerald-400">Cotización Automática y Precios de Venta</h2>
+                </div>
+                <div class="text-xs font-mono text-slate-400">
+                    Tasa: <strong class="text-slate-200">${{ config.usd_to_clp_rate }}</strong> | Margen: <strong class="text-emerald-400">{{ config.commercial_margin_percent }}%</strong>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Ref USD -->
+                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            Ref. Mercado USD
+                        </label>
+                        <span id="priceSourceBadge" class="text-[10px] text-slate-500 font-mono">TCGPlayer</span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-sm text-slate-500 font-mono">$</span>
+                        <input 
+                            type="text" 
+                            name="ref_usd" 
+                            id="refUsdInput" 
+                            value="0.00"
+                            placeholder="0.00" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-7 pr-3 py-2 text-sm text-slate-100 font-mono font-bold focus:border-emerald-500 focus:outline-none"
+                            onchange="fetchPricingPreview()"
+                        >
+                    </div>
+                    <p class="text-[10px] text-slate-500 mt-1">Precio referencial de la edición.</p>
+                </div>
+
+                <!-- Precio Efectivo -->
+                <div class="bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-500/40">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>💵</span> Precio Efectivo (CLP)
+                        </label>
+                        <span class="text-[10px] text-emerald-500 font-bold">-{{ config.cash_discount_percent }}%</span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-sm text-emerald-500 font-mono">$</span>
+                        <input 
+                            type="text" 
+                            name="cash_price" 
+                            id="cashPriceInput" 
+                            value="0"
+                            class="w-full bg-slate-950 border border-emerald-500/50 rounded-lg pl-7 pr-3 py-2 text-base text-emerald-400 font-mono font-black focus:border-emerald-400 focus:outline-none"
+                        >
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">Precio para efectivo o transferencia directa.</p>
+                </div>
+
+                <!-- Precio Tarjeta -->
+                <div class="bg-cyan-950/20 p-3.5 rounded-xl border border-cyan-500/40">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="block text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>💳</span> Precio Tarjeta (CLP)
+                        </label>
+                        <span class="text-[10px] text-cyan-500 font-bold">+{{ config.card_processing_fee_percent }}%</span>
+                    </div>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-sm text-cyan-500 font-mono">$</span>
+                        <input 
+                            type="text" 
+                            name="card_price" 
+                            id="cardPriceInput" 
+                            value="0"
+                            class="w-full bg-slate-950 border border-cyan-500/50 rounded-lg pl-7 pr-3 py-2 text-base text-cyan-400 font-mono font-black focus:border-cyan-400 focus:outline-none"
+                        >
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">Precio para pago con tarjeta o POS TUU.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Dueño y Transferencia Directa (Consignación) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 rounded-full bg-purple-500 text-slate-950 font-black text-xs flex items-center justify-center">4</span>
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-purple-400">Dueño y Datos Bancarios (Consignación / Pago Directo)</h2>
+                </div>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    🔒 Visible sólo para Admin
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        Propietario de la Carta *
+                    </label>
+                    <input 
+                        type="text" 
+                        name="owner_name" 
+                        id="ownerNameInput" 
+                        value="Tienda" 
+                        placeholder="Ej: Tienda o Nombre del Cliente"
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-purple-500 focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        WhatsApp / Teléfono Dueño
+                    </label>
+                    <input 
+                        type="text" 
+                        name="owner_phone" 
+                        placeholder="+569..." 
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-100 focus:border-purple-500 focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                        Monto a Pagar al Dueño (CLP)
+                    </label>
+                    <input 
+                        type="text" 
+                        name="owner_payout_amount" 
+                        id="ownerPayoutInput"
+                        placeholder="Ej: 10000" 
+                        class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-emerald-400 font-mono font-bold focus:border-purple-500 focus:outline-none"
+                    >
+                </div>
+            </div>
+
+            <!-- Datos para Transferencia Bancaria Directa -->
+            <details class="group bg-slate-950 rounded-xl border border-slate-800 p-3">
+                <summary class="cursor-pointer text-xs font-bold text-purple-400 flex items-center justify-between">
+                    <span>🏦 Datos Bancarios para Transferir al Dueño (Haz clic para desplegar)</span>
+                    <span class="text-slate-500 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-3 pt-3 border-t border-slate-800">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Banco</label>
+                        <input type="text" name="owner_bank" placeholder="Ej: Banco Estado, Banco de Chile, BCI..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tipo de Cuenta</label>
+                        <input type="text" name="owner_account_type" placeholder="Ej: CuentaRUT, Corriente, Vista..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Número de Cuenta</label>
+                        <input type="text" name="owner_account_number" placeholder="Ej: 12345678" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">RUT del Titular</label>
+                        <input type="text" name="owner_rut" placeholder="Ej: 12.345.678-9" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100 font-mono">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Email para Comprobante</label>
+                        <input type="email" name="owner_email" placeholder="transferencias@correo.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-100">
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <!-- 5. Asignación a Espacio Físico (Vitrina y Slot) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+                <span class="w-6 h-6 rounded-full bg-indigo-500 text-slate-950 font-black text-xs flex items-center justify-center">5</span>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-indigo-400">Espacio Físico en Vitrina (Slot QR)</h2>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
+                    Seleccionar Espacio de Exhibición *
+                </label>
+                <select 
+                    name="slot_id" 
+                    id="slotIdSelect" 
+                    required 
+                    class="w-full bg-slate-950 border border-indigo-500/50 rounded-xl px-4 py-3 text-sm text-slate-100 font-mono font-bold focus:border-indigo-400 focus:outline-none"
+                >
+                    <option value="">-- Elige la vitrina y el espacio donde colocarás la carta --</option>
+                    {% for item in slot_options %}
+                        <option 
+                            value="{{ item.slot.id }}" 
+                            {% if item.is_selected %}selected{% endif %}
+                            class="{% if item.is_occupied %}text-rose-400{% else %}text-emerald-400{% endif %}"
+                        >
+                            {{ item.slot.showcase.name }} • Espacio {{ item.slot.visible_code }} {% if item.is_occupied %}(⚠️ Ocupado - se reemplazará){% else %}(✓ Disponible){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+                <p class="text-[11px] text-slate-400 mt-2">
+                    Al confirmar, la carta se publicará de inmediato en el código QR físico de este espacio.
+                </p>
+            </div>
+        </div>
+
+        <!-- Botón de Envío Principal -->
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <a href="{% url 'showcase_list' %}" class="text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                ← Volver al listado de vitrinas
+            </a>
+            <button 
+                type="submit" 
+                id="submitBtn"
+                class="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-500 via-emerald-500 to-emerald-600 hover:from-amber-600 hover:to-emerald-700 text-slate-950 font-black text-base rounded-2xl shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 tracking-wide cursor-pointer"
+            >
+                <span>🚀</span> Publicar y Exhibir en Vitrina
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Scripts de Búsqueda, Variantes, Cotización en Tiempo Real y Cámara -->
+<script>
+let currentSearchResults = [];
+let cameraStream = null;
+
+// --- 1. Búsqueda Instantánea en YGOPRODeck ---
+let searchDebounceTimer;
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchDebounceTimer);
+    const q = this.value.trim();
+    if (q.length >= 2) {
+        searchDebounceTimer = setTimeout(executeSearch, 350);
+    } else {
+        document.getElementById('searchResultsDropdown').classList.add('hidden');
+    }
+});
+
+function executeSearch() {
+    const q = searchInput.value.trim();
+    if (q.length < 2) return;
+
+    const status = document.getElementById('searchStatus');
+    const dropdown = document.getElementById('searchResultsDropdown');
+    status.classList.remove('hidden');
+
+    fetch(`{% url 'catalog_api_search' %}?q=${encodeURIComponent(q)}`)
+        .then(res => res.json())
+        .then(data => {
+            status.classList.add('hidden');
+            currentSearchResults = data.cards || [];
+            renderSearchResults(currentSearchResults);
+        })
+        .catch(err => {
+            status.classList.add('hidden');
+            console.error("Error en búsqueda:", err);
+        });
+}
+
+function renderSearchResults(cards) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    dropdown.innerHTML = '';
+
+    if (!cards || cards.length === 0) {
+        dropdown.innerHTML = `
+            <div class="p-4 text-center text-xs text-slate-400">
+                No se encontraron cartas que coincidan con la búsqueda.
+            </div>`;
+        dropdown.classList.remove('hidden');
+        return;
+    }
+
+    cards.forEach((card, index) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center gap-3 p-2.5 hover:bg-slate-800 rounded-xl cursor-pointer transition-colors";
+        item.onclick = () => selectCardFromSearch(index);
+
+        const imgHtml = card.image_url ? 
+            `<img src="${card.image_url}" class="w-8 h-12 object-cover rounded shadow" alt="${card.name}">` : 
+            `<div class="w-8 h-12 bg-slate-950 rounded flex items-center justify-center text-xs text-slate-600">🃏</div>`;
+
+        item.innerHTML = `
+            ${imgHtml}
+            <div class="flex-1 min-w-0">
+                <h4 class="text-sm font-bold text-slate-100 truncate">${card.name}</h4>
+                <p class="text-[11px] text-slate-400 truncate">${card.card_type || ''} • ${card.race || ''} • ${card.attribute || ''}</p>
+            </div>
+            <span class="text-[10px] font-mono px-2 py-1 rounded bg-slate-800 text-amber-400 border border-slate-700 flex-shrink-0">
+                ${card.card_sets ? card.card_sets.length : 0} sets
+            </span>
+        `;
+        dropdown.appendChild(item);
+    });
+
+    dropdown.classList.remove('hidden');
+}
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('searchResultsDropdown');
+    const searchBox = document.getElementById('searchInput');
+    if (!dropdown.contains(e.target) && e.target !== searchBox) {
+        dropdown.classList.add('hidden');
+    }
+});
+
+// --- 2. Selección de Carta y Carga de Variantes ---
+function selectCardFromSearch(index) {
+    const card = currentSearchResults[index];
+    if (!card) return;
+
+    document.getElementById('searchResultsDropdown').classList.add('hidden');
+
+    // Llenar datos de la carta
+    document.getElementById('cardNameInput').value = card.name || '';
+    document.getElementById('ygoprodeckIdInput').value = card.ygoprodeck_id || '';
+    document.getElementById('cardTypeInput').value = card.card_type || '';
+    document.getElementById('descriptionInput').value = card.description || '';
+    document.getElementById('raceInput').value = card.race || '';
+    document.getElementById('attributeInput').value = card.attribute || '';
+    document.getElementById('atkInput').value = card.atk !== null ? card.atk : '';
+    document.getElementById('defInput').value = card.def_points !== null ? card.def_points : '';
+    document.getElementById('levelInput').value = card.level !== null ? card.level : '';
+    document.getElementById('imageUrlInput').value = card.image_url || '';
+
+    // Vista previa de la ilustración
+    const artPreview = document.getElementById('cardArtPreview');
+    const artPlaceholder = document.getElementById('artPlaceholder');
+    if (card.image_url) {
+        artPreview.src = card.image_url;
+        artPreview.classList.remove('hidden');
+        artPlaceholder.classList.add('hidden');
+    } else {
+        artPreview.classList.add('hidden');
+        artPlaceholder.classList.remove('hidden');
+    }
+    document.getElementById('cardBadge').textContent = card.card_type || 'Carta seleccionada';
+
+    // Poblar el selector de sets/variantes
+    populateVariantSelect(card.card_sets || []);
+}
+
+function populateVariantSelect(sets) {
+    const select = document.getElementById('variantSelect');
+    select.innerHTML = '';
+    const badge = document.getElementById('variantCountBadge');
+    badge.textContent = `${sets.length} variantes disponibles`;
+
+    if (!sets || sets.length === 0) {
+        select.innerHTML = '<option value="">-- Sin expansiones registradas (ingresa manualmente abajo) --</option>';
+        return;
+    }
+
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = "";
+    defaultOpt.textContent = `-- Selecciona una expansión (${sets.length} disponibles) --`;
+    select.appendChild(defaultOpt);
+
+    sets.forEach((s, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        const priceText = s.set_price ? ` • $${s.set_price} USD` : '';
+        opt.textContent = `[${s.set_code}] ${s.set_name} - ${s.set_rarity}${priceText}`;
+        opt.dataset.code = s.set_code || '';
+        opt.dataset.name = s.set_name || '';
+        opt.dataset.rarity = s.set_rarity || '';
+        opt.dataset.price = s.set_price || '0';
+        select.appendChild(opt);
+    });
+
+    // Auto-seleccionar la primera variante si hay exactamente 1
+    if (sets.length === 1) {
+        select.selectedIndex = 1;
+        onVariantSelected(0);
+    }
+}
+
+// --- 3. Autoconfiguración al seleccionar una Edición / Set ---
+function onVariantSelected(index) {
+    const select = document.getElementById('variantSelect');
+    if (index === "" || select.selectedIndex <= 0) return;
+
+    const opt = select.options[select.selectedIndex];
+    const code = opt.dataset.code || '';
+    const name = opt.dataset.name || '';
+    const rarity = opt.dataset.rarity || '';
+    const price = opt.dataset.price || '0';
+
+    document.getElementById('printCodeInput').value = code;
+    document.getElementById('setNameInput').value = name;
+    document.getElementById('rarityInput').value = rarity;
+
+    // Sugerencia de idioma por código
+    const langSelect = document.getElementById('languageSelect');
+    if (code.includes('-SP') || code.includes('-S') || code.includes('-ES')) {
+        langSelect.value = 'ES';
+    } else if (code.includes('-JP') || code.includes('-JA')) {
+        langSelect.value = 'JP';
+    } else {
+        langSelect.value = 'EN';
+    }
+
+    // Actualizar precio de referencia USD
+    if (price && parseFloat(price) > 0) {
+        document.getElementById('refUsdInput').value = parseFloat(price).toFixed(2);
+    }
+
+    // Ejecutar cotización automática inmediata
+    fetchPricingPreview();
+}
+
+// --- 4. Cotización en Vivo USD a CLP ---
+function fetchPricingPreview() {
+    const refUsd = document.getElementById('refUsdInput').value.trim();
+    const ygoprodeckId = document.getElementById('ygoprodeckIdInput').value;
+    const cardName = document.getElementById('cardNameInput').value.trim();
+    const printCode = document.getElementById('printCodeInput').value.trim();
+
+    const params = new URLSearchParams({
+        ref_usd: refUsd,
+        ygoprodeck_id: ygoprodeckId,
+        card_name: cardName,
+        print_code: printCode
+    });
+
+    fetch(`{% url 'pricing_api_quote_preview' %}?${params.toString()}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                document.getElementById('cashPriceInput').value = data.cash_price;
+                document.getElementById('cardPriceInput').value = data.card_price;
+                if (!refUsd || parseFloat(refUsd) <= 0) {
+                    document.getElementById('refUsdInput').value = data.ref_usd;
+                }
+                // Si aún no se ingresó monto al dueño, sugerir el 70% del efectivo
+                const payoutInput = document.getElementById('ownerPayoutInput');
+                if (!payoutInput.value || payoutInput.value === '0') {
+                    payoutInput.value = Math.round(data.cash_price * 0.7);
+                }
+            }
+        })
+        .catch(err => console.error("Error al cotizar:", err));
+}
+
+// --- 5. Cámara en Vivo y Captura de Foto Real ---
+function startCamera() {
+    const container = document.getElementById('cameraContainer');
+    const video = document.getElementById('cameraVideo');
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: { ideal: "environment" } } 
+        })
+        .then(stream => {
+            cameraStream = stream;
+            video.srcObject = stream;
+            container.classList.remove('hidden');
+        })
+        .catch(err => {
+            alert("No se pudo acceder a la cámara (" + (err.message || 'permiso denegado') + "). Puedes subir el archivo directamente.");
+        });
+    } else {
+        alert("Tu navegador no soporta captura de cámara directa.");
+    }
+}
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    document.getElementById('cameraContainer').classList.add('hidden');
+}
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(blob => {
+        const file = new File([blob], "foto_real_vitrina.jpg", { type: "image/jpeg" });
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        document.getElementById('realImageInput').files = dataTransfer.files;
+
+        // Mostrar previsualización
+        document.getElementById('photoPreviewImg').src = canvas.toDataURL('image/jpeg');
+        document.getElementById('photoPreviewBox').classList.remove('hidden');
+        document.getElementById('photoStatusText').textContent = "Foto tomada con cámara lista";
+        stopCamera();
+    }, 'image/jpeg', 0.88);
+}
+
+function previewUploadedFile(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('photoPreviewImg').src = e.target.result;
+            document.getElementById('photoPreviewBox').classList.remove('hidden');
+            document.getElementById('photoStatusText').textContent = input.files[0].name;
+            stopCamera();
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function removePhoto() {
+    document.getElementById('realImageInput').value = '';
+    document.getElementById('photoPreviewImg').src = '';
+    document.getElementById('photoPreviewBox').classList.add('hidden');
+    document.getElementById('photoStatusText').textContent = "Sin foto física adjunta";
+}
+</script>
+{% endblock %}

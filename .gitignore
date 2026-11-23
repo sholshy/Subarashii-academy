@@ -71,3 +71,8 @@ dist/
 *.db
 tournament_*.json
 *.wav
+scratch/
+whatsapp_print_automation/impresos/
+whatsapp_print_automation/pendientes/
+data/*.bak*
+

@@ -92,6 +92,28 @@ class CardPriceAPIService:
         return None
 
     @classmethod
+    def get_usd_price_for_card_and_code(cls, ygoprodeck_id: Optional[int] = None, card_name: str = "", print_code: str = "") -> Optional[Decimal]:
+        """Consulta la API de precios para un ID/Nombre y código de set dado."""
+        import urllib.parse
+        try:
+            if ygoprodeck_id:
+                url = f"{cls.API_URL}?id={ygoprodeck_id}"
+            elif card_name:
+                url = f"{cls.API_URL}?name={urllib.parse.quote(card_name)}"
+            else:
+                return None
+
+            req = urllib.request.Request(url, headers=cls.HEADERS)
+            with urllib.request.urlopen(req, timeout=8) as res:
+                data = json.loads(res.read().decode('utf-8'))
+                cards = data.get('data', [])
+                if cards:
+                    return cls.extract_usd_price_for_print(cards[0], print_code)
+        except Exception as e:
+            print(f"[CardPriceAPIService] Error en consulta rápida de precio USD: {e}")
+        return None
+
+    @classmethod
     def sync_quote_for_print(
         cls,
         card_print: CardPrint,

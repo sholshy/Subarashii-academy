@@ -66,6 +66,53 @@ class InventoryItem(models.Model):
         verbose_name='Notas Internas'
     )
 
+    # Datos del Dueño y Transferencia Bancaria Directa (Consignación)
+    owner_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default='Tienda',
+        verbose_name='Dueño / Propietario',
+        help_text='Nombre del dueño de la carta (ej. Tienda o Cliente en consignación).'
+    )
+    owner_phone = models.CharField(
+        max_length=40,
+        blank=True,
+        verbose_name='Teléfono / WhatsApp Dueño'
+    )
+    owner_rut = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='RUT del Dueño'
+    )
+    owner_bank = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Banco para Transferencia'
+    )
+    owner_account_type = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Tipo de Cuenta',
+        help_text='Corriente, Vista, CuentaRUT, Ahorro, etc.'
+    )
+    owner_account_number = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Número de Cuenta'
+    )
+    owner_email = models.EmailField(
+        blank=True,
+        verbose_name='Email para Comprobante'
+    )
+    owner_payout_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Monto a Transferir al Dueño (CLP)',
+        help_text='Monto acordado a pagar al dueño en caso de venta.'
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -54,3 +54,5 @@ services:
         value: subarashii_secret_organizer_key_2026
       - key: ORGANIZER_ADMIN_PASSWORD
         value: subarashii2026
+      - key: DATABASE_PATH
+        value: "data/ygo_data.db"
